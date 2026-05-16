@@ -15,8 +15,8 @@ static PendingIO s_pending;
 
 static void file_cb(void* ud, const char* const* list, int /*filter*/) {
     if (list && list[0]) {
-        auto* p  = static_cast<PendingIO*>(ud);
-        p->path  = list[0];
+        auto* p   = static_cast<PendingIO*>(ud);
+        p->path   = list[0];
         p->active = true;
     }
 }
@@ -26,11 +26,18 @@ static void file_cb(void* ud, const char* const* list, int /*filter*/) {
 bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
     // Process any pending file I/O from a previous dialog callback
     if (s_pending.active) {
-        if (s_pending.is_save)
-            png_io::save(state.canvas.canvas, s_pending.path);
-        else {
-            png_io::load(state.canvas.canvas, s_pending.path);
-            state.canvas.dirty = true;
+        if (s_pending.is_save) {
+            // Save the composited result as a flat PNG
+            Canvas tmp(state.canvas.width(), state.canvas.height());
+            tmp.pixels = state.canvas.composite;
+            png_io::save(tmp, s_pending.path);
+        } else {
+            Canvas tmp;
+            if (png_io::load(tmp, s_pending.path)) {
+                state.canvas.new_canvas(tmp.width, tmp.height);
+                state.canvas.layers[0].canvas = std::move(tmp);
+                state.canvas.rebuild_composite();
+            }
         }
         s_pending.active = false;
     }
@@ -58,8 +65,8 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Undo", "Ctrl+Z")) {}
-            if (ImGui::MenuItem("Redo", "Ctrl+Y")) {}
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) state.canvas.undo();
+            if (ImGui::MenuItem("Redo", "Ctrl+Y")) state.canvas.redo();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
@@ -81,9 +88,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
         w = std::clamp(w, 1, 4096);
         h = std::clamp(h, 1, 4096);
         if (ImGui::Button("Create")) {
-            state.canvas.canvas.resize(w, h);
-            state.canvas.pan   = { 0.0f, 0.0f };
-            state.canvas.dirty = true;
+            state.canvas.new_canvas(w, h);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();

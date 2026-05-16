@@ -8,7 +8,7 @@ struct Canvas {
     std::vector<uint32_t> pixels; // RGBA8, row-major, R in bits 0-7
 
     Canvas(int w = 64, int h = 64)
-        : width(w), height(h), pixels(w * h, 0xFFFFFFFF) {}
+        : width(w), height(h), pixels(w * h, 0x00000000) {}
 
     bool in_bounds(int x, int y) const { return x >= 0 && x < width && y >= 0 && y < height; }
     void set(int x, int y, uint32_t rgba) { if (in_bounds(x, y)) pixels[y * width + x] = rgba; }

@@ -52,6 +52,9 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) app.canvas.undo();
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) app.canvas.redo();
+
         ImGuiID dock_id = BeginWorkbench();
         EnsureDefaultLayout(dock_id);
 
@@ -60,7 +63,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
         panels::DrawTools(app.tools);
         panels::DrawCanvas(app.canvas, app.tools, app.palette);
-        panels::DrawLayers(app.layers);
+        panels::DrawLayers(app.canvas);
         panels::DrawPalette(app.palette);
 
         ImGui::Render();
