@@ -55,7 +55,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGuiID dock_id = BeginWorkbench();
         EnsureDefaultLayout(dock_id);
 
-        if (!panels::DrawMenuBar(app))
+        if (!panels::DrawMenuBar(app, window))
             running = false;
 
         panels::DrawTools(app.tools);

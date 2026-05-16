@@ -3,14 +3,15 @@
 #include "canvas.h"
 
 struct CanvasState {
-    Canvas canvas;        // pixel buffer (default 64x64, white)
-    float  zoom  = 8.0f; // display scale
-    bool   dirty = true; // true -> re-upload to GL texture this frame
+    Canvas canvas;
+    float  zoom  = 8.0f;
+    ImVec2 pan   = { 0.0f, 0.0f }; // screen-pixel offset for middle-mouse pan
+    bool   dirty = true;
 };
 
 struct ToolsState {
-    int active_tool = 0; // 0 = brush
-    int brush_size  = 1; // diameter in canvas pixels
+    int active_tool = 0; // 0 = brush, 1 = eraser
+    int brush_size  = 1;
 };
 
 struct PaletteState {

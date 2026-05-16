@@ -45,14 +45,24 @@ target_link_libraries(imgui_lib PUBLIC SDL3::SDL3-static)
 
 find_package(OpenGL REQUIRED)
 
+# stb — header-only image load/write
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG        master
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(stb)
+
 add_executable(pix-cells
     src/main.cpp
     src/workbench.cpp
+    src/png_io.cpp
     src/panels/menu_bar.cpp
     src/panels/canvas_panel.cpp
     src/panels/tools_panel.cpp
     src/panels/palette_panel.cpp
     src/panels/layers_panel.cpp
 )
-target_include_directories(pix-cells PRIVATE src)
+target_include_directories(pix-cells PRIVATE src ${stb_SOURCE_DIR})
 target_link_libraries(pix-cells PRIVATE imgui_lib SDL3::SDL3-static OpenGL::GL)

@@ -51,34 +51,59 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
     }
 
     ImGui::Begin("Canvas");
+    ImGuiIO& io = ImGui::GetIO();
 
-    // ImGui v1.92+ binds a linear sampler object that overrides texture parameters.
-    // Inject nearest-sampling callback so pixel art renders crisp, then restore.
+    // Pan with middle-mouse drag
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Middle, 0.0f)) {
+        cs.pan.x += io.MouseDelta.x;
+        cs.pan.y += io.MouseDelta.y;
+    }
+
+    // ImGui v1.92+ binds a linear sampler that overrides texture parameters — switch to nearest.
     ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
     ImDrawList*      dl  = ImGui::GetWindowDrawList();
     if (pio.DrawCallback_SetSamplerNearest)
         dl->AddCallback(pio.DrawCallback_SetSamplerNearest, nullptr);
 
-    ImVec2 origin       = ImGui::GetCursorScreenPos();
+    // Apply pan offset before drawing
+    ImVec2 base     = ImGui::GetCursorScreenPos();
+    ImVec2 origin   = { base.x + cs.pan.x, base.y + cs.pan.y };
+    ImGui::SetCursorScreenPos(origin);
+
     ImVec2 display_size = { cs.canvas.width * cs.zoom, cs.canvas.height * cs.zoom };
     ImGui::Image((ImTextureID)(uintptr_t)texture, display_size);
 
     if (pio.DrawCallback_SetSamplerLinear)
         dl->AddCallback(pio.DrawCallback_SetSamplerLinear, nullptr);
 
-    ImGuiIO& io = ImGui::GetIO();
+    // Pixel grid overlay (zoom >= 4x only)
+    if (cs.zoom >= 4.0f) {
+        ImU32  gcol = IM_COL32(80, 80, 80, 100);
+        float  W    = cs.canvas.width  * cs.zoom;
+        float  H    = cs.canvas.height * cs.zoom;
+        for (int x = 0; x <= cs.canvas.width; x++) {
+            float sx = origin.x + x * cs.zoom;
+            dl->AddLine({ sx, origin.y }, { sx, origin.y + H }, gcol);
+        }
+        for (int y = 0; y <= cs.canvas.height; y++) {
+            float sy = origin.y + y * cs.zoom;
+            dl->AddLine({ origin.x, sy }, { origin.x + W, sy }, gcol);
+        }
+    }
 
+    // Brush / eraser input
     if (ImGui::IsItemHovered()) {
-        // Scroll-wheel zoom
         if (io.MouseWheel != 0.0f)
             cs.zoom = std::clamp(cs.zoom + io.MouseWheel, 1.0f, 32.0f);
 
-        // Brush painting
         int px = (int)((io.MousePos.x - origin.x) / cs.zoom);
         int py = (int)((io.MousePos.y - origin.y) / cs.zoom);
 
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-            uint32_t color = ImGui::ColorConvertFloat4ToU32(palette.primary_color);
+            uint32_t color = (tools.active_tool == 1)
+                ? 0xFFFFFFFFu
+                : ImGui::ColorConvertFloat4ToU32(palette.primary_color);
+
             if (last_px.x < 0.0f)
                 paint_pixel(cs, px, py, color, tools.brush_size);
             else
