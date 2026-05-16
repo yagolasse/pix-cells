@@ -52,9 +52,19 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
 
     ImGui::Begin("Canvas");
 
+    // ImGui v1.92+ binds a linear sampler object that overrides texture parameters.
+    // Inject nearest-sampling callback so pixel art renders crisp, then restore.
+    ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+    ImDrawList*      dl  = ImGui::GetWindowDrawList();
+    if (pio.DrawCallback_SetSamplerNearest)
+        dl->AddCallback(pio.DrawCallback_SetSamplerNearest, nullptr);
+
     ImVec2 origin       = ImGui::GetCursorScreenPos();
     ImVec2 display_size = { cs.canvas.width * cs.zoom, cs.canvas.height * cs.zoom };
     ImGui::Image((ImTextureID)(uintptr_t)texture, display_size);
+
+    if (pio.DrawCallback_SetSamplerLinear)
+        dl->AddCallback(pio.DrawCallback_SetSamplerLinear, nullptr);
 
     ImGuiIO& io = ImGui::GetIO();
 
