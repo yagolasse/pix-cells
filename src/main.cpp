@@ -3,6 +3,13 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
+#include "workbench.h"
+#include "app_state.h"
+#include "panels/menu_bar.h"
+#include "panels/canvas_panel.h"
+#include "panels/tools_panel.h"
+#include "panels/palette_panel.h"
+#include "panels/layers_panel.h"
 
 int main(int /*argc*/, char* /*argv*/[]) {
     SDL_Init(SDL_INIT_VIDEO);
@@ -30,6 +37,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
+    AppState app;
+
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -43,7 +52,16 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::ShowDemoWindow();
+        ImGuiID dock_id = BeginWorkbench();
+        EnsureDefaultLayout(dock_id);
+
+        if (!panels::DrawMenuBar(app))
+            running = false;
+
+        panels::DrawTools(app.tools);
+        panels::DrawCanvas(app.canvas);
+        panels::DrawLayers(app.layers);
+        panels::DrawPalette(app.palette);
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
