@@ -59,7 +59,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
             running = false;
 
         panels::DrawTools(app.tools);
-        panels::DrawCanvas(app.canvas);
+        panels::DrawCanvas(app.canvas, app.tools, app.palette);
         panels::DrawLayers(app.layers);
         panels::DrawPalette(app.palette);
 
