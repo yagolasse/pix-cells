@@ -1,4 +1,5 @@
 #include "app_state.h"
+#include "log.h"
 
 // Porter-Duff "over" — RGBA8, R in bits 0-7
 static uint32_t blend_over(uint32_t dst, uint32_t src) {
@@ -60,6 +61,7 @@ void CanvasState::undo() {
     layers = std::move(undo_stack.back());
     undo_stack.pop_back();
     rebuild_composite();
+    Log("Undo (%d steps remain)", (int)undo_stack.size());
 }
 
 void CanvasState::redo() {
@@ -68,6 +70,7 @@ void CanvasState::redo() {
     layers = std::move(redo_stack.back());
     redo_stack.pop_back();
     rebuild_composite();
+    Log("Redo (%d steps remain)", (int)redo_stack.size());
 }
 
 void CanvasState::new_canvas(int w, int h) {
@@ -80,4 +83,5 @@ void CanvasState::new_canvas(int w, int h) {
     redo_stack.clear();
     composite.resize(w * h, 0x00000000);
     rebuild_composite();
+    Log("New canvas: %dx%d", w, h);
 }

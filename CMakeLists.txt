@@ -58,12 +58,14 @@ add_executable(pix-cells
     src/main.cpp
     src/workbench.cpp
     src/canvas_state.cpp
+    src/log.cpp
     src/png_io.cpp
     src/panels/menu_bar.cpp
     src/panels/canvas_panel.cpp
     src/panels/tools_panel.cpp
     src/panels/palette_panel.cpp
     src/panels/layers_panel.cpp
+    src/panels/log_panel.cpp
 )
 target_include_directories(pix-cells PRIVATE src ${stb_SOURCE_DIR})
 target_link_libraries(pix-cells PRIVATE imgui_lib SDL3::SDL3-static OpenGL::GL)

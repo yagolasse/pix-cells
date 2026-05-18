@@ -10,6 +10,9 @@
 #include "panels/tools_panel.h"
 #include "panels/palette_panel.h"
 #include "panels/layers_panel.h"
+#include "panels/log_panel.h"
+#include "log.h"
+#include <algorithm>
 
 int main(int /*argc*/, char* /*argv*/[]) {
     SDL_Init(SDL_INIT_VIDEO);
@@ -55,6 +58,20 @@ int main(int /*argc*/, char* /*argv*/[]) {
         if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) app.canvas.undo();
         if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) app.canvas.redo();
 
+        if (!ImGui::GetIO().WantTextInput) {
+            if (ImGui::IsKeyPressed(ImGuiKey_B)) { app.tools.active_tool = 0; Log("Tool: Brush"); }
+            if (ImGui::IsKeyPressed(ImGuiKey_E)) { app.tools.active_tool = 1; Log("Tool: Eraser"); }
+            if (ImGui::IsKeyPressed(ImGuiKey_F)) { app.tools.active_tool = 2; Log("Tool: Fill"); }
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
+                app.tools.brush_size = std::max(1, app.tools.brush_size - 1);
+                Log("Brush size: %d", app.tools.brush_size);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_RightBracket)) {
+                app.tools.brush_size = std::min(32, app.tools.brush_size + 1);
+                Log("Brush size: %d", app.tools.brush_size);
+            }
+        }
+
         ImGuiID dock_id = BeginWorkbench();
         EnsureDefaultLayout(dock_id);
 
@@ -65,6 +82,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         panels::DrawCanvas(app.canvas, app.tools, app.palette);
         panels::DrawLayers(app.canvas);
         panels::DrawPalette(app.palette);
+        panels::DrawLog();
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

@@ -1,6 +1,7 @@
 #include "menu_bar.h"
 #include "imgui.h"
 #include "png_io.h"
+#include "log.h"
 #include <algorithm>
 
 // --- SDL3 async file dialog helpers ---
@@ -27,11 +28,12 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
     // Process any pending file I/O from a previous dialog callback
     if (s_pending.active) {
         if (s_pending.is_save) {
-            // Save the composited result as a flat PNG
+            Log("Saving: %s", s_pending.path.c_str());
             Canvas tmp(state.canvas.width(), state.canvas.height());
             tmp.pixels = state.canvas.composite;
             png_io::save(tmp, s_pending.path);
         } else {
+            Log("Loading: %s", s_pending.path.c_str());
             Canvas tmp;
             if (png_io::load(tmp, s_pending.path)) {
                 state.canvas.new_canvas(tmp.width, tmp.height);

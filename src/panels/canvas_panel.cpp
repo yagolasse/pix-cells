@@ -1,4 +1,5 @@
 #include "canvas_panel.h"
+#include "log.h"
 #include "imgui.h"
 #include <SDL3/SDL_opengl.h>
 #include <algorithm>
@@ -46,9 +47,9 @@ static void flood_fill(CanvasState& cs, int sx, int sy, uint32_t new_col) {
 }
 
 void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteState& palette) {
-    static GLuint  texture     = 0;
-    static int     tex_w       = 0, tex_h = 0;
-    static ImVec2  last_px     = { -1.0f, -1.0f };
+    static GLuint  texture      = 0;
+    static int     tex_w        = 0, tex_h = 0;
+    static ImVec2  last_px      = { -1.0f, -1.0f };
     static bool    was_painting = false;
 
     // (Re)create texture on first call or if canvas dimensions changed
@@ -92,7 +93,8 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
             for (float cx = origin.x; cx < origin.x + W; cx += cell) {
                 int   parity = (int)((cy - origin.y) / cell + (cx - origin.x) / cell) % 2;
                 ImU32 col    = parity ? IM_COL32(170,170,170,255) : IM_COL32(220,220,220,255);
-                dl->AddRectFilled({cx, cy}, {std::min(cx+cell, origin.x+W), std::min(cy+cell, origin.y+H)}, col);
+                dl->AddRectFilled({cx, cy},
+                    {std::min(cx+cell, origin.x+W), std::min(cy+cell, origin.y+H)}, col);
             }
     }
 
@@ -122,11 +124,21 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
 
     // Tool input
     if (ImGui::IsItemHovered()) {
-        if (io.MouseWheel != 0.0f)
-            cs.zoom = std::clamp(cs.zoom + io.MouseWheel, 1.0f, 32.0f);
+        if (io.MouseWheel != 0.0f) {
+            float new_zoom = std::clamp(cs.zoom + io.MouseWheel, 1.0f, 32.0f);
+            if (new_zoom != cs.zoom) {
+                // Keep the canvas pixel under the cursor fixed in screen space
+                cs.pan.x = io.MousePos.x - (io.MousePos.x - base.x - cs.pan.x) / cs.zoom * new_zoom - base.x;
+                cs.pan.y = io.MousePos.y - (io.MousePos.y - base.y - cs.pan.y) / cs.zoom * new_zoom - base.y;
+                cs.zoom  = new_zoom;
+                Log("Zoom: %.0fx", cs.zoom);
+            }
+        }
 
-        int px = (int)((io.MousePos.x - origin.x) / cs.zoom);
-        int py = (int)((io.MousePos.y - origin.y) / cs.zoom);
+        // Recompute origin after potential zoom/pan change this frame
+        ImVec2 cur_origin = { base.x + cs.pan.x, base.y + cs.pan.y };
+        int px = (int)((io.MousePos.x - cur_origin.x) / cs.zoom);
+        int py = (int)((io.MousePos.y - cur_origin.y) / cs.zoom);
 
         uint32_t color = (tools.active_tool == 1)
             ? 0x00000000u
@@ -136,12 +148,17 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
             was_painting = false;
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 cs.push_snapshot();
+                Log("Flood fill at (%d,%d) color #%08X", px, py, color);
                 flood_fill(cs, px, py, color);
                 cs.rebuild_composite();
             }
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-            if (is_painting && !was_painting) cs.push_snapshot();
+            if (is_painting && !was_painting) {
+                cs.push_snapshot();
+                Log("Stroke start at (%d,%d) tool=%d size=%d",
+                    px, py, tools.active_tool, tools.brush_size);
+            }
             if (is_painting) {
                 if (last_px.x < 0.0f)
                     paint_pixel(cs, px, py, color, tools.brush_size);
