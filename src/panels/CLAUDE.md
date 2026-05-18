@@ -1,0 +1,25 @@
+# src/panels/ — Panel responsibilities
+
+Each panel is a self-contained ImGui window. Panels receive references only to the state they need.
+
+| Panel | Signature | Responsibility |
+|-------|-----------|----------------|
+| `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&)` | GL texture, checkerboard, zoom-to-cursor, tool input |
+| `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
+| `tools_panel` | `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill), brush size slider |
+| `palette_panel` | `DrawPalette(PaletteState&)` | Primary/secondary color pickers |
+| `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*)` → bool | File (New/Open/Save), Edit (Undo/Redo), SDL3 async file dialogs |
+| `log_panel` | `DrawLog()` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button |
+
+## canvas_panel internals
+- Texture recreated when `cs.width()/height()` changes; updated via `glTexSubImage2D` when `cs.dirty`.
+- **Sampler fix**: ImGui v1.92+ binds a LINEAR sampler before each draw. Inject `DrawCallback_SetSamplerNearest` / `DrawCallback_SetSamplerLinear` around `ImGui::Image()` to preserve `GL_NEAREST`.
+- **Zoom-to-cursor**: on scroll, adjusts `cs.pan` so the canvas pixel under the mouse stays fixed: `pan.x = mouse.x - (mouse.x - base.x - pan.x) / old_zoom * new_zoom - base.x`.
+- `was_painting` static tracks stroke continuity; `push_snapshot()` fires once on stroke start (not per pixel).
+- `base` = `ImGui::GetCursorScreenPos()` before `SetCursorScreenPos(origin)` — used as the fixed anchor for pan math.
+
+## Adding a new tool
+1. Add a comment in `app_state.h` `ToolsState` documenting the new index.
+2. Extend `names[]` and loop count in `tools_panel.cpp`.
+3. Add a handler branch (`if (tools.active_tool == N)`) in `canvas_panel.cpp` inside the `IsItemHovered` block.
+4. Add a keyboard shortcut in `main.cpp` if desired.

@@ -5,7 +5,7 @@ A pixel art editor built in C++.
 ## Stack
 - **Build**: CMake 3.20+, FetchContent
 - **Window/Input**: SDL3 (static)
-- **UI**: Dear ImGui — docking branch
+- **UI**: Dear ImGui — docking branch (v1.92+)
 - **Renderer**: OpenGL 3.3 core
 
 ## Build
@@ -17,10 +17,8 @@ cmake --build build
 ## Rules
 - **Always build after every code change** to verify it compiles before reporting done.
 - Run from `C:\Projects\pix-cells`.
-- Executable: `build\Debug\pix-cells.exe` (or `build\pix-cells.exe` on single-config generators).
+- Executable: `build\Debug\pix-cells.exe`
 
-## Project layout
-```
-src/        source files
-  main.cpp  entry point — SDL3 + ImGui init, main loop
-```
+## Architecture
+- `src/CLAUDE.md` — data model, file roles, pixel format, dirty-flag pattern
+- `src/panels/CLAUDE.md` — panel signatures, canvas_panel internals, how to add a tool
