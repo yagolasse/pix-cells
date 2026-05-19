@@ -78,7 +78,8 @@ void CanvasState::new_canvas(int w, int h) {
     Layer l; l.name = "Layer 1"; l.canvas = Canvas(w, h);
     layers.push_back(std::move(l));
     active_layer = 0;
-    pan = { 0.0f, 0.0f };
+    pan          = { 0.0f, 0.0f };
+    needs_center = true;
     undo_stack.clear();
     redo_stack.clear();
     composite.resize(w * h, 0x00000000);

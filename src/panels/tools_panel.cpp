@@ -17,17 +17,18 @@ void panels::DrawTools(ToolsState& state) {
     const float pad   = std::max(0.0f, (avail - BTN) * 0.5f);
 
     struct { const char* label; const char* tip; } tool_defs[] = {
-        { ICON_FA_PAINTBRUSH "##t0", "Brush  (B)"  },
-        { ICON_FA_ERASER     "##t1", "Eraser  (E)" },
-        { ICON_FA_FILL_DRIP  "##t2", "Fill  (F)"   },
-        { ICON_FA_PEN        "##t3", "Line  (L)"   },
-        { ICON_FA_SQUARE     "##t4", "Rect  (R)"   },
-        { ICON_FA_CIRCLE     "##t5", "Circle  (C)" },
+        { ICON_FA_PAINTBRUSH           "##t0", "Brush  (B)"  },
+        { ICON_FA_ERASER               "##t1", "Eraser  (E)" },
+        { ICON_FA_FILL_DRIP            "##t2", "Fill  (F)"   },
+        { ICON_FA_PEN                  "##t3", "Line  (L)"   },
+        { ICON_FA_SQUARE               "##t4", "Rect  (R)"   },
+        { ICON_FA_CIRCLE               "##t5", "Circle  (C)" },
+        { ICON_FA_HAND                 "##t6", "Move  (M)"   },
     };
 
     if (s_icon_font) ImGui::PushFont(s_icon_font);
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
         bool active = (state.active_tool == i);
         if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));

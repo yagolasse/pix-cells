@@ -123,6 +123,15 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
     ImGui::Begin("Canvas");
     ImGuiIO& io = ImGui::GetIO();
 
+    // Center canvas in the window on first render after creation
+    if (cs.needs_center) {
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        float  W     = cs.width()  * cs.zoom;
+        float  H     = cs.height() * cs.zoom;
+        cs.pan          = { (avail.x - W) * 0.5f, (avail.y - H) * 0.5f };
+        cs.needs_center = false;
+    }
+
     // Pan with middle-mouse drag
     if (ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Middle, 0.0f)) {
         cs.pan.x += io.MouseDelta.x;
@@ -199,6 +208,13 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
         }
     }
 
+    // Move tool — left-drag pans just like middle-mouse
+    if (tools.active_tool == 6 && ImGui::IsWindowHovered() &&
+        ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f)) {
+        cs.pan.x += io.MouseDelta.x;
+        cs.pan.y += io.MouseDelta.y;
+    }
+
     if (ImGui::IsItemHovered()) {
         if (io.MouseWheel != 0.0f) {
             float new_zoom = std::clamp(cs.zoom + io.MouseWheel, 1.0f, 32.0f);
@@ -227,7 +243,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
                 flood_fill(cs, px, py, color);
                 cs.rebuild_composite();
             }
-        } else if (tools.active_tool >= 3) {
+        } else if (tools.active_tool >= 3 && tools.active_tool <= 5) {
             // Shape tools — start drag on click
             was_painting = false;
             last_px = { -1.0f, -1.0f };
@@ -237,6 +253,9 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
                 shape_dragging = true;
                 Log("Shape start at (%d,%d) tool=%d", px, py, tools.active_tool);
             }
+        } else if (tools.active_tool == 6) {
+            was_painting = false;
+            last_px = { -1.0f, -1.0f };
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
             if (is_painting && !was_painting) {

@@ -15,9 +15,10 @@ struct CanvasState {
     std::vector<Layer>             layers;
     int                            active_layer = 0;
     std::vector<uint32_t>          composite;   // blended result for GPU upload
-    float                          zoom  = 8.0f;
-    ImVec2                         pan   = { 0.0f, 0.0f };
-    bool                           dirty = true;
+    float                          zoom         = 8.0f;
+    ImVec2                         pan          = { 0.0f, 0.0f };
+    bool                           dirty        = true;
+    bool                           needs_center = true;
 
     std::deque<std::vector<Layer>> undo_stack;  // full layer-stack snapshots
     std::deque<std::vector<Layer>> redo_stack;
@@ -37,7 +38,7 @@ struct CanvasState {
 };
 
 struct ToolsState {
-    int  active_tool  = 0; // 0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle
+    int  active_tool  = 0; // 0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle 6=Move
     int  brush_size   = 1;
     bool circle_brush = false; // circular stamp for Brush/Eraser
     bool shape_filled = false; // Rect/Circle: filled vs outline

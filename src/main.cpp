@@ -74,6 +74,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
             if (ImGui::IsKeyPressed(ImGuiKey_L)) { app.tools.active_tool = 3; Log("Tool: Line"); }
             if (ImGui::IsKeyPressed(ImGuiKey_R)) { app.tools.active_tool = 4; Log("Tool: Rect"); }
             if (ImGui::IsKeyPressed(ImGuiKey_C)) { app.tools.active_tool = 5; Log("Tool: Circle"); }
+            if (ImGui::IsKeyPressed(ImGuiKey_M)) { app.tools.active_tool = 6; Log("Tool: Move"); }
             if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
                 app.tools.brush_size = std::max(1, app.tools.brush_size - 1);
                 Log("Brush size: %d", app.tools.brush_size);
