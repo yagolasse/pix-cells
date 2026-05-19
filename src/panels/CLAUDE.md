@@ -6,7 +6,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 |-------|-----------|----------------|
 | `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&)` | GL texture, checkerboard, zoom-to-cursor, tool input |
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
-| `tools_panel` | `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill), brush size slider |
+| `tools_panel` | `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle), brush shape, filled toggle, brush size slider |
 | `palette_panel` | `DrawPalette(PaletteState&)` | Primary/secondary color pickers |
 | `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*)` → bool | File (New/Open/Save), Edit (Undo/Redo), SDL3 async file dialogs |
 | `log_panel` | `DrawLog()` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button |
@@ -21,5 +21,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 ## Adding a new tool
 1. Add a comment in `app_state.h` `ToolsState` documenting the new index.
 2. Extend `names[]` and loop count in `tools_panel.cpp`.
-3. Add a handler branch (`if (tools.active_tool == N)`) in `canvas_panel.cpp` inside the `IsItemHovered` block.
+3. Add a handler branch in `canvas_panel.cpp`:
+   - Brush-like tools: inside `IsItemHovered` in the `else` branch.
+   - Shape tools (click-drag): start inside `IsItemHovered`; commit in the `shape_dragging` block outside `IsItemHovered`. Add a preview in the `if (shape_dragging)` block.
 4. Add a keyboard shortcut in `main.cpp` if desired.

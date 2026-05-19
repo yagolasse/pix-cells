@@ -7,7 +7,8 @@ All runtime state lives in `AppState` (`app_state.h`):
 ```
 AppState
   CanvasState   canvas   — layers, composite buffer, zoom/pan, undo/redo stacks
-  ToolsState    tools    — active_tool (0=brush 1=eraser 2=fill), brush_size
+  ToolsState    tools    — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle),
+                           brush_size, circle_brush, shape_filled
   PaletteState  palette  — primary_color, secondary_color (ImVec4 RGBA 0-1)
 ```
 

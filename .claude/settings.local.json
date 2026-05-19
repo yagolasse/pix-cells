@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cmake *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\pix-cells\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(head *)",
+      "Bash(rtk cmake *)",
+      "Bash(rtk git *)",
+      "Bash(rtk ls *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\pix-cells\" -Recurse -Include \"*.cpp\", \"*.h\", \"*.md\")",
+      "Bash(cmake *)"
+    ]
+  }
+}

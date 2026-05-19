@@ -37,8 +37,10 @@ struct CanvasState {
 };
 
 struct ToolsState {
-    int active_tool = 0; // 0=brush  1=eraser  2=fill
-    int brush_size  = 1;
+    int  active_tool  = 0; // 0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle
+    int  brush_size   = 1;
+    bool circle_brush = false; // circular stamp for Brush/Eraser
+    bool shape_filled = false; // Rect/Circle: filled vs outline
 };
 
 struct PaletteState {
