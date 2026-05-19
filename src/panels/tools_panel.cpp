@@ -8,7 +8,6 @@ void panels::SetIconFont(ImFont* font) { s_icon_font = font; }
 
 void panels::DrawTools(ToolsState& state) {
     static bool s_symmetry = false;
-    static bool s_grid     = false;
     static bool s_onion    = false;
 
     ImGui::Begin("Tools");
@@ -42,9 +41,9 @@ void panels::DrawTools(ToolsState& state) {
     ImGui::Spacing();
 
     struct { bool* val; const char* label; const char* tip; } view_defs[] = {
-        { &s_symmetry, ICON_FA_LEFT_RIGHT "##sym",   "Symmetry"   },
-        { &s_grid,     ICON_FA_BORDER_ALL "##grid",  "Grid"       },
-        { &s_onion,    ICON_FA_CLONE      "##onion", "Onion skin" },
+        { &s_symmetry,        ICON_FA_LEFT_RIGHT "##sym",   "Symmetry"   },
+        { &state.show_grid,   ICON_FA_BORDER_ALL "##grid",  "Grid"       },
+        { &s_onion,           ICON_FA_CLONE      "##onion", "Onion skin" },
     };
 
     for (auto& v : view_defs) {

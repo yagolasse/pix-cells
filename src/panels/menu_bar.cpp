@@ -44,7 +44,8 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
         s_pending.active = false;
     }
 
-    static bool open_new_canvas = false;
+    static bool open_new_canvas        = false;
+    static bool open_canvas_settings   = false;
     bool keep_running = true;
 
     if (ImGui::BeginMainMenuBar()) {
@@ -72,9 +73,24 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
+            if (ImGui::MenuItem("Canvas Settings...")) open_canvas_settings = true;
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
+    }
+
+    // Canvas Settings popup
+    if (open_canvas_settings) {
+        ImGui::OpenPopup("Canvas Settings");
+        open_canvas_settings = false;
+    }
+    if (ImGui::BeginPopupModal("Canvas Settings", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::SliderFloat("Cell Size", &state.canvas.checker_size, 2.f, 64.f, "%.0f px");
+        ImGui::ColorEdit3("Light Color", (float*)&state.canvas.checker_color1);
+        ImGui::ColorEdit3("Dark Color",  (float*)&state.canvas.checker_color2);
+        if (ImGui::Button("Close")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
     }
 
     // New Canvas popup (must be outside BeginMainMenuBar scope)

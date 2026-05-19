@@ -146,11 +146,13 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
 
     // Checkerboard background — visible through transparent pixels
     {
-        float cell = 8.0f;
+        float cell = cs.checker_size;
+        ImU32 col1 = ImGui::ColorConvertFloat4ToU32(cs.checker_color1);
+        ImU32 col2 = ImGui::ColorConvertFloat4ToU32(cs.checker_color2);
         for (float cy = origin.y; cy < origin.y + H; cy += cell)
             for (float cx = origin.x; cx < origin.x + W; cx += cell) {
                 int   parity = (int)((cy - origin.y) / cell + (cx - origin.x) / cell) % 2;
-                ImU32 col    = parity ? IM_COL32(170,170,170,255) : IM_COL32(220,220,220,255);
+                ImU32 col    = parity ? col2 : col1;
                 dl->AddRectFilled({cx, cy},
                     {std::min(cx+cell, origin.x+W), std::min(cy+cell, origin.y+H)}, col);
             }
@@ -167,8 +169,8 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
     if (pio.DrawCallback_SetSamplerLinear)
         dl->AddCallback(pio.DrawCallback_SetSamplerLinear, nullptr);
 
-    // Pixel grid overlay (zoom >= 4x only)
-    if (cs.zoom >= 4.0f) {
+    // Pixel grid overlay (zoom >= 4x, only when enabled)
+    if (tools.show_grid && cs.zoom >= 4.0f) {
         ImU32 gcol = IM_COL32(80, 80, 80, 100);
         for (int x = 0; x <= cs.width(); x++) {
             float sx = origin.x + x * cs.zoom;

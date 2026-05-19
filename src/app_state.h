@@ -19,6 +19,9 @@ struct CanvasState {
     ImVec2                         pan          = { 0.0f, 0.0f };
     bool                           dirty        = true;
     bool                           needs_center = true;
+    float                          checker_size   = 8.0f;
+    ImVec4                         checker_color1 = { 220/255.f, 220/255.f, 220/255.f, 1.f };
+    ImVec4                         checker_color2 = { 170/255.f, 170/255.f, 170/255.f, 1.f };
 
     std::deque<std::vector<Layer>> undo_stack;  // full layer-stack snapshots
     std::deque<std::vector<Layer>> redo_stack;
@@ -42,6 +45,7 @@ struct ToolsState {
     int  brush_size   = 1;
     bool circle_brush = false; // circular stamp for Brush/Eraser
     bool shape_filled = false; // Rect/Circle: filled vs outline
+    bool show_grid    = false;
 };
 
 struct PaletteState {
