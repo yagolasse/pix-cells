@@ -67,5 +67,10 @@ add_executable(pix-cells
     src/panels/layers_panel.cpp
     src/panels/log_panel.cpp
 )
-target_include_directories(pix-cells PRIVATE src ${stb_SOURCE_DIR})
+target_include_directories(pix-cells PRIVATE src ${stb_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vendor/icons_font_awesome)
+
+add_custom_command(TARGET pix-cells POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/fonts $<TARGET_FILE_DIR:pix-cells>/fonts
+)
 target_link_libraries(pix-cells PRIVATE imgui_lib SDL3::SDL3-static OpenGL::GL)

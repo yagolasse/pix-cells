@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
+#include "IconsFontAwesome6.h"
 #include "workbench.h"
 #include "app_state.h"
 #include "panels/menu_bar.h"
@@ -36,6 +37,12 @@ int main(int /*argc*/, char* /*argv*/[]) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui::StyleColorsDark();
+
+    io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 15.0f);
+    {
+        static const ImWchar ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+        panels::SetIconFont(io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges));
+    }
 
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330 core");
