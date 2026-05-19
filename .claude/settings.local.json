@@ -10,7 +10,9 @@
       "Bash(rtk ls *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Projects\\\\pix-cells\" -Recurse -Include \"*.cpp\", \"*.h\", \"*.md\")",
       "Bash(cmake *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
