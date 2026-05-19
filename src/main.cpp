@@ -41,7 +41,9 @@ int main(int /*argc*/, char* /*argv*/[]) {
     io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 15.0f);
     {
         static const ImWchar ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-        panels::SetIconFont(io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges));
+        ImFont* icon_font = io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges);
+        panels::SetIconFont(icon_font);
+        panels::SetPaletteIconFont(icon_font);
     }
 
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);

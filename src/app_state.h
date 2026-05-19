@@ -46,6 +46,13 @@ struct ToolsState {
 struct PaletteState {
     ImVec4 primary_color   { 0.0f, 0.0f, 0.0f, 1.0f };
     ImVec4 secondary_color { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    std::vector<ImVec4> swatches;
+    int                 selected_swatch = -1;
+    std::string         palette_name    = "pico-8";
+    std::vector<ImVec4> recent_colors;  // most-recent first, capped at 8
+
+    PaletteState();
 };
 
 struct AppState {

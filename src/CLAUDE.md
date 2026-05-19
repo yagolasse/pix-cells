@@ -9,7 +9,9 @@ AppState
   CanvasState   canvas   — layers, composite buffer, zoom/pan, undo/redo stacks
   ToolsState    tools    — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle),
                            brush_size, circle_brush, shape_filled
-  PaletteState  palette  — primary_color, secondary_color (ImVec4 RGBA 0-1)
+  PaletteState  palette  — primary_color, secondary_color (ImVec4 RGBA 0-1),
+                           swatches (vector<ImVec4>), selected_swatch (int),
+                           palette_name (string), recent_colors (vector<ImVec4>, max 8)
 ```
 
 ### Pixel format
@@ -38,6 +40,7 @@ Key methods:
 |------|------|
 | `canvas.h` | `Canvas` struct: `width`, `height`, `pixels` (RGBA8 row-major); `set/get/fill/in_bounds` |
 | `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `AppState` |
+| `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations + `blend_over` (Porter-Duff) |
 | `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/[/] shortcuts |
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API) |

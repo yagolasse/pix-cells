@@ -57,6 +57,7 @@ FetchContent_MakeAvailable(stb)
 add_executable(pix-cells
     src/main.cpp
     src/workbench.cpp
+    src/app_state.cpp
     src/canvas_state.cpp
     src/log.cpp
     src/png_io.cpp
