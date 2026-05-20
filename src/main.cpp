@@ -265,8 +265,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
             }
         }
 
-        ImGuiID dock_id = BeginWorkbench();
-        EnsureDefaultLayout(dock_id);
+        BeginWorkbench();
 
         static bool show_log = false;
         if (!panels::DrawMenuBar(app, window, show_log))
