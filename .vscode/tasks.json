@@ -1,0 +1,100 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: Generate (Debug)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["-B", "build", "-DCMAKE_BUILD_TYPE=Debug"],
+            "windows": {
+                "args": ["-B", "build"]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "CMake: Generate (Release)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["-B", "build", "-DCMAKE_BUILD_TYPE=Release"],
+            "windows": {
+                "args": ["-B", "build"]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "CMake: Build (Debug)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "build", "--config", "Debug"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "CMake: Build (Release)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "build", "--config", "Release"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "CMake: Clean",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "build", "--target", "clean"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Rebuild (Debug)",
+            "dependsOrder": "sequence",
+            "dependsOn": ["CMake: Generate (Debug)", "CMake: Build (Debug)"],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
