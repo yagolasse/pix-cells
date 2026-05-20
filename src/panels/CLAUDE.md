@@ -4,7 +4,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 
 | Panel | Signature | Responsibility |
 |-------|-----------|----------------|
-| `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&, SelectionState&)` | GL texture, checkerboard, zoom-to-cursor, tool input, marching-ants selection overlay |
+| `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&, SelectionState&)` | GL texture, checkerboard, zoom-to-cursor, tool input, marching-ants overlay, floating selection move/scale, resize handles, layer-lock enforcement |
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
 | `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); context-sensitive options: brush size + shape toggle (Brush/Eraser), brush size only (Line) |
 | `palette_panel` | `SetPaletteIconFont(ImFont*)`, `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
@@ -18,7 +18,11 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 - **Zoom-to-cursor**: on scroll, adjusts `cs.pan` so the canvas pixel under the mouse stays fixed: `pan.x = mouse.x - (mouse.x - base.x - pan.x) / old_zoom * new_zoom - base.x`.
 - `was_painting` static tracks stroke continuity; `push_snapshot()` fires once on stroke start (not per pixel).
 - `base` = `ImGui::GetCursorScreenPos()` before `SetCursorScreenPos(origin)` — used as the fixed anchor for pan math.
-- **Selection overlay**: when `sel.active`, two `AddRect` calls (alternating white/black at 8 Hz via `ImGui::GetTime()`) draw marching ants over the selected region. Tool 9 (RectSelect) uses the same `shape_dragging` pattern as shape tools but commits to `SelectionState` bounds without calling `rebuild_composite()`.
+- **Layer lock**: all pixel-write paths (brush, eraser, fill, shapes, cut/paste/delete) check `cs.active_layer_locked()` and log "Layer locked" without modifying the canvas.
+- **Selection overlay**: when `sel.active`, two `AddRect` calls (alternating white/black at 8 Hz via `ImGui::GetTime()`) draw marching ants over the selected region.
+- **Floating selection**: clicking inside an active selection with tool 9 calls `lift_selection()` (snapshot + erase pixels + store in `sel.float_pixels`); the lifted pixels render as `AddRectFilled` quads over the composite while floating. Mouse release keeps the float in place (it stays "in the air"); `commit_floating()` is called on tool switch or when the user clicks outside the float rect. Escape undoes the lift via `app.canvas.undo()` and clears `sel.active`.
+- **Resize handles**: 8 `AddRectFilled` handles (TL/TM/TR/RM/BR/BM/BL/LM) drawn around `sel` when tool 9 is active. Dragging a handle resizes `sel.x0/y0/x1/y1`; on release, if floating, `nn_scale` (nearest-neighbour) scales `sel.float_pixels` to the new dimensions.
+- **Tool 9 click priority**: (1) handle hit → handle drag, (2) inside floating rect → re-drag float, (3) inside sel rect + unlocked → lift, (4) elsewhere → new selection drag (clears `sel.active`).
 
 ## Icon font
 `tools_panel.cpp`, `palette_panel.cpp`, `layers_panel.cpp`, and `timeline_panel.cpp` each hold a `static ImFont* s_icon_font`. `main.cpp` loads `fonts/fa-solid-900.ttf` and passes the pointer to `panels::SetIconFont()`, `panels::SetPaletteIconFont()`, `panels::SetLayersIconFont()`, and `panels::SetTimelineIconFont()` before the main loop. Tooltips inside a `PushFont(s_icon_font)` block must wrap `SetTooltip` with `PushFont(nullptr)` / `PopFont()` to restore the default text font. Wrap icon-only button labels in `PushFont(s_icon_font)` / `PopFont()`. Icon defines (`ICON_FA_*`) come from `vendor/icons_font_awesome/IconsFontAwesome6.h`. To add an icon to a button label use compile-time string concatenation: `ICON_FA_PENCIL "##id"`.

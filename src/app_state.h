@@ -40,6 +40,10 @@ struct CanvasState {
     std::vector<Layer>&       active_layers()       { return frames[active_frame].layers; }
     const std::vector<Layer>& active_layers() const { return frames[active_frame].layers; }
 
+    bool active_layer_locked() const {
+        return frames[active_frame].layers[active_layer].locked;
+    }
+
     CanvasState();
 
     int     width()  const;
@@ -65,6 +69,14 @@ struct SelectionState {
     bool active      = false;
     int  x0 = 0, y0 = 0;        // top-left (canvas pixels, normalized)
     int  x1 = 0, y1 = 0;        // bottom-right (inclusive)
+
+    // Floating selection (pixels lifted from canvas, following the mouse)
+    bool floating        = false;
+    std::vector<uint32_t> float_pixels;
+    int  float_w = 0, float_h = 0;
+    int  float_x = 0, float_y = 0;
+    int  float_orig_x = 0, float_orig_y = 0;
+
     std::vector<uint32_t> clipboard;
     int  clipboard_w  = 0, clipboard_h  = 0;
     int  clipboard_ox = 0, clipboard_oy = 0; // paste origin

@@ -13,6 +13,7 @@ AppState
                              swatches (vector<ImVec4>), selected_swatch (int),
                              palette_name (string), recent_colors (vector<ImVec4>, max 8)
   SelectionState selection — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive),
+                             floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer),
                              clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
 
 Layer (in Frame.layers)
@@ -34,6 +35,7 @@ Key methods:
 | Method | What it does |
 |--------|-------------|
 | `active()` | Returns `Canvas&` for `frames[active_frame].layers[active_layer]` |
+| `active_layer_locked()` | Returns `bool` — true if the active layer has `locked=true`; use to guard all pixel-write operations |
 | `active_layers()` | Returns `vector<Layer>&` for the active frame's layer stack |
 | `rebuild_composite()` | Composites active frame's visible layers → `composite` applying per-layer opacity and blend mode (Normal/Multiply/Screen/Overlay/Add); sets `dirty=true` |
 | `push_snapshot()` | Copies full `frames` vector onto `undo_stack`, clears `redo_stack` |
@@ -52,7 +54,7 @@ Key methods:
 | `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `AppState` |
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations + `blend_pixel` (Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity) |
-| `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/C/M/S/[/] tool shortcuts; Ctrl+A select-all, Ctrl+C/X copy/cut, Ctrl+V paste, Delete/Backspace erase selection, Escape deselect |
+| `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/U/M/S/[/] tool shortcuts (U=Circle); Ctrl+A select-all, Ctrl+C/X copy/cut (locked layer blocked), Ctrl+V paste (locked layer blocked), Delete/Backspace erase selection (locked layer blocked), Escape deselect/cancel-float |
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API) |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
 | `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image; `png_io::save_sprite_sheet(CanvasState&, path, SheetLayout, cols)` — composites each frame and blits into a single PNG |
