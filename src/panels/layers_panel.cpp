@@ -54,8 +54,11 @@ void panels::DrawLayers(CanvasState& cs) {
         Log("Layer added: \"%s\"", layers[cs.active_layer].name.c_str());
         cs.rebuild_composite();
     }
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered()) {
+        if (s_icon_font) ImGui::PopFont();
         ImGui::SetTooltip("New layer");
+        if (s_icon_font) ImGui::PushFont(s_icon_font);
+    }
 
     ImGui::SameLine(0, spacing);
     if (ImGui::Button(ICON_FA_COPY "##ldup", {btn_sz, btn_sz})) {
@@ -67,8 +70,11 @@ void panels::DrawLayers(CanvasState& cs) {
         Log("Layer duplicated: \"%s\"", layers[cs.active_layer].name.c_str());
         cs.rebuild_composite();
     }
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered()) {
+        if (s_icon_font) ImGui::PopFont();
         ImGui::SetTooltip("Duplicate layer");
+        if (s_icon_font) ImGui::PushFont(s_icon_font);
+    }
 
     ImGui::SameLine(0, spacing);
     ImGui::BeginDisabled((int)layers.size() <= 1);
@@ -79,8 +85,11 @@ void panels::DrawLayers(CanvasState& cs) {
         cs.active_layer = std::min(cs.active_layer, (int)layers.size() - 1);
         cs.rebuild_composite();
     }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        if (s_icon_font) ImGui::PopFont();
         ImGui::SetTooltip("Delete layer");
+        if (s_icon_font) ImGui::PushFont(s_icon_font);
+    }
     ImGui::EndDisabled();
 
     if (s_icon_font)
@@ -107,25 +116,26 @@ void panels::DrawLayers(CanvasState& cs) {
             ImGui::PushFont(s_icon_font);
 
         // Eye icon (transparent button, dimmed when hidden)
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4.0f);
         ImGui::PushStyleColor(ImGuiCol_Text, layer.visible ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : dim_col);
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.15f));
-        if (ImGui::Button(layer.visible ? ICON_FA_EYE "##eye" : ICON_FA_EYE_SLASH "##eye", {18, 18})) {
+        if (ImGui::Button(layer.visible ? ICON_FA_EYE "##eye" : ICON_FA_EYE_SLASH "##eye", {20, 20})) {
             layer.visible = !layer.visible;
             Log("Layer \"%s\" %s", layer.name.c_str(), layer.visible ? "shown" : "hidden");
             cs.rebuild_composite();
         }
         ImGui::PopStyleColor(4);
 
-        ImGui::SameLine(0, 3);
+        ImGui::SameLine(0, 5);
 
         // Lock icon (transparent button, dimmed when unlocked)
         ImGui::PushStyleColor(ImGuiCol_Text, layer.locked ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : dim_col);
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.15f));
-        if (ImGui::Button(layer.locked ? ICON_FA_LOCK "##lck" : ICON_FA_LOCK_OPEN "##lck", {18, 18})) {
+        if (ImGui::Button(layer.locked ? ICON_FA_LOCK "##lck" : ICON_FA_LOCK_OPEN "##lck", {20, 20})) {
             layer.locked = !layer.locked;
             Log("Layer \"%s\" %s", layer.name.c_str(), layer.locked ? "locked" : "unlocked");
         }

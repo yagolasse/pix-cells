@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: pix-cells-linux
+            binary: build/pix-cells
+            archive: pix-cells-linux.tar.gz
+          - os: macos-latest
+            artifact: pix-cells-macos
+            binary: build/pix-cells
+            archive: pix-cells-macos.tar.gz
+          - os: windows-latest
+            artifact: pix-cells-windows
+            binary: build/Release/pix-cells.exe
+            archive: pix-cells-windows.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libgles2-mesa-dev \
+            libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libxext-dev \
+            libwayland-dev libxkbcommon-dev \
+            libasound2-dev libpulse-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir dist
+          cp ${{ matrix.binary }} dist/
+          cp -r fonts dist/
+          tar -czf ${{ matrix.archive }} -C dist .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist
+          Copy-Item ${{ matrix.binary }} dist\
+          Copy-Item -Recurse fonts dist\fonts
+          Compress-Archive -Path dist\* -DestinationPath ${{ matrix.archive }}
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.archive }}

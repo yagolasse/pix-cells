@@ -7,6 +7,8 @@
 #include <cstdio>
 
 static ImFont* s_timeline_icon_font = nullptr;
+static bool    s_playing            = false;
+static double  s_next_frame_at      = 0.0;
 
 void panels::SetTimelineIconFont(ImFont* font) {
     s_timeline_icon_font = font;
@@ -89,7 +91,70 @@ void panels::DrawTimeline(CanvasState& cs) {
     if (!cs.frames.empty() && cs.active_frame >= (int)cs.frames.size())
         cs.active_frame = (int)cs.frames.size() - 1;
 
+    // Advance playback
+    if (s_playing) {
+        if ((int)cs.frames.size() <= 1) {
+            s_playing = false;
+        } else {
+            double now = ImGui::GetTime();
+            if (now >= s_next_frame_at) {
+                cs.active_frame = (cs.active_frame + 1) % (int)cs.frames.size();
+                cs.rebuild_composite();
+                s_next_frame_at = now + 1.0 / (double)cs.fps;
+            }
+        }
+    }
+
     ImGui::Begin("Timeline");
+
+    // Transport controls
+    const float TBTN = 22.0f;
+    if (s_timeline_icon_font)
+        ImGui::PushFont(s_timeline_icon_font);
+
+    if (ImGui::Button(ICON_FA_BACKWARD_STEP "##prev", {TBTN, TBTN})) {
+        s_playing = false;
+        cs.active_frame = (cs.active_frame - 1 + (int)cs.frames.size()) % (int)cs.frames.size();
+        cs.rebuild_composite();
+    }
+    if (ImGui::IsItemHovered()) {
+        if (s_timeline_icon_font) ImGui::PopFont();
+        ImGui::SetTooltip("Previous frame");
+        if (s_timeline_icon_font) ImGui::PushFont(s_timeline_icon_font);
+    }
+    ImGui::SameLine(0, 4);
+
+    if (ImGui::Button(s_playing ? ICON_FA_PAUSE "##play" : ICON_FA_PLAY "##play", {TBTN, TBTN})) {
+        s_playing = !s_playing;
+        if (s_playing) {
+            if ((int)cs.frames.size() <= 1)
+                s_playing = false;
+            else
+                s_next_frame_at = ImGui::GetTime() + 1.0 / (double)cs.fps;
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        if (s_timeline_icon_font) ImGui::PopFont();
+        ImGui::SetTooltip(s_playing ? "Pause" : "Play");
+        if (s_timeline_icon_font) ImGui::PushFont(s_timeline_icon_font);
+    }
+    ImGui::SameLine(0, 4);
+
+    if (ImGui::Button(ICON_FA_FORWARD_STEP "##next", {TBTN, TBTN})) {
+        s_playing = false;
+        cs.active_frame = (cs.active_frame + 1) % (int)cs.frames.size();
+        cs.rebuild_composite();
+    }
+    if (ImGui::IsItemHovered()) {
+        if (s_timeline_icon_font) ImGui::PopFont();
+        ImGui::SetTooltip("Next frame");
+        if (s_timeline_icon_font) ImGui::PushFont(s_timeline_icon_font);
+    }
+
+    if (s_timeline_icon_font)
+        ImGui::PopFont();
+
+    ImGui::SameLine(0, 8);
 
     // Status bar: FPS and frame count
     ImGui::Text("FPS: %d  |  Frames: %d", (int)cs.fps, (int)cs.frames.size());

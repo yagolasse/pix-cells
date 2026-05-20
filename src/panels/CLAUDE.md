@@ -6,10 +6,10 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 |-------|-----------|----------------|
 | `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&)` | GL texture, checkerboard, zoom-to-cursor, tool input |
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
-| `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); brush size slider |
+| `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); context-sensitive options: brush size + shape toggle (Brush/Eraser), brush size only (Line) |
 | `palette_panel` | `SetPaletteIconFont(ImFont*)`, `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
 | `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*, bool& show_log)` → bool | File (New/Open/Save as PIXC, Export > PNG / Sprite Sheet), Edit (Undo/Redo/Canvas Settings), View (Log toggle), SDL3 async file dialogs; detects PIXC vs PNG on open by magic bytes |
-| `timeline_panel` | `SetTimelineIconFont(ImFont*)`, `DrawTimeline(CanvasState&)` | Transport buttons (first/play/last), playhead slider, horizontally-scrolling frame strip of 68×68 cards (checkerboard bg, frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
+| `timeline_panel` | `SetTimelineIconFont(ImFont*)`, `DrawTimeline(CanvasState&)` | Transport buttons (|< prev, play/pause, >| next) advance frames at `cs.fps`; playhead slider; horizontally-scrolling frame strip of 56×64 cards (frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
 | `log_panel` | `DrawLog(bool* p_open)` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button; `p_open` wires the window close button to the View > Log toggle |
 
 ## canvas_panel internals
@@ -24,8 +24,9 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 
 ## Adding a new tool
 1. Add a comment in `app_state.h` `ToolsState` documenting the new index.
-2. Add an entry to `tool_defs[]` in `tools_panel.cpp` with the FA icon and tooltip.
+2. Add an entry to `tool_defs[]` in `tools_panel.cpp` with the FA icon and tooltip. Update loop bound.
 3. Add a handler branch in `canvas_panel.cpp`:
    - Brush-like tools: inside `IsItemHovered` in the `else` branch.
-   - Shape tools (click-drag): start inside `IsItemHovered`; commit in the `shape_dragging` block outside `IsItemHovered`. Add a preview in the `if (shape_dragging)` block.
-4. Add a keyboard shortcut in `main.cpp` if desired.
+   - Shape tools (click-drag): extend the `active_tool >= 3 && active_tool <= 7` range; start inside `IsItemHovered`; commit in the `shape_dragging` switch; add preview in `if (shape_dragging)`.
+4. Update `active_tool == 8` (Move) checks in `canvas_panel.cpp` if inserting before Move.
+5. Add a keyboard shortcut in `main.cpp` if desired.
