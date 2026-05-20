@@ -3,6 +3,6 @@
 #include "imgui.h"
 
 namespace panels {
-    void SetLayersIconFont(ImFont* font);
-    void DrawLayers(CanvasState& cs);
-}
+void SetLayersIconFont(ImFont* font);
+void DrawLayers(CanvasState& cs);
+} // namespace panels

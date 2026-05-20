@@ -14,7 +14,9 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(clang-format --version)",
+      "Bash(xargs clang-format -i)"
     ]
   }
 }

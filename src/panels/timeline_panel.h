@@ -2,6 +2,6 @@
 #include "imgui.h"
 
 namespace panels {
-    void SetTimelineIconFont(ImFont* font);
-    void DrawTimeline();
-}
+void SetTimelineIconFont(ImFont* font);
+void DrawTimeline();
+} // namespace panels

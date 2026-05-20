@@ -5,7 +5,8 @@
 void panels::DrawLog(bool* p_open) {
     ImGui::Begin("Log", p_open, ImGuiWindowFlags_NoTitleBar);
 
-    if (ImGui::Button("Clear")) LogClear();
+    if (ImGui::Button("Clear"))
+        LogClear();
     ImGui::Separator();
 
     ImGui::BeginChild("##entries", ImVec2(0, 0), ImGuiChildFlags_None);

@@ -3,6 +3,6 @@
 #include "app_state.h"
 
 namespace panels {
-    // Returns false when the user chooses File > Quit.
-    bool DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log);
-}
+// Returns false when the user chooses File > Quit.
+bool DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log);
+} // namespace panels

@@ -5,23 +5,26 @@
 #include <cstring>
 
 static ImFont* s_icon_font = nullptr;
-void panels::SetTimelineIconFont(ImFont* font) { s_icon_font = font; }
+void panels::SetTimelineIconFont(ImFont* font) {
+    s_icon_font = font;
+}
 
-static int  s_active_frame = 2;
-static int  s_frame_count  = 8;
-static int  s_fps          = 12;
-static int  s_frame_ms[32] = {100,100,100,100,100,100,100,100};
+static int s_active_frame = 2;
+static int s_frame_count  = 8;
+static int s_fps          = 12;
+static int s_frame_ms[32] = {100, 100, 100, 100, 100, 100, 100, 100};
 
-static const ImU32 k_checker_a = IM_COL32(58,  52, 44, 255); // #3a342c
-static const ImU32 k_checker_b = IM_COL32(42,  37, 32, 255); // #2a2520
-static const ImU32 k_badge_bg  = IM_COL32(0,    0,  0, 140); // rgba(0,0,0,0.55)
+static const ImU32 k_checker_a = IM_COL32(58, 52, 44, 255); // #3a342c
+static const ImU32 k_checker_b = IM_COL32(42, 37, 32, 255); // #2a2520
+static const ImU32 k_badge_bg  = IM_COL32(0, 0, 0, 140);    // rgba(0,0,0,0.55)
 
 static void draw_frame_card(ImDrawList* dl, int idx, bool active) {
     const float SZ = 68.0f;
     char id[16];
     snprintf(id, sizeof(id), "##fc%d", idx);
     ImGui::InvisibleButton(id, {SZ, SZ});
-    if (ImGui::IsItemClicked()) s_active_frame = idx;
+    if (ImGui::IsItemClicked())
+        s_active_frame = idx;
 
     ImVec2 p  = ImGui::GetItemRectMin();
     ImVec2 p2 = {p.x + SZ, p.y + SZ};
@@ -34,12 +37,14 @@ static void draw_frame_card(ImDrawList* dl, int idx, bool active) {
     const float cs = 17.0f;
     for (int cy = 0; cy < 4; cy++) {
         for (int cx = 0; cx < 4; cx++) {
-            ImU32 cc = ((cx + cy) % 2 == 0) ? k_checker_a : k_checker_b;
+            ImU32 cc   = ((cx + cy) % 2 == 0) ? k_checker_a : k_checker_b;
             ImVec2 cp  = {p.x + cx * cs, p.y + cy * cs};
             ImVec2 cp2 = {cp.x + cs, cp.y + cs};
             // Clip to card bounds
-            if (cp2.x > p2.x) cp2.x = p2.x;
-            if (cp2.y > p2.y) cp2.y = p2.y;
+            if (cp2.x > p2.x)
+                cp2.x = p2.x;
+            if (cp2.y > p2.y)
+                cp2.y = p2.y;
             dl->AddRectFilled(cp, cp2, cc);
         }
     }
@@ -85,36 +90,57 @@ static void draw_add_card(ImDrawList* dl) {
 
     // Centered "+" text
     const char* plus = "+";
-    ImVec2 ts = ImGui::CalcTextSize(plus);
-    ImVec2 tc = {p.x + (SZ - ts.x) * 0.5f, p.y + (SZ - ts.y) * 0.5f};
+    ImVec2 ts        = ImGui::CalcTextSize(plus);
+    ImVec2 tc        = {p.x + (SZ - ts.x) * 0.5f, p.y + (SZ - ts.y) * 0.5f};
     dl->AddText(tc, ImGui::GetColorU32(ImGuiCol_TextDisabled), plus);
 }
 
 void panels::DrawTimeline() {
     ImGui::Begin("Timeline");
 
-    ImDrawList* dl    = ImGui::GetWindowDrawList();
-    const float avail = ImGui::GetContentRegionAvail().x;
+    ImDrawList* dl     = ImGui::GetWindowDrawList();
+    const float avail  = ImGui::GetContentRegionAvail().x;
     const float btn_sz = 22.0f;
-    const float sp    = ImGui::GetStyle().ItemSpacing.x;
+    const float sp     = ImGui::GetStyle().ItemSpacing.x;
 
     // ── Transport buttons ──────────────────────────────────────────────
-    if (s_icon_font) ImGui::PushFont(s_icon_font);
-    if (ImGui::Button(ICON_FA_BACKWARD_STEP "##tfirst", {btn_sz, btn_sz})) s_active_frame = 0;
-    if (s_icon_font) { ImGui::PopFont(); }
-    if (ImGui::IsItemHovered()) { ImGui::PushFont(nullptr); ImGui::SetTooltip("First"); ImGui::PopFont(); }
+    if (s_icon_font)
+        ImGui::PushFont(s_icon_font);
+    if (ImGui::Button(ICON_FA_BACKWARD_STEP "##tfirst", {btn_sz, btn_sz}))
+        s_active_frame = 0;
+    if (s_icon_font) {
+        ImGui::PopFont();
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::PushFont(nullptr);
+        ImGui::SetTooltip("First");
+        ImGui::PopFont();
+    }
 
     ImGui::SameLine(0, sp);
-    if (s_icon_font) ImGui::PushFont(s_icon_font);
+    if (s_icon_font)
+        ImGui::PushFont(s_icon_font);
     ImGui::Button(ICON_FA_PLAY "##tplay", {btn_sz, btn_sz});
-    if (s_icon_font) ImGui::PopFont();
-    if (ImGui::IsItemHovered()) { ImGui::PushFont(nullptr); ImGui::SetTooltip("Play"); ImGui::PopFont(); }
+    if (s_icon_font)
+        ImGui::PopFont();
+    if (ImGui::IsItemHovered()) {
+        ImGui::PushFont(nullptr);
+        ImGui::SetTooltip("Play");
+        ImGui::PopFont();
+    }
 
     ImGui::SameLine(0, sp);
-    if (s_icon_font) ImGui::PushFont(s_icon_font);
-    if (ImGui::Button(ICON_FA_FORWARD_STEP "##tlast", {btn_sz, btn_sz})) s_active_frame = s_frame_count - 1;
-    if (s_icon_font) ImGui::PopFont();
-    if (ImGui::IsItemHovered()) { ImGui::PushFont(nullptr); ImGui::SetTooltip("Last"); ImGui::PopFont(); }
+    if (s_icon_font)
+        ImGui::PushFont(s_icon_font);
+    if (ImGui::Button(ICON_FA_FORWARD_STEP "##tlast", {btn_sz, btn_sz}))
+        s_active_frame = s_frame_count - 1;
+    if (s_icon_font)
+        ImGui::PopFont();
+    if (ImGui::IsItemHovered()) {
+        ImGui::PushFont(nullptr);
+        ImGui::SetTooltip("Last");
+        ImGui::PopFont();
+    }
 
     ImGui::SameLine(0, sp * 2);
     ImGui::TextDisabled("%d frames \xc2\xb7 %d fps", s_frame_count, s_fps);

@@ -7,8 +7,8 @@
 // --- SDL3 async file dialog helpers ---
 
 struct PendingIO {
-    bool        active  = false;
-    bool        is_save = false;
+    bool active  = false;
+    bool is_save = false;
     std::string path;
 };
 
@@ -46,32 +46,35 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log) {
 
     static bool open_new_canvas      = false;
     static bool open_canvas_settings = false;
-    bool keep_running = true;
+    bool keep_running                = true;
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New",  "Ctrl+N")) open_new_canvas = true;
+            if (ImGui::MenuItem("New", "Ctrl+N"))
+                open_new_canvas = true;
 
-            static SDL_DialogFileFilter png_filter[] = { {"PNG Images", "png"} };
+            static SDL_DialogFileFilter png_filter[] = {{"PNG Images", "png"}};
             if (ImGui::MenuItem("Open", "Ctrl+O")) {
                 s_pending.is_save = false;
-                SDL_ShowOpenFileDialog(file_cb, &s_pending, window,
-                                      png_filter, 1, nullptr, false);
+                SDL_ShowOpenFileDialog(file_cb, &s_pending, window, png_filter, 1, nullptr, false);
             }
             if (ImGui::MenuItem("Save", "Ctrl+S")) {
                 s_pending.is_save = true;
-                SDL_ShowSaveFileDialog(file_cb, &s_pending, window,
-                                      png_filter, 1, nullptr);
+                SDL_ShowSaveFileDialog(file_cb, &s_pending, window, png_filter, 1, nullptr);
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Quit", "Alt+F4")) keep_running = false;
+            if (ImGui::MenuItem("Quit", "Alt+F4"))
+                keep_running = false;
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Undo", "Ctrl+Z")) state.canvas.undo();
-            if (ImGui::MenuItem("Redo", "Ctrl+Y")) state.canvas.redo();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z"))
+                state.canvas.undo();
+            if (ImGui::MenuItem("Redo", "Ctrl+Y"))
+                state.canvas.redo();
             ImGui::Separator();
-            if (ImGui::MenuItem("Canvas Settings...")) open_canvas_settings = true;
+            if (ImGui::MenuItem("Canvas Settings..."))
+                open_canvas_settings = true;
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
@@ -86,12 +89,12 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log) {
         ImGui::OpenPopup("Canvas Settings");
         open_canvas_settings = false;
     }
-    if (ImGui::BeginPopupModal("Canvas Settings", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Canvas Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::SliderFloat("Cell Size", &state.canvas.checker_size, 2.f, 64.f, "%.0f px");
         ImGui::ColorEdit3("Light Color", (float*)&state.canvas.checker_color1);
-        ImGui::ColorEdit3("Dark Color",  (float*)&state.canvas.checker_color2);
-        if (ImGui::Button("Close")) ImGui::CloseCurrentPopup();
+        ImGui::ColorEdit3("Dark Color", (float*)&state.canvas.checker_color2);
+        if (ImGui::Button("Close"))
+            ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
 
@@ -100,10 +103,9 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log) {
         ImGui::OpenPopup("New Canvas");
         open_new_canvas = false;
     }
-    if (ImGui::BeginPopupModal("New Canvas", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("New Canvas", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         static int w = 64, h = 64;
-        ImGui::InputInt("Width",  &w, 1, 16);
+        ImGui::InputInt("Width", &w, 1, 16);
         ImGui::InputInt("Height", &h, 1, 16);
         w = std::clamp(w, 1, 4096);
         h = std::clamp(h, 1, 4096);
@@ -112,7 +114,8 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        if (ImGui::Button("Cancel"))
+            ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
 

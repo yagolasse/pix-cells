@@ -23,11 +23,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    SDL_Window* window = SDL_CreateWindow(
-        "pix-cells",
-        1280, 720,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
-    );
+    SDL_Window* window = SDL_CreateWindow("pix-cells", 1280, 720,
+                                          SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1);
@@ -43,50 +40,50 @@ int main(int /*argc*/, char* /*argv*/[]) {
     {
         ImVec4* c = ImGui::GetStyle().Colors;
         // Base surfaces
-        c[ImGuiCol_WindowBg]          = ImVec4(0.133f, 0.122f, 0.106f, 1.00f); // #221f1b
-        c[ImGuiCol_ChildBg]           = ImVec4(0.082f, 0.075f, 0.059f, 1.00f); // #15130f
-        c[ImGuiCol_PopupBg]           = ImVec4(0.165f, 0.149f, 0.125f, 1.00f); // #2a2620
-        c[ImGuiCol_TitleBg]           = ImVec4(0.165f, 0.149f, 0.125f, 1.00f); // #2a2620
-        c[ImGuiCol_TitleBgActive]     = ImVec4(0.208f, 0.184f, 0.145f, 1.00f); // #352f25
-        c[ImGuiCol_TitleBgCollapsed]  = ImVec4(0.165f, 0.149f, 0.125f, 1.00f);
-        c[ImGuiCol_MenuBarBg]         = ImVec4(0.149f, 0.133f, 0.110f, 1.00f); // #26221c
+        c[ImGuiCol_WindowBg]         = ImVec4(0.133f, 0.122f, 0.106f, 1.00f); // #221f1b
+        c[ImGuiCol_ChildBg]          = ImVec4(0.082f, 0.075f, 0.059f, 1.00f); // #15130f
+        c[ImGuiCol_PopupBg]          = ImVec4(0.165f, 0.149f, 0.125f, 1.00f); // #2a2620
+        c[ImGuiCol_TitleBg]          = ImVec4(0.165f, 0.149f, 0.125f, 1.00f); // #2a2620
+        c[ImGuiCol_TitleBgActive]    = ImVec4(0.208f, 0.184f, 0.145f, 1.00f); // #352f25
+        c[ImGuiCol_TitleBgCollapsed] = ImVec4(0.165f, 0.149f, 0.125f, 1.00f);
+        c[ImGuiCol_MenuBarBg]        = ImVec4(0.149f, 0.133f, 0.110f, 1.00f); // #26221c
         // Text
-        c[ImGuiCol_Text]              = ImVec4(0.941f, 0.910f, 0.839f, 1.00f); // #f0e8d6
-        c[ImGuiCol_TextDisabled]      = ImVec4(0.353f, 0.318f, 0.271f, 1.00f); // #5a5145
+        c[ImGuiCol_Text]         = ImVec4(0.941f, 0.910f, 0.839f, 1.00f); // #f0e8d6
+        c[ImGuiCol_TextDisabled] = ImVec4(0.353f, 0.318f, 0.271f, 1.00f); // #5a5145
         // Frames / inputs
-        c[ImGuiCol_FrameBg]           = ImVec4(0.094f, 0.086f, 0.071f, 1.00f); // #181612
-        c[ImGuiCol_FrameBgHovered]    = ImVec4(0.122f, 0.110f, 0.090f, 1.00f); // #1f1c17
-        c[ImGuiCol_FrameBgActive]     = ImVec4(0.122f, 0.110f, 0.090f, 1.00f);
+        c[ImGuiCol_FrameBg]        = ImVec4(0.094f, 0.086f, 0.071f, 1.00f); // #181612
+        c[ImGuiCol_FrameBgHovered] = ImVec4(0.122f, 0.110f, 0.090f, 1.00f); // #1f1c17
+        c[ImGuiCol_FrameBgActive]  = ImVec4(0.122f, 0.110f, 0.090f, 1.00f);
         // Borders
-        c[ImGuiCol_Border]            = ImVec4(0.549f, 0.486f, 0.392f, 0.28f);
-        c[ImGuiCol_BorderShadow]      = ImVec4(0.000f, 0.000f, 0.000f, 0.00f);
-        c[ImGuiCol_Separator]         = ImVec4(0.549f, 0.486f, 0.392f, 0.20f);
-        c[ImGuiCol_SeparatorHovered]  = ImVec4(0.549f, 0.486f, 0.392f, 0.40f);
-        c[ImGuiCol_SeparatorActive]   = ImVec4(0.549f, 0.486f, 0.392f, 0.60f);
+        c[ImGuiCol_Border]           = ImVec4(0.549f, 0.486f, 0.392f, 0.28f);
+        c[ImGuiCol_BorderShadow]     = ImVec4(0.000f, 0.000f, 0.000f, 0.00f);
+        c[ImGuiCol_Separator]        = ImVec4(0.549f, 0.486f, 0.392f, 0.20f);
+        c[ImGuiCol_SeparatorHovered] = ImVec4(0.549f, 0.486f, 0.392f, 0.40f);
+        c[ImGuiCol_SeparatorActive]  = ImVec4(0.549f, 0.486f, 0.392f, 0.60f);
         // Scrollbar
-        c[ImGuiCol_ScrollbarBg]       = ImVec4(0.000f, 0.000f, 0.000f, 0.35f);
-        c[ImGuiCol_ScrollbarGrab]     = ImVec4(0.290f, 0.267f, 0.227f, 1.00f); // #4a443a
+        c[ImGuiCol_ScrollbarBg]          = ImVec4(0.000f, 0.000f, 0.000f, 0.35f);
+        c[ImGuiCol_ScrollbarGrab]        = ImVec4(0.290f, 0.267f, 0.227f, 1.00f); // #4a443a
         c[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.353f, 0.325f, 0.275f, 1.00f);
         c[ImGuiCol_ScrollbarGrabActive]  = ImVec4(0.420f, 0.388f, 0.330f, 1.00f);
         // Accent: #d4a04a = (0.831, 0.627, 0.290)
-        c[ImGuiCol_Header]            = ImVec4(0.831f, 0.627f, 0.290f, 0.30f);
-        c[ImGuiCol_HeaderHovered]     = ImVec4(0.831f, 0.627f, 0.290f, 0.55f);
-        c[ImGuiCol_HeaderActive]      = ImVec4(0.831f, 0.627f, 0.290f, 0.92f);
-        c[ImGuiCol_Button]            = ImVec4(0.831f, 0.627f, 0.290f, 0.15f);
-        c[ImGuiCol_ButtonHovered]     = ImVec4(0.831f, 0.627f, 0.290f, 0.35f);
-        c[ImGuiCol_ButtonActive]      = ImVec4(0.831f, 0.627f, 0.290f, 0.65f);
-        c[ImGuiCol_CheckMark]         = ImVec4(0.831f, 0.627f, 0.290f, 1.00f);
-        c[ImGuiCol_SliderGrab]        = ImVec4(0.831f, 0.627f, 0.290f, 1.00f);
-        c[ImGuiCol_SliderGrabActive]  = ImVec4(0.900f, 0.720f, 0.420f, 1.00f);
-        c[ImGuiCol_DockingPreview]    = ImVec4(0.831f, 0.627f, 0.290f, 0.40f);
-        c[ImGuiCol_DragDropTarget]    = ImVec4(0.831f, 0.627f, 0.290f, 0.90f);
+        c[ImGuiCol_Header]           = ImVec4(0.831f, 0.627f, 0.290f, 0.30f);
+        c[ImGuiCol_HeaderHovered]    = ImVec4(0.831f, 0.627f, 0.290f, 0.55f);
+        c[ImGuiCol_HeaderActive]     = ImVec4(0.831f, 0.627f, 0.290f, 0.92f);
+        c[ImGuiCol_Button]           = ImVec4(0.831f, 0.627f, 0.290f, 0.15f);
+        c[ImGuiCol_ButtonHovered]    = ImVec4(0.831f, 0.627f, 0.290f, 0.35f);
+        c[ImGuiCol_ButtonActive]     = ImVec4(0.831f, 0.627f, 0.290f, 0.65f);
+        c[ImGuiCol_CheckMark]        = ImVec4(0.831f, 0.627f, 0.290f, 1.00f);
+        c[ImGuiCol_SliderGrab]       = ImVec4(0.831f, 0.627f, 0.290f, 1.00f);
+        c[ImGuiCol_SliderGrabActive] = ImVec4(0.900f, 0.720f, 0.420f, 1.00f);
+        c[ImGuiCol_DockingPreview]   = ImVec4(0.831f, 0.627f, 0.290f, 0.40f);
+        c[ImGuiCol_DragDropTarget]   = ImVec4(0.831f, 0.627f, 0.290f, 0.90f);
         // Tabs
-        c[ImGuiCol_Tab]               = ImVec4(0.165f, 0.149f, 0.125f, 1.00f);
-        c[ImGuiCol_TabHovered]        = ImVec4(0.208f, 0.184f, 0.145f, 1.00f);
-        c[ImGuiCol_TabSelected]       = ImVec4(0.831f, 0.627f, 0.290f, 0.30f);
+        c[ImGuiCol_Tab]                 = ImVec4(0.165f, 0.149f, 0.125f, 1.00f);
+        c[ImGuiCol_TabHovered]          = ImVec4(0.208f, 0.184f, 0.145f, 1.00f);
+        c[ImGuiCol_TabSelected]         = ImVec4(0.831f, 0.627f, 0.290f, 0.30f);
         c[ImGuiCol_TabSelectedOverline] = ImVec4(0.831f, 0.627f, 0.290f, 1.00f);
-        c[ImGuiCol_TabDimmed]         = ImVec4(0.133f, 0.122f, 0.106f, 1.00f);
-        c[ImGuiCol_TabDimmedSelected] = ImVec4(0.165f, 0.149f, 0.125f, 1.00f);
+        c[ImGuiCol_TabDimmed]           = ImVec4(0.133f, 0.122f, 0.106f, 1.00f);
+        c[ImGuiCol_TabDimmedSelected]   = ImVec4(0.165f, 0.149f, 0.125f, 1.00f);
         // Resize grip
         c[ImGuiCol_ResizeGrip]        = ImVec4(0.831f, 0.627f, 0.290f, 0.20f);
         c[ImGuiCol_ResizeGripHovered] = ImVec4(0.831f, 0.627f, 0.290f, 0.50f);
@@ -101,8 +98,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
     io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 15.0f);
     {
-        static const ImWchar ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-        ImFont* icon_font = io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges);
+        static const ImWchar ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+        ImFont* icon_font             = io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges);
         panels::SetIconFont(icon_font);
         panels::SetPaletteIconFont(icon_font);
         panels::SetLayersIconFont(icon_font);
@@ -127,17 +124,40 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) app.canvas.undo();
-        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) app.canvas.redo();
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z))
+            app.canvas.undo();
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y))
+            app.canvas.redo();
 
         if (!ImGui::GetIO().WantTextInput) {
-            if (ImGui::IsKeyPressed(ImGuiKey_B)) { app.tools.active_tool = 0; Log("Tool: Brush"); }
-            if (ImGui::IsKeyPressed(ImGuiKey_E)) { app.tools.active_tool = 1; Log("Tool: Eraser"); }
-            if (ImGui::IsKeyPressed(ImGuiKey_F)) { app.tools.active_tool = 2; Log("Tool: Fill"); }
-            if (ImGui::IsKeyPressed(ImGuiKey_L)) { app.tools.active_tool = 3; Log("Tool: Line"); }
-            if (ImGui::IsKeyPressed(ImGuiKey_R)) { app.tools.active_tool = 4; Log("Tool: Rect"); }
-            if (ImGui::IsKeyPressed(ImGuiKey_C)) { app.tools.active_tool = 5; Log("Tool: Circle"); }
-            if (ImGui::IsKeyPressed(ImGuiKey_M)) { app.tools.active_tool = 6; Log("Tool: Move"); }
+            if (ImGui::IsKeyPressed(ImGuiKey_B)) {
+                app.tools.active_tool = 0;
+                Log("Tool: Brush");
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_E)) {
+                app.tools.active_tool = 1;
+                Log("Tool: Eraser");
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_F)) {
+                app.tools.active_tool = 2;
+                Log("Tool: Fill");
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_L)) {
+                app.tools.active_tool = 3;
+                Log("Tool: Line");
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) {
+                app.tools.active_tool = 4;
+                Log("Tool: Rect");
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_C)) {
+                app.tools.active_tool = 5;
+                Log("Tool: Circle");
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_M)) {
+                app.tools.active_tool = 6;
+                Log("Tool: Move");
+            }
             if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
                 app.tools.brush_size = std::max(1, app.tools.brush_size - 1);
                 Log("Brush size: %d", app.tools.brush_size);
@@ -160,7 +180,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
         panels::DrawLayers(app.canvas);
         panels::DrawTimeline();
         panels::DrawPalette(app.palette);
-        if (show_log) panels::DrawLog(&show_log);
+        if (show_log)
+            panels::DrawLog(&show_log);
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
