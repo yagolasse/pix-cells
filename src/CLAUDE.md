@@ -47,6 +47,7 @@ Key methods:
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations + `blend_over` (Porter-Duff) |
 | `main.cpp` | SDL3+ImGui init, Mocha warm-dark theme, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/C/M/[/] shortcuts |
-| `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API) |
+| `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API — Tools/Canvas/Layers/Color/Timeline) |
+| `imgui.ini` | Git-tracked dock layout; CMake copies it to the build output on every build. Edit layout in-app, then commit `imgui.ini` to ship the update. |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
 | `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image |

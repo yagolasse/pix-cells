@@ -66,12 +66,16 @@ add_executable(pix-cells
     src/panels/tools_panel.cpp
     src/panels/palette_panel.cpp
     src/panels/layers_panel.cpp
+    src/panels/timeline_panel.cpp
     src/panels/log_panel.cpp
 )
 target_include_directories(pix-cells PRIVATE src ${stb_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vendor/icons_font_awesome)
+target_compile_options(pix-cells PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
 add_custom_command(TARGET pix-cells POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/fonts $<TARGET_FILE_DIR:pix-cells>/fonts
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/imgui.ini $<TARGET_FILE_DIR:pix-cells>/imgui.ini
 )
 target_link_libraries(pix-cells PRIVATE imgui_lib SDL3::SDL3-static OpenGL::GL)

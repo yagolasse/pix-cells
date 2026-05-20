@@ -33,7 +33,11 @@ void panels::DrawTools(ToolsState& state) {
         if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
         if (ImGui::Button(tool_defs[i].label, ImVec2(BTN, BTN))) state.active_tool = i;
         if (active) ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tool_defs[i].tip);
+        if (ImGui::IsItemHovered()) {
+            ImGui::PushFont(nullptr);
+            ImGui::SetTooltip("%s", tool_defs[i].tip);
+            ImGui::PopFont();
+        }
     }
 
     ImGui::Spacing();
@@ -51,7 +55,11 @@ void panels::DrawTools(ToolsState& state) {
         if (*v.val) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
         if (ImGui::Button(v.label, ImVec2(BTN, BTN))) *v.val = !*v.val;
         if (*v.val) ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", v.tip);
+        if (ImGui::IsItemHovered()) {
+            ImGui::PushFont(nullptr);
+            ImGui::SetTooltip("%s", v.tip);
+            ImGui::PopFont();
+        }
     }
 
     if (s_icon_font) ImGui::PopFont();

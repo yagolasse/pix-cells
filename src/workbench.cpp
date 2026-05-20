@@ -31,25 +31,30 @@ static void BuildDefaultLayout(ImGuiID dockspace_id) {
     ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->WorkSize);
 
-    // Split left strip for Tools (~7%)
+    // Bottom strip for Timeline (~20%)
+    ImGuiID node_main, node_timeline;
+    ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.20f, &node_timeline, &node_main);
+
+    // Left strip for Tools (~7% of remaining)
     ImGuiID node_center, node_tools;
     node_center = ImGui::DockBuilderSplitNode(
-        dockspace_id, ImGuiDir_Left, 0.07f, &node_tools, &node_center);
+        node_main, ImGuiDir_Left, 0.07f, &node_tools, &node_center);
 
-    // Split right strip for Layers + Palette (~19%)
+    // Right strip for Layers + Palette (~19% of remaining)
     ImGuiID node_right;
     node_center = ImGui::DockBuilderSplitNode(
         node_center, ImGuiDir_Right, 0.19f, &node_right, &node_center);
 
-    // Split bottom of right strip for Palette (~40%)
+    // Bottom of right strip for Color (~40%)
     ImGuiID node_layers, node_palette;
     ImGui::DockBuilderSplitNode(
         node_right, ImGuiDir_Down, 0.40f, &node_palette, &node_layers);
 
-    ImGui::DockBuilderDockWindow("Tools",   node_tools);
-    ImGui::DockBuilderDockWindow("Canvas",  node_center);
-    ImGui::DockBuilderDockWindow("Layers",  node_layers);
-    ImGui::DockBuilderDockWindow("Palette", node_palette);
+    ImGui::DockBuilderDockWindow("Tools",    node_tools);
+    ImGui::DockBuilderDockWindow("Canvas",   node_center);
+    ImGui::DockBuilderDockWindow("Layers",   node_layers);
+    ImGui::DockBuilderDockWindow("Color",    node_palette);
+    ImGui::DockBuilderDockWindow("Timeline", node_timeline);
 
     ImGui::DockBuilderFinish(dockspace_id);
 }
