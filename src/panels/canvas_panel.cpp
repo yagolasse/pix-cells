@@ -92,18 +92,23 @@ static void draw_ellipse(CanvasState& cs, int x0, int y0, int x1, int y1, uint32
                 cs.active().set(cx + x, cy + y, color);
         }
     } else {
-        // Parameterized outline — enough steps to fill every pixel without gaps
-        int steps = 4 * std::max(1, std::max(rx, ry));
-        for (int i = 0; i < steps; i++) {
-            float t = (float)i / (float)steps * 6.28318530718f;
-            int ex  = cx + (int)std::round(rx * std::cos(t));
-            int ey  = cy + (int)std::round(ry * std::sin(t));
-            cs.active().set(ex, ey, color);
+        // Dual scan: row-by-row then column-by-column — guarantees gap-free outline
+        for (int dy = -ry; dy <= ry; dy++) {
+            float t = (ry > 0) ? (float)(rx * rx) * (1.0f - (float)(dy * dy) / (float)(ry * ry)) : 0.0f;
+            int xw  = (t > 0.0f) ? (int)std::sqrt(t) : 0;
+            cs.active().set(cx - xw, cy + dy, color);
+            cs.active().set(cx + xw, cy + dy, color);
+        }
+        for (int dx = -rx; dx <= rx; dx++) {
+            float t = (rx > 0) ? (float)(ry * ry) * (1.0f - (float)(dx * dx) / (float)(rx * rx)) : 0.0f;
+            int yw  = (t > 0.0f) ? (int)std::sqrt(t) : 0;
+            cs.active().set(cx + dx, cy - yw, color);
+            cs.active().set(cx + dx, cy + yw, color);
         }
     }
 }
 
-void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteState& palette) {
+void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteState& palette, SelectionState& sel) {
     static GLuint texture = 0;
     static int tex_w = 0, tex_h = 0;
     static ImVec2 last_px      = {-1.0f, -1.0f};
@@ -195,6 +200,17 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
         }
     }
 
+    // Marching ants selection overlay
+    if (sel.active) {
+        ImVec2 sp1 = {origin.x + sel.x0 * cs.zoom,          origin.y + sel.y0 * cs.zoom};
+        ImVec2 sp2 = {origin.x + (sel.x1 + 1) * cs.zoom,    origin.y + (sel.y1 + 1) * cs.zoom};
+        bool blink  = (int)(ImGui::GetTime() * 8) % 2;
+        dl->AddRect(sp1, sp2,
+            blink ? IM_COL32(255,255,255,255) : IM_COL32(0,0,0,255), 0, 0, 1.5f);
+        dl->AddRect({sp1.x+1,sp1.y+1},{sp2.x-1,sp2.y-1},
+            blink ? IM_COL32(0,0,0,255) : IM_COL32(255,255,255,255), 0, 0, 1.0f);
+    }
+
     // Tool input — compute canvas coords early so shape commit can use them outside hovered block
     ImVec2 cur_origin = {base.x + cs.pan.x, base.y + cs.pan.y};
     int px            = (int)((io.MousePos.x - cur_origin.x) / cs.zoom);
@@ -212,23 +228,26 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
         int t = tools.active_tool;
         if (t == 3) {
             dl->AddLine(p1, {cur_origin.x + px * cs.zoom, cur_origin.y + py * cs.zoom}, prev_col, 1.5f);
-        } else if (t == 4) {
-            if (tools.shape_filled)
+        } else if (t == 4 || t == 5) {
+            if (t == 5)
                 dl->AddRectFilled(p1, p2, prev_col);
             else
                 dl->AddRect(p1, p2, prev_col, 0.0f, 0, 1.5f);
-        } else if (t == 5) {
+        } else if (t == 6 || t == 7) {
             float ecx = (p1.x + p2.x) * 0.5f, ecy = (p1.y + p2.y) * 0.5f;
             float erx = std::abs(p2.x - p1.x) * 0.5f, ery = std::abs(p2.y - p1.y) * 0.5f;
-            if (tools.shape_filled)
+            if (t == 7)
                 dl->AddEllipseFilled({ecx, ecy}, {erx, ery}, prev_col);
             else
                 dl->AddEllipse({ecx, ecy}, {erx, ery}, prev_col, 0.0f, 0, 1.5f);
+        } else if (t == 9) {
+            dl->AddRect(p1, p2, IM_COL32(255,255,255,200), 0, 0, 1.5f);
+            dl->AddRect({p1.x+1,p1.y+1},{p2.x-1,p2.y-1}, IM_COL32(0,0,0,200), 0, 0, 1.0f);
         }
     }
 
     // Move tool — left-drag pans just like middle-mouse
-    if (tools.active_tool == 6 && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f)) {
+    if (tools.active_tool == 8 && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f)) {
         cs.pan.x += io.MouseDelta.x;
         cs.pan.y += io.MouseDelta.y;
     }
@@ -267,7 +286,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
                 flood_fill(cs, px, py, color);
                 cs.rebuild_composite();
             }
-        } else if (tools.active_tool >= 3 && tools.active_tool <= 5) {
+        } else if (tools.active_tool >= 3 && tools.active_tool <= 7) {
             // Shape tools — start drag on click
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
@@ -278,9 +297,17 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
                 shape_dragging = true;
                 Log("Shape start at (%d,%d) tool=%d", px, py, tools.active_tool);
             }
-        } else if (tools.active_tool == 6) {
+        } else if (tools.active_tool == 8) {
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
+        } else if (tools.active_tool == 9) {
+            was_painting = false;
+            last_px      = {-1.0f, -1.0f};
+            if (!shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                shape_sx       = px;
+                shape_sy       = py;
+                shape_dragging = true;
+            }
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
             if (is_painting && !was_painting) {
@@ -307,20 +334,26 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
 
     // Commit shape on mouse release regardless of hover state
     if (shape_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-        uint32_t color = ImGui::ColorConvertFloat4ToU32(palette.primary_color);
         Log("Shape commit tool=%d (%d,%d)->(%d,%d)", tools.active_tool, shape_sx, shape_sy, px, py);
-        switch (tools.active_tool) {
-        case 3:
-            bresenham(cs, shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush);
-            break;
-        case 4:
-            draw_rect(cs, shape_sx, shape_sy, px, py, color, tools.shape_filled);
-            break;
-        case 5:
-            draw_ellipse(cs, shape_sx, shape_sy, px, py, color, tools.shape_filled);
-            break;
+        if (tools.active_tool == 9) {
+            int cw = cs.width(), ch = cs.height();
+            int ax = std::clamp(std::min(shape_sx, px), 0, cw - 1);
+            int ay = std::clamp(std::min(shape_sy, py), 0, ch - 1);
+            int bx = std::clamp(std::max(shape_sx, px), 0, cw - 1);
+            int by = std::clamp(std::max(shape_sy, py), 0, ch - 1);
+            sel.active = (ax != bx || ay != by);
+            if (sel.active) { sel.x0 = ax; sel.y0 = ay; sel.x1 = bx; sel.y1 = by; }
+        } else {
+            uint32_t color = ImGui::ColorConvertFloat4ToU32(palette.primary_color);
+            switch (tools.active_tool) {
+            case 3: bresenham(cs, shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush); break;
+            case 4: draw_rect(cs, shape_sx, shape_sy, px, py, color, false); break;
+            case 5: draw_rect(cs, shape_sx, shape_sy, px, py, color, true);  break;
+            case 6: draw_ellipse(cs, shape_sx, shape_sy, px, py, color, false); break;
+            case 7: draw_ellipse(cs, shape_sx, shape_sy, px, py, color, true);  break;
+            }
+            cs.rebuild_composite();
         }
-        cs.rebuild_composite();
         shape_dragging = false;
     }
 

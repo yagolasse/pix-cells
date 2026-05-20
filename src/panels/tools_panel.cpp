@@ -31,12 +31,13 @@ void panels::DrawTools(ToolsState& state) {
         {ICON_FA_RING "##t6",          "Circle  (C)"},
         {ICON_FA_CIRCLE "##t7",        "Filled Circle"},
         {ICON_FA_HAND "##t8",          "Move  (M)"},
+        {ICON_FA_OBJECT_GROUP "##t9",  "Rect Select  (S)"},
     };
 
     if (s_icon_font)
         ImGui::PushFont(s_icon_font);
 
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 10; i++) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
         bool active = (state.active_tool == i);
         if (active)

@@ -6,12 +6,14 @@ All runtime state lives in `AppState` (`app_state.h`):
 
 ```
 AppState
-  CanvasState   canvas   — frames, composite buffer, zoom/pan, undo/redo stacks
-  ToolsState    tools    — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move),
-                           brush_size, circle_brush, shape_filled
-  PaletteState  palette  — primary_color, secondary_color (ImVec4 RGBA 0-1),
-                           swatches (vector<ImVec4>), selected_swatch (int),
-                           palette_name (string), recent_colors (vector<ImVec4>, max 8)
+  CanvasState    canvas    — frames, composite buffer, zoom/pan, undo/redo stacks
+  ToolsState     tools     — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect),
+                             brush_size, circle_brush, shape_filled
+  PaletteState   palette   — primary_color, secondary_color (ImVec4 RGBA 0-1),
+                             swatches (vector<ImVec4>), selected_swatch (int),
+                             palette_name (string), recent_colors (vector<ImVec4>, max 8)
+  SelectionState selection — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive),
+                             clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
 
 Layer (in Frame.layers)
   canvas (Canvas), name (string), visible (bool),
@@ -33,7 +35,7 @@ Key methods:
 |--------|-------------|
 | `active()` | Returns `Canvas&` for `frames[active_frame].layers[active_layer]` |
 | `active_layers()` | Returns `vector<Layer>&` for the active frame's layer stack |
-| `rebuild_composite()` | Porter-Duff "over" blend of active frame's visible layers → `composite`; sets `dirty=true` |
+| `rebuild_composite()` | Composites active frame's visible layers → `composite` applying per-layer opacity and blend mode (Normal/Multiply/Screen/Overlay/Add); sets `dirty=true` |
 | `push_snapshot()` | Copies full `frames` vector onto `undo_stack`, clears `redo_stack` |
 | `undo()` / `redo()` | Swaps `frames` vectors, calls `rebuild_composite()` |
 | `new_canvas(w,h)` | Resets to one frame with one transparent layer, clears undo/redo |
@@ -47,10 +49,10 @@ Key methods:
 | File | Role |
 |------|------|
 | `canvas.h` | `Canvas` struct: `width`, `height`, `pixels` (RGBA8 row-major); `set/get/fill/in_bounds` |
-| `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `AppState` |
+| `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `AppState` |
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
-| `canvas_state.cpp` | `CanvasState` method implementations + `blend_over` (Porter-Duff) |
-| `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/[/] shortcuts |
+| `canvas_state.cpp` | `CanvasState` method implementations + `blend_pixel` (Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity) |
+| `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/C/M/S/[/] tool shortcuts; Ctrl+A select-all, Ctrl+C/X copy/cut, Ctrl+V paste, Delete/Backspace erase selection, Escape deselect |
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API) |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
 | `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image; `png_io::save_sprite_sheet(CanvasState&, path, SheetLayout, cols)` — composites each frame and blits into a single PNG |

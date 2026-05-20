@@ -4,9 +4,9 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 
 | Panel | Signature | Responsibility |
 |-------|-----------|----------------|
-| `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&)` | GL texture, checkerboard, zoom-to-cursor, tool input |
+| `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&, SelectionState&)` | GL texture, checkerboard, zoom-to-cursor, tool input, marching-ants selection overlay |
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
-| `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); context-sensitive options: brush size + shape toggle (Brush/Eraser), brush size only (Line) |
+| `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); context-sensitive options: brush size + shape toggle (Brush/Eraser), brush size only (Line) |
 | `palette_panel` | `SetPaletteIconFont(ImFont*)`, `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
 | `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*, bool& show_log)` → bool | File (New/Open/Save as PIXC, Export > PNG / Sprite Sheet), Edit (Undo/Redo/Canvas Settings), View (Log toggle), SDL3 async file dialogs; detects PIXC vs PNG on open by magic bytes |
 | `timeline_panel` | `SetTimelineIconFont(ImFont*)`, `DrawTimeline(CanvasState&)` | Transport buttons (|< prev, play/pause, >| next) advance frames at `cs.fps`; playhead slider; horizontally-scrolling frame strip of 56×64 cards (frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
@@ -18,6 +18,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 - **Zoom-to-cursor**: on scroll, adjusts `cs.pan` so the canvas pixel under the mouse stays fixed: `pan.x = mouse.x - (mouse.x - base.x - pan.x) / old_zoom * new_zoom - base.x`.
 - `was_painting` static tracks stroke continuity; `push_snapshot()` fires once on stroke start (not per pixel).
 - `base` = `ImGui::GetCursorScreenPos()` before `SetCursorScreenPos(origin)` — used as the fixed anchor for pan math.
+- **Selection overlay**: when `sel.active`, two `AddRect` calls (alternating white/black at 8 Hz via `ImGui::GetTime()`) draw marching ants over the selected region. Tool 9 (RectSelect) uses the same `shape_dragging` pattern as shape tools but commits to `SelectionState` bounds without calling `rebuild_composite()`.
 
 ## Icon font
 `tools_panel.cpp`, `palette_panel.cpp`, `layers_panel.cpp`, and `timeline_panel.cpp` each hold a `static ImFont* s_icon_font`. `main.cpp` loads `fonts/fa-solid-900.ttf` and passes the pointer to `panels::SetIconFont()`, `panels::SetPaletteIconFont()`, `panels::SetLayersIconFont()`, and `panels::SetTimelineIconFont()` before the main loop. Tooltips inside a `PushFont(s_icon_font)` block must wrap `SetTooltip` with `PushFont(nullptr)` / `PopFont()` to restore the default text font. Wrap icon-only button labels in `PushFont(s_icon_font)` / `PopFont()`. Icon defines (`ICON_FA_*`) come from `vendor/icons_font_awesome/IconsFontAwesome6.h`. To add an icon to a button label use compile-time string concatenation: `ICON_FA_PENCIL "##id"`.
@@ -27,6 +28,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 2. Add an entry to `tool_defs[]` in `tools_panel.cpp` with the FA icon and tooltip. Update loop bound.
 3. Add a handler branch in `canvas_panel.cpp`:
    - Brush-like tools: inside `IsItemHovered` in the `else` branch.
-   - Shape tools (click-drag): extend the `active_tool >= 3 && active_tool <= 7` range; start inside `IsItemHovered`; commit in the `shape_dragging` switch; add preview in `if (shape_dragging)`.
-4. Update `active_tool == 8` (Move) checks in `canvas_panel.cpp` if inserting before Move.
+   - Shape tools (click-drag): extend the `active_tool >= 3 && active_tool <= 7` range; start inside `IsItemHovered`; commit in the `shape_dragging` `else` block's switch; add preview in `if (shape_dragging)`.
+   - Non-pixel tools (e.g. selection): add an `else if` branch after tool 8; handle commit in the `tools.active_tool == 9` branch of the release block (skips `rebuild_composite`).
+4. Update `active_tool == 8` (Move) and `active_tool == 9` (RectSelect) checks in `canvas_panel.cpp` if inserting before them.
 5. Add a keyboard shortcut in `main.cpp` if desired.

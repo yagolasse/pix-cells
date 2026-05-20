@@ -97,8 +97,14 @@ bool png_io::save_sprite_sheet(const CanvasState& cs,
         std::vector<uint32_t> frame_composite((size_t)(fw * fh), 0x00000000u);
         for (const auto& layer : cs.frames[fi].layers) {
             if (!layer.visible) continue;
-            for (int i = 0; i < fw * fh; i++)
-                frame_composite[i] = sheet_blend_over(frame_composite[i], layer.canvas.pixels[i]);
+            for (int i = 0; i < fw * fh; i++) {
+                uint32_t src = layer.canvas.pixels[i];
+                if (layer.opacity < 1.0f) {
+                    uint8_t a = (uint8_t)(((src >> 24) & 0xFF) * layer.opacity);
+                    src = (src & 0x00FFFFFF) | ((uint32_t)a << 24);
+                }
+                frame_composite[i] = sheet_blend_over(frame_composite[i], src);
+            }
         }
 
         // Determine blit offset in the sheet

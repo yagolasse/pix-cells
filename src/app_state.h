@@ -54,11 +54,20 @@ struct CanvasState {
 };
 
 struct ToolsState {
-    int  active_tool  = 0; // 0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle 6=Move
+    int  active_tool  = 0; // 0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect
     int  brush_size   = 1;
     bool circle_brush = false; // circular stamp for Brush/Eraser
     bool shape_filled = false; // Rect/Circle: filled vs outline
     bool show_grid    = false;
+};
+
+struct SelectionState {
+    bool active      = false;
+    int  x0 = 0, y0 = 0;        // top-left (canvas pixels, normalized)
+    int  x1 = 0, y1 = 0;        // bottom-right (inclusive)
+    std::vector<uint32_t> clipboard;
+    int  clipboard_w  = 0, clipboard_h  = 0;
+    int  clipboard_ox = 0, clipboard_oy = 0; // paste origin
 };
 
 struct PaletteState {
@@ -74,7 +83,8 @@ struct PaletteState {
 };
 
 struct AppState {
-    CanvasState  canvas;
-    ToolsState   tools;
-    PaletteState palette;
+    CanvasState    canvas;
+    ToolsState     tools;
+    PaletteState   palette;
+    SelectionState selection;
 };
