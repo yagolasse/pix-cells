@@ -2,8 +2,8 @@
 #include "log.h"
 #include "imgui.h"
 
-void panels::DrawLog() {
-    ImGui::Begin("Log", nullptr, ImGuiWindowFlags_NoTitleBar);
+void panels::DrawLog(bool* p_open) {
+    ImGui::Begin("Log", p_open, ImGuiWindowFlags_NoTitleBar);
 
     if (ImGui::Button("Clear"))
         LogClear();

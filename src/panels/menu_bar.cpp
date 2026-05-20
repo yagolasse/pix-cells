@@ -31,7 +31,7 @@ static void file_cb(void* ud, const char* const* list, int /*filter*/) {
 
 // --- Menu bar ---
 
-bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
+bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log) {
     // Process any pending file I/O from a previous dialog callback
     if (s_pending.active) {
         switch (s_pending.kind) {
@@ -113,12 +113,17 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Undo", "Ctrl+Z")) state.canvas.undo();
-            if (ImGui::MenuItem("Redo", "Ctrl+Y")) state.canvas.redo();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z"))
+                state.canvas.undo();
+            if (ImGui::MenuItem("Redo", "Ctrl+Y"))
+                state.canvas.redo();
+            ImGui::Separator();
+            if (ImGui::MenuItem("Canvas Settings..."))
+                open_canvas_settings = true;
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("Canvas Settings...")) open_canvas_settings = true;
+            ImGui::MenuItem("Log", nullptr, &show_log);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
