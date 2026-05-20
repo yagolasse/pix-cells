@@ -8,7 +8,8 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
 | `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); brush size slider |
 | `palette_panel` | `SetPaletteIconFont(ImFont*)`, `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
-| `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*)` → bool | File (New/Open/Save), Edit (Undo/Redo), SDL3 async file dialogs |
+| `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*)` → bool | File (New/Open/Save as PIXC, Export > PNG / Sprite Sheet), Edit (Undo/Redo/Canvas Settings), SDL3 async file dialogs; detects PIXC vs PNG on open by magic bytes |
+| `timeline_panel` | `SetTimelineIconFont(ImFont*)`, `DrawTimeline(CanvasState&)` | Transport buttons (first/play/last), playhead slider, horizontally-scrolling frame strip of 68×68 cards (checkerboard bg, frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
 | `log_panel` | `DrawLog()` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button |
 
 ## canvas_panel internals
@@ -19,7 +20,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 - `base` = `ImGui::GetCursorScreenPos()` before `SetCursorScreenPos(origin)` — used as the fixed anchor for pan math.
 
 ## Icon font
-`tools_panel.cpp` and `palette_panel.cpp` each hold a `static ImFont* s_icon_font`. `main.cpp` loads `fonts/fa-solid-900.ttf` and passes the pointer to both `panels::SetIconFont()` and `panels::SetPaletteIconFont()` before the main loop. Wrap icon-only button labels in `PushFont(s_icon_font)` / `PopFont()`. Icon defines (`ICON_FA_*`) come from `vendor/icons_font_awesome/IconsFontAwesome6.h`. To add an icon to a button label use compile-time string concatenation: `ICON_FA_PENCIL "##id"`.
+`tools_panel.cpp`, `palette_panel.cpp`, `layers_panel.cpp`, and `timeline_panel.cpp` each hold a `static ImFont* s_icon_font`. `main.cpp` loads `fonts/fa-solid-900.ttf` and passes the pointer to `panels::SetIconFont()`, `panels::SetPaletteIconFont()`, `panels::SetLayersIconFont()`, and `panels::SetTimelineIconFont()` before the main loop. Tooltips inside a `PushFont(s_icon_font)` block must wrap `SetTooltip` with `PushFont(nullptr)` / `PopFont()` to restore the default text font. Wrap icon-only button labels in `PushFont(s_icon_font)` / `PopFont()`. Icon defines (`ICON_FA_*`) come from `vendor/icons_font_awesome/IconsFontAwesome6.h`. To add an icon to a button label use compile-time string concatenation: `ICON_FA_PENCIL "##id"`.
 
 ## Adding a new tool
 1. Add a comment in `app_state.h` `ToolsState` documenting the new index.

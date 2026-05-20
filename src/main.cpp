@@ -11,6 +11,7 @@
 #include "panels/tools_panel.h"
 #include "panels/palette_panel.h"
 #include "panels/layers_panel.h"
+#include "panels/timeline_panel.h"
 #include "panels/log_panel.h"
 #include "log.h"
 #include <algorithm>
@@ -44,6 +45,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImFont* icon_font = io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges);
         panels::SetIconFont(icon_font);
         panels::SetPaletteIconFont(icon_font);
+        panels::SetTimelineIconFont(icon_font);
     }
 
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
@@ -94,6 +96,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         panels::DrawTools(app.tools);
         panels::DrawCanvas(app.canvas, app.tools, app.palette);
         panels::DrawLayers(app.canvas);
+        panels::DrawTimeline(app.canvas);
         panels::DrawPalette(app.palette);
         panels::DrawLog();
 

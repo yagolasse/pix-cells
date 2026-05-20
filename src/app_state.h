@@ -9,11 +9,21 @@ struct Layer {
     Canvas      canvas;
     std::string name    = "Layer";
     bool        visible = true;
+    bool        locked  = false;
+    float       opacity = 1.0f;
+    uint8_t     blend_mode = 0;
+};
+
+struct Frame {
+    std::vector<Layer> layers;
+    uint16_t           duration_ms = 100;
 };
 
 struct CanvasState {
-    std::vector<Layer>             layers;
+    std::vector<Frame>             frames;
+    int                            active_frame = 0;
     int                            active_layer = 0;
+    float                          fps          = 12.0f;
     std::vector<uint32_t>          composite;   // blended result for GPU upload
     float                          zoom         = 8.0f;
     ImVec2                         pan          = { 0.0f, 0.0f };
@@ -23,9 +33,12 @@ struct CanvasState {
     ImVec4                         checker_color1 = { 220/255.f, 220/255.f, 220/255.f, 1.f };
     ImVec4                         checker_color2 = { 170/255.f, 170/255.f, 170/255.f, 1.f };
 
-    std::deque<std::vector<Layer>> undo_stack;  // full layer-stack snapshots
-    std::deque<std::vector<Layer>> redo_stack;
+    std::deque<std::vector<Frame>> undo_stack;  // full frame-stack snapshots
+    std::deque<std::vector<Frame>> redo_stack;
     static constexpr int           MAX_HISTORY = 50;
+
+    std::vector<Layer>&       active_layers()       { return frames[active_frame].layers; }
+    const std::vector<Layer>& active_layers() const { return frames[active_frame].layers; }
 
     CanvasState();
 

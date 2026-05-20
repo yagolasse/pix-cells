@@ -28,20 +28,31 @@ static uint32_t blend_over(uint32_t dst, uint32_t src) {
 }
 
 CanvasState::CanvasState() {
-    Layer l; l.name = "Layer 1";
-    layers.push_back(std::move(l));
+    Frame f;
+    Layer l;
+    l.name = "Layer 1";
+    f.layers.push_back(std::move(l));
+    frames.push_back(std::move(f));
     composite.resize(64 * 64, 0x00000000);
     rebuild_composite();
 }
 
-int     CanvasState::width()  const { return layers.empty() ? 0 : layers[0].canvas.width; }
-int     CanvasState::height() const { return layers.empty() ? 0 : layers[0].canvas.height; }
-Canvas& CanvasState::active()       { return layers[active_layer].canvas; }
+int CanvasState::width() const {
+    return frames.empty() || frames[0].layers.empty() ? 0 : frames[0].layers[0].canvas.width;
+}
+
+int CanvasState::height() const {
+    return frames.empty() || frames[0].layers.empty() ? 0 : frames[0].layers[0].canvas.height;
+}
+
+Canvas& CanvasState::active() {
+    return frames[active_frame].layers[active_layer].canvas;
+}
 
 void CanvasState::rebuild_composite() {
     int sz = width() * height();
     composite.assign(sz, 0x00000000);
-    for (const auto& layer : layers) {
+    for (const auto& layer : active_layers()) {
         if (!layer.visible) continue;
         for (int i = 0; i < sz; i++)
             composite[i] = blend_over(composite[i], layer.canvas.pixels[i]);
@@ -50,15 +61,15 @@ void CanvasState::rebuild_composite() {
 }
 
 void CanvasState::push_snapshot() {
-    undo_stack.push_back(layers);
+    undo_stack.push_back(frames);
     if ((int)undo_stack.size() > MAX_HISTORY) undo_stack.pop_front();
     redo_stack.clear();
 }
 
 void CanvasState::undo() {
     if (undo_stack.empty()) return;
-    redo_stack.push_back(layers);
-    layers = std::move(undo_stack.back());
+    redo_stack.push_back(frames);
+    frames = std::move(undo_stack.back());
     undo_stack.pop_back();
     rebuild_composite();
     Log("Undo (%d steps remain)", (int)undo_stack.size());
@@ -66,17 +77,22 @@ void CanvasState::undo() {
 
 void CanvasState::redo() {
     if (redo_stack.empty()) return;
-    undo_stack.push_back(layers);
-    layers = std::move(redo_stack.back());
+    undo_stack.push_back(frames);
+    frames = std::move(redo_stack.back());
     redo_stack.pop_back();
     rebuild_composite();
     Log("Redo (%d steps remain)", (int)redo_stack.size());
 }
 
 void CanvasState::new_canvas(int w, int h) {
-    layers.clear();
-    Layer l; l.name = "Layer 1"; l.canvas = Canvas(w, h);
-    layers.push_back(std::move(l));
+    frames.clear();
+    Frame f;
+    Layer l;
+    l.name   = "Layer 1";
+    l.canvas = Canvas(w, h);
+    f.layers.push_back(std::move(l));
+    frames.push_back(std::move(f));
+    active_frame = 0;
     active_layer = 0;
     pan          = { 0.0f, 0.0f };
     needs_center = true;

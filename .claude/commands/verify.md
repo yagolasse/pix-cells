@@ -1,15 +1,17 @@
-Run the mandatory post-change verification for pix-cells. There is no test suite — the build is the verification.
+Run the mandatory post-change verification for pix-cells.
 
 Run:
 ```bash
-cmake --build build
+cmake --build build && ctest --test-dir build --output-on-failure
 ```
-
-The build must succeed with zero errors. Compiler warnings are also treated as failures — flag any that appear.
 
 If the build directory does not exist yet, configure first:
 ```bash
-cmake -B build && cmake --build build
+cmake -B build && cmake --build build && ctest --test-dir build --output-on-failure
 ```
 
-Report a single summary line at the end: build passed or failed (and which file/line if failed).
+Both steps must pass:
+1. **Build** — zero errors, zero warnings (warnings are treated as failures).
+2. **Tests** — all `ctest` tests pass. Currently: `test_pixc` (PIXC round-trip save/load).
+
+Report a single summary line at the end: build+tests passed or failed (and which file/line/test if failed).

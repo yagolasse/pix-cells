@@ -8,22 +8,24 @@
 void panels::DrawLayers(CanvasState& cs) {
     ImGui::Begin("Layers");
 
+    auto& layers = cs.frames[cs.active_frame].layers;
+
     if (ImGui::Button("+")) {
         cs.push_snapshot();
         Layer l;
-        l.name   = "Layer " + std::to_string(cs.layers.size() + 1);
+        l.name   = "Layer " + std::to_string(layers.size() + 1);
         l.canvas = Canvas(cs.width(), cs.height());
-        Log("Layer added: \"%s\"", l.name.c_str());
-        cs.layers.insert(cs.layers.begin() + cs.active_layer + 1, std::move(l));
+        layers.insert(layers.begin() + cs.active_layer + 1, std::move(l));
         cs.active_layer++;
+        Log("Layer added: \"%s\"", layers[cs.active_layer].name.c_str());
         cs.rebuild_composite();
     }
     ImGui::SameLine();
-    if (cs.layers.size() > 1 && ImGui::Button("-")) {
-        Log("Layer deleted: \"%s\"", cs.layers[cs.active_layer].name.c_str());
+    if (layers.size() > 1 && ImGui::Button("-")) {
+        Log("Layer deleted: \"%s\"", layers[cs.active_layer].name.c_str());
         cs.push_snapshot();
-        cs.layers.erase(cs.layers.begin() + cs.active_layer);
-        cs.active_layer = std::min(cs.active_layer, (int)cs.layers.size() - 1);
+        layers.erase(layers.begin() + cs.active_layer);
+        cs.active_layer = std::min(cs.active_layer, (int)layers.size() - 1);
         cs.rebuild_composite();
     }
 
@@ -34,11 +36,11 @@ void panels::DrawLayers(CanvasState& cs) {
     static bool focus_rename    = false;
 
     // Guard against stale rename index after layer deletion
-    if (renaming_layer >= (int)cs.layers.size()) renaming_layer = -1;
+    if (renaming_layer >= (int)layers.size()) renaming_layer = -1;
 
     // Draw layers top-to-bottom (highest index first)
-    for (int i = (int)cs.layers.size() - 1; i >= 0; i--) {
-        auto& layer = cs.layers[i];
+    for (int i = (int)layers.size() - 1; i >= 0; i--) {
+        auto& layer = layers[i];
         ImGui::PushID(i);
 
         if (ImGui::Checkbox("##v", &layer.visible)) {
@@ -77,6 +79,10 @@ void panels::DrawLayers(CanvasState& cs) {
 
         ImGui::PopID();
     }
+
+    // Guard against active_layer going out of bounds when switching frames
+    if (cs.active_layer >= (int)layers.size())
+        cs.active_layer = (int)layers.size() - 1;
 
     ImGui::End();
 }

@@ -6,12 +6,19 @@ All runtime state lives in `AppState` (`app_state.h`):
 
 ```
 AppState
-  CanvasState   canvas   — layers, composite buffer, zoom/pan, undo/redo stacks
+  CanvasState   canvas   — frames, composite buffer, zoom/pan, undo/redo stacks
   ToolsState    tools    — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle),
                            brush_size, circle_brush, shape_filled
   PaletteState  palette  — primary_color, secondary_color (ImVec4 RGBA 0-1),
                            swatches (vector<ImVec4>), selected_swatch (int),
                            palette_name (string), recent_colors (vector<ImVec4>, max 8)
+
+Layer (in Frame.layers)
+  canvas (Canvas), name (string), visible (bool),
+  locked (bool), opacity (float 0–1), blend_mode (uint8_t 0=Normal…4=Add)
+
+Frame (in CanvasState.frames)
+  layers (vector<Layer>), duration_ms (uint16_t, default 100ms)
 ```
 
 ### Pixel format
@@ -19,16 +26,17 @@ AppState
 Matches `GL_RGBA / GL_UNSIGNED_BYTE`. `ImGui::ColorConvertFloat4ToU32` produces this layout.
 
 ### CanvasState (`canvas_state.cpp`)
-Owns `std::vector<Layer>` composited into a flat `composite` buffer for GPU upload.
+Owns `std::vector<Frame>` (each with its own layer stack) composited into a flat `composite` buffer for GPU upload. `active_frame` and `active_layer` index the currently-edited canvas.
 
 Key methods:
 | Method | What it does |
 |--------|-------------|
-| `active()` | Returns `Canvas&` for the active layer |
-| `rebuild_composite()` | Porter-Duff "over" blend of all visible layers → `composite`; sets `dirty=true` |
-| `push_snapshot()` | Copies full layer stack onto `undo_stack`, clears `redo_stack` |
-| `undo()` / `redo()` | Swaps layer stacks, calls `rebuild_composite()` |
-| `new_canvas(w,h)` | Resets to single transparent 64×64 layer, clears undo/redo |
+| `active()` | Returns `Canvas&` for `frames[active_frame].layers[active_layer]` |
+| `active_layers()` | Returns `vector<Layer>&` for the active frame's layer stack |
+| `rebuild_composite()` | Porter-Duff "over" blend of active frame's visible layers → `composite`; sets `dirty=true` |
+| `push_snapshot()` | Copies full `frames` vector onto `undo_stack`, clears `redo_stack` |
+| `undo()` / `redo()` | Swaps `frames` vectors, calls `rebuild_composite()` |
+| `new_canvas(w,h)` | Resets to one frame with one transparent layer, clears undo/redo |
 
 ### Dirty flag
 `cs.dirty = true` → `glTexSubImage2D` upload next frame (canvas_panel.cpp).
@@ -45,4 +53,5 @@ Key methods:
 | `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/[/] shortcuts |
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API) |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
-| `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image |
+| `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image; `png_io::save_sprite_sheet(CanvasState&, path, SheetLayout, cols)` — composites each frame and blits into a single PNG |
+| `pixc_io.h/cpp` | `pixc_io::save(AppState&, path)`, `pixc_io::load(AppState&, path)` — custom binary format (`PIXC` magic, version, frames + layers + pixels) |

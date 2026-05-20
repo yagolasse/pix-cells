@@ -10,15 +10,15 @@ A pixel art editor built in C++.
 - **Fonts**: Ubuntu Regular (`fonts/Ubuntu-Regular.ttf`) — default UI font loaded at 15px; Font Awesome 6 Solid (`fonts/fa-solid-900.ttf`) — icon-only font at 16px, accessed via `panels::SetIconFont` / `PushFont`. Header: `vendor/icons_font_awesome/IconsFontAwesome6.h`.
 
 ## Build
-```powershell
+```bash
 cmake -B build
 cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 
 ## Rules
-- **Always build after every code change** to verify it compiles before reporting done.
-- Run from `C:\Projects\pix-cells`.
-- Executable: `build\Debug\pix-cells.exe`
+- **Always build and run tests after every code change** — both must pass before reporting done.
+- **Always update the docs (CLAUDE.md files) after code changes**
 
 ## Palette File Formats to Implement
 
