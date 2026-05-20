@@ -19,6 +19,7 @@ cmake --build build
 - **Always build after every code change** to verify it compiles before reporting done.
 - Run from `C:\Projects\pix-cells`.
 - Executable: `build\Debug\pix-cells.exe`
+- **Always update the docs (CLAUDE.md files) after code changes**
 
 ## Palette File Formats to Implement
 

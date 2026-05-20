@@ -7,8 +7,11 @@
 
 struct Layer {
     Canvas      canvas;
-    std::string name    = "Layer";
-    bool        visible = true;
+    std::string name       = "Layer";
+    bool        visible    = true;
+    bool        locked     = false;
+    float       opacity    = 1.0f;  // 0.0–1.0; shown as 0–100% in UI
+    int         blend_mode = 0;     // 0=Normal 1=Multiply 2=Screen 3=Overlay 4=Add
 };
 
 struct CanvasState {

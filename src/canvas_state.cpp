@@ -43,8 +43,16 @@ void CanvasState::rebuild_composite() {
     composite.assign(sz, 0x00000000);
     for (const auto& layer : layers) {
         if (!layer.visible) continue;
-        for (int i = 0; i < sz; i++)
-            composite[i] = blend_over(composite[i], layer.canvas.pixels[i]);
+        float op = layer.opacity;
+        if (op <= 0.0f) continue;
+        for (int i = 0; i < sz; i++) {
+            uint32_t src = layer.canvas.pixels[i];
+            if (op < 1.0f) {
+                uint32_t a = (uint32_t)(((src >> 24) & 0xFF) * op + 0.5f);
+                src = (src & 0x00FFFFFF) | (a << 24);
+            }
+            composite[i] = blend_over(composite[i], src);
+        }
     }
     dirty = true;
 }
