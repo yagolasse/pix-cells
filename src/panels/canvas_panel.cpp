@@ -146,16 +146,18 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
 
     // Checkerboard background — visible through transparent pixels
     {
-        float cell = cs.checker_size;
+        float cell = cs.checker_size * cs.zoom;
         ImU32 col1 = ImGui::ColorConvertFloat4ToU32(cs.checker_color1);
         ImU32 col2 = ImGui::ColorConvertFloat4ToU32(cs.checker_color2);
-        for (float cy = origin.y; cy < origin.y + H; cy += cell)
-            for (float cx = origin.x; cx < origin.x + W; cx += cell) {
-                int   parity = (int)((cy - origin.y) / cell + (cx - origin.x) / cell) % 2;
-                ImU32 col    = parity ? col2 : col1;
-                dl->AddRectFilled({cx, cy},
-                    {std::min(cx+cell, origin.x+W), std::min(cy+cell, origin.y+H)}, col);
+        dl->PushClipRect({origin.x, origin.y}, {origin.x + W, origin.y + H}, true);
+        for (int row = 0; row * cell < H; row++)
+            for (int col = 0; col * cell < W; col++) {
+                float cx = origin.x + col * cell;
+                float cy = origin.y + row * cell;
+                ImU32 c  = (row + col) % 2 ? col2 : col1;
+                dl->AddRectFilled({cx, cy}, {cx + cell, cy + cell}, c);
             }
+        dl->PopClipRect();
     }
 
     // ImGui v1.92+ binds a linear sampler that overrides texture parameters — switch to nearest.
@@ -219,7 +221,15 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
 
     if (ImGui::IsItemHovered()) {
         if (io.MouseWheel != 0.0f) {
-            float new_zoom = std::clamp(cs.zoom + io.MouseWheel, 1.0f, 32.0f);
+            float dir = io.MouseWheel > 0.0f ? 1.0f : -1.0f;
+            float new_zoom;
+            if (dir > 0.0f && cs.zoom >= 8.0f)
+                new_zoom = std::ceil((cs.zoom + 1.0f) / 4.0f) * 4.0f;
+            else if (dir < 0.0f && cs.zoom > 8.0f)
+                new_zoom = std::floor((cs.zoom - 1.0f) / 4.0f) * 4.0f;
+            else
+                new_zoom = cs.zoom + dir;
+            new_zoom = std::clamp(new_zoom, 1.0f, 32.0f);
             if (new_zoom != cs.zoom) {
                 // Keep the canvas pixel under the cursor fixed in screen space
                 cs.pan.x = io.MousePos.x - (io.MousePos.x - base.x - cs.pan.x) / cs.zoom * new_zoom - base.x;
