@@ -67,7 +67,8 @@ target_include_directories(pix-cells-core PUBLIC
     ${stb_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/vendor/icons_font_awesome
 )
-target_compile_options(pix-cells-core PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_compile_options(pix-cells-core PRIVATE
+    $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
 target_link_libraries(pix-cells-core PUBLIC imgui_lib)
 
 add_executable(pix-cells
@@ -81,7 +82,8 @@ add_executable(pix-cells
     src/panels/timeline_panel.cpp
     src/panels/log_panel.cpp
 )
-target_compile_options(pix-cells PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_compile_options(pix-cells PRIVATE
+    $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
 target_link_libraries(pix-cells PRIVATE pix-cells-core SDL3::SDL3-static OpenGL::GL)
 
 add_custom_command(TARGET pix-cells POST_BUILD
@@ -93,5 +95,6 @@ enable_testing()
 
 add_executable(test_pixc tests/test_pixc.cpp)
 target_link_libraries(test_pixc PRIVATE pix-cells-core)
-target_compile_options(test_pixc PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_compile_options(test_pixc PRIVATE
+    $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
 add_test(NAME test_pixc COMMAND test_pixc)
