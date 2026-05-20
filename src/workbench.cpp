@@ -21,7 +21,7 @@ ImGuiID BeginWorkbench() {
     ImGui::PopStyleVar(3);
 
     ImGuiID id = ImGui::GetID("WorkbenchDockSpace");
-    ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+    ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_AutoHideTabBar);
     ImGui::End();
     return id;
 }

@@ -88,14 +88,15 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGuiID dock_id = BeginWorkbench();
         EnsureDefaultLayout(dock_id);
 
-        if (!panels::DrawMenuBar(app, window))
+        static bool show_log = false;
+        if (!panels::DrawMenuBar(app, window, show_log))
             running = false;
 
         panels::DrawTools(app.tools);
         panels::DrawCanvas(app.canvas, app.tools, app.palette);
         panels::DrawLayers(app.canvas);
         panels::DrawPalette(app.palette);
-        panels::DrawLog();
+        if (show_log) panels::DrawLog(&show_log);
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

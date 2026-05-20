@@ -1,4 +1,4 @@
-Review the changes made this session and update the CLAUDE.md documentation files so they accurately reflect the current state of the codebase.
+Run the mandatory post-change verification for pix-cells and update the CLAUDE.md documentation files so they accurately reflect the current state of the codebase.
 
 ## Files to keep in sync
 

@@ -7,7 +7,7 @@ All runtime state lives in `AppState` (`app_state.h`):
 ```
 AppState
   CanvasState   canvas   — layers, composite buffer, zoom/pan, undo/redo stacks
-  ToolsState    tools    — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle),
+  ToolsState    tools    — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle 6=Move),
                            brush_size, circle_brush, shape_filled
   PaletteState  palette  — primary_color, secondary_color (ImVec4 RGBA 0-1),
                            swatches (vector<ImVec4>), selected_swatch (int),
@@ -42,7 +42,7 @@ Key methods:
 | `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `AppState` |
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations + `blend_over` (Porter-Duff) |
-| `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/[/] shortcuts |
+| `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/C/M/[/] shortcuts |
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`), `EnsureDefaultLayout` (DockBuilder API) |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
 | `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image |
