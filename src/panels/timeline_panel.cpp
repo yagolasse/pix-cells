@@ -1,179 +1,141 @@
 #include "timeline_panel.h"
+#include "app_state.h"
+#include "log.h"
 #include "imgui.h"
 #include "IconsFontAwesome6.h"
+#include <algorithm>
 #include <cstdio>
-#include <cstring>
 
-static ImFont* s_icon_font = nullptr;
+static ImFont* s_timeline_icon_font = nullptr;
+
 void panels::SetTimelineIconFont(ImFont* font) {
-    s_icon_font = font;
+    s_timeline_icon_font = font;
 }
 
-static int s_active_frame = 2;
-static int s_frame_count  = 8;
-static int s_fps          = 12;
-static int s_frame_ms[32] = {100, 100, 100, 100, 100, 100, 100, 100};
+// Returns true if this frame card was clicked
+static bool draw_frame_card(int idx, bool is_active, uint16_t duration_ms) {
+    ImGui::PushID(idx);
 
-static const ImU32 k_checker_a = IM_COL32(58, 52, 44, 255); // #3a342c
-static const ImU32 k_checker_b = IM_COL32(42, 37, 32, 255); // #2a2520
-static const ImU32 k_badge_bg  = IM_COL32(0, 0, 0, 140);    // rgba(0,0,0,0.55)
+    float card_w = 56.0f;
+    float card_h = 64.0f;
 
-static void draw_frame_card(ImDrawList* dl, int idx, bool active) {
-    const float SZ = 68.0f;
-    char id[16];
-    snprintf(id, sizeof(id), "##fc%d", idx);
-    ImGui::InvisibleButton(id, {SZ, SZ});
-    if (ImGui::IsItemClicked())
-        s_active_frame = idx;
-
-    ImVec2 p  = ImGui::GetItemRectMin();
-    ImVec2 p2 = {p.x + SZ, p.y + SZ};
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
 
     // Background
-    ImU32 col_bg = ImGui::GetColorU32(ImGuiCol_ChildBg);
-    dl->AddRectFilled(p, p2, col_bg, 4.0f);
+    ImU32 bg = is_active
+        ? IM_COL32(80, 130, 200, 220)
+        : IM_COL32(50, 50, 60, 200);
+    dl->AddRectFilled(pos, { pos.x + card_w, pos.y + card_h }, bg, 4.0f);
 
-    // Checkerboard (2×2 grid of 17px cells)
-    const float cs = 17.0f;
-    for (int cy = 0; cy < 4; cy++) {
-        for (int cx = 0; cx < 4; cx++) {
-            ImU32 cc   = ((cx + cy) % 2 == 0) ? k_checker_a : k_checker_b;
-            ImVec2 cp  = {p.x + cx * cs, p.y + cy * cs};
-            ImVec2 cp2 = {cp.x + cs, cp.y + cs};
-            // Clip to card bounds
-            if (cp2.x > p2.x)
-                cp2.x = p2.x;
-            if (cp2.y > p2.y)
-                cp2.y = p2.y;
-            dl->AddRectFilled(cp, cp2, cc);
+    // Border
+    ImU32 border = is_active
+        ? IM_COL32(120, 180, 255, 255)
+        : IM_COL32(80, 80, 100, 200);
+    dl->AddRect(pos, { pos.x + card_w, pos.y + card_h }, border, 4.0f, 0, 1.5f);
+
+    // Frame number label
+    char label[16];
+    snprintf(label, sizeof(label), "%d", idx + 1);
+    ImVec2 text_size = ImGui::CalcTextSize(label);
+    dl->AddText(
+        { pos.x + (card_w - text_size.x) * 0.5f, pos.y + 8.0f },
+        IM_COL32(220, 220, 220, 255),
+        label
+    );
+
+    // Duration label
+    char dur_label[16];
+    snprintf(dur_label, sizeof(dur_label), "%dms", (int)duration_ms);
+    ImVec2 dur_size = ImGui::CalcTextSize(dur_label);
+    dl->AddText(
+        { pos.x + (card_w - dur_size.x) * 0.5f, pos.y + card_h - 18.0f },
+        IM_COL32(160, 160, 160, 255),
+        dur_label
+    );
+
+    // Invisible button for interaction
+    ImGui::InvisibleButton("##card", { card_w, card_h });
+    bool clicked = ImGui::IsItemClicked();
+
+    ImGui::PopID();
+    return clicked;
+}
+
+static void draw_add_card() {
+    float card_w = 40.0f;
+    float card_h = 64.0f;
+
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    dl->AddRectFilled(pos, { pos.x + card_w, pos.y + card_h }, IM_COL32(40, 40, 50, 180), 4.0f);
+    dl->AddRect(pos, { pos.x + card_w, pos.y + card_h }, IM_COL32(80, 80, 100, 180), 4.0f, 0, 1.5f);
+
+    // "+" text centered
+    const char* plus = "+";
+    ImVec2 plus_size = ImGui::CalcTextSize(plus);
+    dl->AddText(
+        { pos.x + (card_w - plus_size.x) * 0.5f, pos.y + (card_h - plus_size.y) * 0.5f },
+        IM_COL32(160, 200, 160, 255),
+        plus
+    );
+
+    ImGui::InvisibleButton("##add_card", { card_w, card_h });
+}
+
+void panels::DrawTimeline(CanvasState& cs) {
+    // Clamp active_frame to valid range
+    if (!cs.frames.empty() && cs.active_frame >= (int)cs.frames.size())
+        cs.active_frame = (int)cs.frames.size() - 1;
+
+    ImGui::Begin("Timeline");
+
+    // Status bar: FPS and frame count
+    ImGui::Text("FPS: %d  |  Frames: %d", (int)cs.fps, (int)cs.frames.size());
+    ImGui::SameLine();
+
+    // Playhead slider
+    ImGui::SetNextItemWidth(200.0f);
+    int max_frame = std::max(0, (int)cs.frames.size() - 1);
+    if (ImGui::SliderInt("##playhead", &cs.active_frame, 0, max_frame, "Frame %d")) {
+        cs.rebuild_composite();
+    }
+
+    ImGui::Separator();
+
+    // Scrollable frame card row
+    ImGui::BeginChild("##frame_scroll", ImVec2(0, 90.0f), false,
+                       ImGuiWindowFlags_HorizontalScrollbar);
+
+    for (int i = 0; i < (int)cs.frames.size(); i++) {
+        if (i > 0) ImGui::SameLine(0.0f, 6.0f);
+
+        uint16_t dur = cs.frames[i].duration_ms;
+        if (draw_frame_card(i, i == cs.active_frame, dur)) {
+            if (cs.active_frame != i) {
+                cs.active_frame = i;
+                cs.rebuild_composite();
+                Log("Timeline: switched to frame %d", i + 1);
+            }
         }
     }
 
-    // Border
-    if (active) {
-        ImU32 accent = ImGui::GetColorU32(ImGuiCol_SliderGrab);
-        dl->AddRect({p.x + 1, p.y + 1}, {p2.x - 1, p2.y - 1}, accent, 4.0f, 0, 2.0f);
-    } else {
-        dl->AddRect(p, p2, ImGui::GetColorU32(ImGuiCol_Border), 4.0f, 0, 1.0f);
+    // Add frame button
+    ImGui::SameLine(0.0f, 6.0f);
+    draw_add_card();
+    if (ImGui::IsItemClicked()) {
+        cs.push_snapshot();
+        Frame f;
+        Layer l;
+        l.name   = "Layer 1";
+        l.canvas = Canvas(cs.width(), cs.height());
+        f.layers.push_back(std::move(l));
+        cs.frames.push_back(std::move(f));
+        cs.active_frame = (int)cs.frames.size() - 1;
+        cs.rebuild_composite();
+        Log("Timeline: added frame %d", cs.active_frame + 1);
     }
-
-    // Frame number badge — top left
-    char num_buf[8];
-    snprintf(num_buf, sizeof(num_buf), "%02d", idx + 1);
-    ImVec2 num_sz = ImGui::CalcTextSize(num_buf);
-    ImVec2 nb_min = {p.x + 3, p.y + 3};
-    ImVec2 nb_max = {nb_min.x + num_sz.x + 6, nb_min.y + num_sz.y + 2};
-    dl->AddRectFilled(nb_min, nb_max, k_badge_bg, 2.0f);
-    dl->AddText({nb_min.x + 3, nb_min.y + 1}, ImGui::GetColorU32(ImGuiCol_Text), num_buf);
-
-    // Duration badge — bottom right
-    char dur_buf[16];
-    snprintf(dur_buf, sizeof(dur_buf), "%dms", s_frame_ms[idx < 32 ? idx : 0]);
-    ImVec2 dur_sz = ImGui::CalcTextSize(dur_buf);
-    ImVec2 db_max = {p2.x - 3, p2.y - 3};
-    ImVec2 db_min = {db_max.x - dur_sz.x - 6, db_max.y - dur_sz.y - 2};
-    dl->AddRectFilled(db_min, db_max, k_badge_bg, 2.0f);
-    dl->AddText({db_min.x + 3, db_min.y + 1}, IM_COL32_WHITE, dur_buf);
-}
-
-static void draw_add_card(ImDrawList* dl) {
-    const float SZ = 68.0f;
-    ImGui::InvisibleButton("##fcadd", {SZ, SZ});
-    bool hov = ImGui::IsItemHovered();
-
-    ImVec2 p  = ImGui::GetItemRectMin();
-    ImVec2 p2 = {p.x + SZ, p.y + SZ};
-
-    ImU32 col_bg = ImGui::GetColorU32(ImGuiCol_ChildBg);
-    dl->AddRectFilled(p, p2, col_bg, 4.0f);
-    dl->AddRect(p, p2, ImGui::GetColorU32(hov ? ImGuiCol_BorderShadow : ImGuiCol_Border), 4.0f, 0, 1.0f);
-
-    // Centered "+" text
-    const char* plus = "+";
-    ImVec2 ts        = ImGui::CalcTextSize(plus);
-    ImVec2 tc        = {p.x + (SZ - ts.x) * 0.5f, p.y + (SZ - ts.y) * 0.5f};
-    dl->AddText(tc, ImGui::GetColorU32(ImGuiCol_TextDisabled), plus);
-}
-
-void panels::DrawTimeline() {
-    ImGui::Begin("Timeline");
-
-    ImDrawList* dl     = ImGui::GetWindowDrawList();
-    const float avail  = ImGui::GetContentRegionAvail().x;
-    const float btn_sz = 22.0f;
-    const float sp     = ImGui::GetStyle().ItemSpacing.x;
-
-    // ── Transport buttons ──────────────────────────────────────────────
-    if (s_icon_font)
-        ImGui::PushFont(s_icon_font);
-    if (ImGui::Button(ICON_FA_BACKWARD_STEP "##tfirst", {btn_sz, btn_sz}))
-        s_active_frame = 0;
-    if (s_icon_font) {
-        ImGui::PopFont();
-    }
-    if (ImGui::IsItemHovered()) {
-        ImGui::PushFont(nullptr);
-        ImGui::SetTooltip("First");
-        ImGui::PopFont();
-    }
-
-    ImGui::SameLine(0, sp);
-    if (s_icon_font)
-        ImGui::PushFont(s_icon_font);
-    ImGui::Button(ICON_FA_PLAY "##tplay", {btn_sz, btn_sz});
-    if (s_icon_font)
-        ImGui::PopFont();
-    if (ImGui::IsItemHovered()) {
-        ImGui::PushFont(nullptr);
-        ImGui::SetTooltip("Play");
-        ImGui::PopFont();
-    }
-
-    ImGui::SameLine(0, sp);
-    if (s_icon_font)
-        ImGui::PushFont(s_icon_font);
-    if (ImGui::Button(ICON_FA_FORWARD_STEP "##tlast", {btn_sz, btn_sz}))
-        s_active_frame = s_frame_count - 1;
-    if (s_icon_font)
-        ImGui::PopFont();
-    if (ImGui::IsItemHovered()) {
-        ImGui::PushFont(nullptr);
-        ImGui::SetTooltip("Last");
-        ImGui::PopFont();
-    }
-
-    ImGui::SameLine(0, sp * 2);
-    ImGui::TextDisabled("%d frames \xc2\xb7 %d fps", s_frame_count, s_fps);
-
-    // ── Playhead row ───────────────────────────────────────────────────
-    ImGui::Spacing();
-    {
-        char frame_lbl[12];
-        snprintf(frame_lbl, sizeof(frame_lbl), "%02d / %02d", s_active_frame + 1, s_frame_count);
-        ImGui::TextDisabled("%s", frame_lbl);
-
-        ImGui::SameLine(0, sp);
-        float time_lbl_w = ImGui::CalcTextSize("0.00s").x + sp;
-        ImGui::SetNextItemWidth(avail - ImGui::GetCursorPosX() + ImGui::GetStyle().WindowPadding.x - time_lbl_w);
-        ImGui::SliderInt("##tph", &s_active_frame, 0, s_frame_count - 1, "");
-
-        ImGui::SameLine(0, sp);
-        float secs = (s_active_frame + 1) * (s_frame_ms[0] / 1000.0f);
-        char time_buf[12];
-        snprintf(time_buf, sizeof(time_buf), "%.2fs", secs);
-        ImGui::TextDisabled("%s", time_buf);
-    }
-
-    // ── Frame strip ────────────────────────────────────────────────────
-    ImGui::Spacing();
-    ImGui::BeginChild("##tstrip", {-1, 88}, false, ImGuiWindowFlags_HorizontalScrollbar);
-    dl = ImGui::GetWindowDrawList();
-
-    for (int i = 0; i < s_frame_count; i++) {
-        draw_frame_card(dl, i, i == s_active_frame);
-        ImGui::SameLine(0, 6);
-    }
-    draw_add_card(dl);
 
     ImGui::EndChild();
 

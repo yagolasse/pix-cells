@@ -16,7 +16,10 @@
       "Bash(git *)",
       "Bash(python3 *)",
       "Bash(clang-format --version)",
-      "Bash(xargs clang-format -i)"
+      "Bash(xargs clang-format -i)",
+      "Bash(grep -v \"^$\")",
+      "Bash(./build/test_pixc)",
+      "Bash(ctest *)"
     ]
   }
 }

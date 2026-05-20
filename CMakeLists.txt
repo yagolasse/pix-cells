@@ -3,6 +3,7 @@ project(pix-cells VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 
@@ -54,13 +55,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
-add_executable(pix-cells
-    src/main.cpp
-    src/workbench.cpp
+# pix-cells-core — core logic as a static library (linkable by tests)
+add_library(pix-cells-core STATIC
     src/app_state.cpp
     src/canvas_state.cpp
     src/log.cpp
     src/png_io.cpp
+    src/pixc_io.cpp
+)
+target_include_directories(pix-cells-core PUBLIC
+    src
+    ${stb_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/vendor/icons_font_awesome
+)
+target_compile_options(pix-cells-core PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_link_libraries(pix-cells-core PUBLIC imgui_lib)
+
+add_executable(pix-cells
+    src/main.cpp
+    src/workbench.cpp
     src/panels/menu_bar.cpp
     src/panels/canvas_panel.cpp
     src/panels/tools_panel.cpp
@@ -69,13 +82,17 @@ add_executable(pix-cells
     src/panels/timeline_panel.cpp
     src/panels/log_panel.cpp
 )
-target_include_directories(pix-cells PRIVATE src ${stb_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vendor/icons_font_awesome)
 target_compile_options(pix-cells PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_link_libraries(pix-cells PRIVATE pix-cells-core SDL3::SDL3-static OpenGL::GL)
 
 add_custom_command(TARGET pix-cells POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/fonts $<TARGET_FILE_DIR:pix-cells>/fonts
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_SOURCE_DIR}/imgui.ini $<TARGET_FILE_DIR:pix-cells>/imgui.ini
 )
-target_link_libraries(pix-cells PRIVATE imgui_lib SDL3::SDL3-static OpenGL::GL)
+
+enable_testing()
+
+add_executable(test_pixc tests/test_pixc.cpp)
+target_link_libraries(test_pixc PRIVATE pix-cells-core)
+target_compile_options(test_pixc PRIVATE -Wall -Wextra -Wno-unused-parameter)
+add_test(NAME test_pixc COMMAND test_pixc)
