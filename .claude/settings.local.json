@@ -19,7 +19,12 @@
       "Bash(xargs clang-format -i)",
       "Bash(grep -v \"^$\")",
       "Bash(./build/test_pixc)",
-      "Bash(ctest *)"
+      "Bash(ctest *)",
+      "Bash(grep *)",
+      "Bash(rtk read *)",
+      "Bash(rtk find *)",
+      "Bash(rtk grep *)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

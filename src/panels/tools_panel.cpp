@@ -47,9 +47,9 @@ void panels::DrawTools(ToolsState& state) {
         if (active)
             ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
-            ImGui::PushFont(nullptr);
+            if (s_icon_font) ImGui::PopFont();
             ImGui::SetTooltip("%s", tool_defs[i].tip);
-            ImGui::PopFont();
+            if (s_icon_font) ImGui::PushFont(s_icon_font);
         }
     }
 
@@ -76,9 +76,9 @@ void panels::DrawTools(ToolsState& state) {
         if (*v.val)
             ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
-            ImGui::PushFont(nullptr);
+            if (s_icon_font) ImGui::PopFont();
             ImGui::SetTooltip("%s", v.tip);
-            ImGui::PopFont();
+            if (s_icon_font) ImGui::PushFont(s_icon_font);
         }
     }
 
