@@ -8,9 +8,9 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
 | `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=Circle) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); brush size slider |
 | `palette_panel` | `SetPaletteIconFont(ImFont*)`, `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
-| `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*)` → bool | File (New/Open/Save as PIXC, Export > PNG / Sprite Sheet), Edit (Undo/Redo/Canvas Settings), SDL3 async file dialogs; detects PIXC vs PNG on open by magic bytes |
+| `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*, bool& show_log)` → bool | File (New/Open/Save as PIXC, Export > PNG / Sprite Sheet), Edit (Undo/Redo/Canvas Settings), View (Log toggle), SDL3 async file dialogs; detects PIXC vs PNG on open by magic bytes |
 | `timeline_panel` | `SetTimelineIconFont(ImFont*)`, `DrawTimeline(CanvasState&)` | Transport buttons (first/play/last), playhead slider, horizontally-scrolling frame strip of 68×68 cards (checkerboard bg, frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
-| `log_panel` | `DrawLog()` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button |
+| `log_panel` | `DrawLog(bool* p_open)` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button; `p_open` wires the window close button to the View > Log toggle |
 
 ## canvas_panel internals
 - Texture recreated when `cs.width()/height()` changes; updated via `glTexSubImage2D` when `cs.dirty`.
