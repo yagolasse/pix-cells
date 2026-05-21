@@ -162,6 +162,10 @@ int main(int /*argc*/, char* /*argv*/[]) {
                 app.tools.active_tool = 9;
                 Log("Tool: Rect Select");
             }
+            if (ImGui::IsKeyPressed(ImGuiKey_I)) {
+                app.tools.active_tool = 10;
+                Log("Tool: Color Picker");
+            }
             if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
                 app.tools.brush_size = std::max(1, app.tools.brush_size - 1);
                 Log("Brush size: %d", app.tools.brush_size);

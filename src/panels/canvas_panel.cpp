@@ -160,7 +160,7 @@ static constexpr bool k_hmoves[8][4] = {
     {0,0,1,1}, {0,0,0,1}, {1,0,0,1}, {1,0,0,0}
 };
 
-void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteState& palette, SelectionState& sel) {
+void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& palette, SelectionState& sel) {
     static GLuint texture = 0;
     static int tex_w = 0, tex_h = 0;
     static ImVec2 last_px       = {-1.0f, -1.0f};
@@ -465,6 +465,13 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, const PaletteS
                     shape_sy       = py;
                     shape_dragging = true;
                 }
+            }
+        } else if (tools.active_tool == 10) {
+            was_painting = false;
+            last_px      = {-1.0f, -1.0f};
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
+                palette.primary_color = ImGui::ColorConvertU32ToFloat4(cs.active().get(px, py));
+                Log("Color pick at (%d,%d) #%08X", px, py, cs.active().get(px, py));
             }
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
