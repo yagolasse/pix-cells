@@ -6,10 +6,10 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 |-------|-----------|----------------|
 | `canvas_panel` | `DrawCanvas(CanvasState&, ToolsState&, PaletteState&, SelectionState&)` | GL texture, checkerboard, zoom-to-cursor, tool input, marching-ants overlay, floating selection move/scale, resize handles, layer-lock enforcement |
 | `layers_panel` | `DrawLayers(CanvasState&)` | Layer list (top = highest index), add/delete/rename/visibility |
-| `tools_panel` | `SetIconFont(ImFont*)`, `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker) rendered as FA icons via `PushFont`/`PopFont`; view toggles (symmetry, grid, onion skin); context-sensitive options: brush size + shape toggle (Brush/Eraser), brush size only (Line) |
-| `palette_panel` | `SetPaletteIconFont(ImFont*)`, `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
+| `tools_panel` | `DrawTools(ToolsState&)` | Tool buttons (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker) rendered as SVG textures via `icon_manager`; view toggles (symmetry, grid, onion skin) with dual on/off icons for grid; context-sensitive options: brush size + shape toggle (Brush/Eraser), brush size only (Line) |
+| `palette_panel` | `DrawPalette(PaletteState&)` | "Color" window: current/previous swatch strip + swap, HSV/RGB/HEX tabs (picker, channel inputs, recent row), palette grid (8-col, selected outline), Add/Remove/Sort |
 | `menu_bar` | `DrawMenuBar(AppState&, SDL_Window*, bool& show_log)` → bool | File (New/Open/Save as PIXC, Export > PNG / Sprite Sheet), Edit (Undo/Redo/Canvas Settings), View (Log toggle), SDL3 async file dialogs; detects PIXC vs PNG on open by magic bytes |
-| `timeline_panel` | `SetTimelineIconFont(ImFont*)`, `DrawTimeline(CanvasState&)` | Transport buttons (|< prev, play/pause, >| next) advance frames at `cs.fps`; playhead slider; horizontally-scrolling frame strip of 56×64 cards (frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
+| `timeline_panel` | `DrawTimeline(CanvasState&)` | Transport buttons (|< prev, play/pause, >| next) advance frames at `cs.fps`; playhead slider; horizontally-scrolling frame strip of 56×64 cards (frame-number badge, duration badge, accent border on active frame); clicking a card sets `cs.active_frame`; add-frame card appends a new blank frame |
 | `log_panel` | `DrawLog(bool* p_open)` | Displays `LogEntries()` ring buffer; auto-scrolls, Clear button; `p_open` wires the window close button to the View > Log toggle |
 
 ## canvas_panel internals
@@ -24,12 +24,14 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 - **Resize handles**: 8 `AddRectFilled` handles (TL/TM/TR/RM/BR/BM/BL/LM) drawn around `sel` when tool 9 is active. Dragging a handle resizes `sel.x0/y0/x1/y1`; on release, if floating, `nn_scale` (nearest-neighbour) scales `sel.float_pixels` to the new dimensions.
 - **Tool 9 click priority**: (1) handle hit → handle drag, (2) inside floating rect → re-drag float, (3) inside sel rect + unlocked → lift, (4) elsewhere → new selection drag (clears `sel.active`).
 
-## Icon font
-`tools_panel.cpp`, `palette_panel.cpp`, `layers_panel.cpp`, and `timeline_panel.cpp` each hold a `static ImFont* s_icon_font`. `main.cpp` loads `fonts/fa-solid-900.ttf` and passes the pointer to `panels::SetIconFont()`, `panels::SetPaletteIconFont()`, `panels::SetLayersIconFont()`, and `panels::SetTimelineIconFont()` before the main loop. Tooltips inside a `PushFont(s_icon_font)` block must call `PopFont()` **before** `SetTooltip` and `PushFont(s_icon_font)` **after** to restore the icon font. Do not use `PushFont(nullptr)` — in ImGui v1.92+ it re-pushes the current font rather than switching to the default. Wrap icon-only button labels in `PushFont(s_icon_font)` / `PopFont()`. Icon defines (`ICON_FA_*`) come from `vendor/icons_font_awesome/IconsFontAwesome6.h`. To add an icon to a button label use compile-time string concatenation: `ICON_FA_PENCIL "##id"`.
+## Icons
+Icons are SVG files in `icons/` rasterized at runtime via lunasvg. `icon_manager::init("icons")` is called in `main.cpp` after `ImGui_ImplOpenGL3_Init`; `icon_manager::shutdown()` is called before `ImGui_ImplOpenGL3_Shutdown`. Panels call `icon_manager::get("name")` to retrieve an `ImTextureID` (GL texture, 32×32 RGBA, lazily loaded and cached). All icon buttons use `ImGui::ImageButton` with `ImGuiStyleVar_FramePadding` set to `(FP, FP)` (tools panel uses `FP=4` with `ICON=22`). Missing SVG files return texture ID 0 (blank button, no crash). SVG files use the naming convention `name.svg` / `name_filled.svg` / `name_off.svg` / `name_open.svg`.
+
+SDL cursors are managed by `cursor_manager` (`src/cursor_manager.h/cpp`). `set_for_tool(tool_index, mouse_pressed)` is called each frame in `main.cpp`. Move tool (8) uses `pan_tool.svg` / `pan_tool_alt.svg` depending on `mouse_pressed`; Color Picker (10) uses `eyedropper.svg`; all others use `point_scan.svg`.
 
 ## Adding a new tool
 1. Add a comment in `app_state.h` `ToolsState` documenting the new index.
-2. Add an entry to `tool_defs[]` in `tools_panel.cpp` with the FA icon and tooltip. Update loop bound.
+2. Add an entry to `tool_defs[]` in `tools_panel.cpp` with the SVG icon name, `##tN` id, and tooltip. Place the corresponding `name.svg` in `icons/`.
 3. Add a handler branch in `canvas_panel.cpp`:
    - Brush-like tools: inside `IsItemHovered` in the `else` branch.
    - Shape tools (click-drag): extend the `active_tool >= 3 && active_tool <= 7` range; start inside `IsItemHovered`; commit in the `shape_dragging` `else` block's switch; add preview in `if (shape_dragging)`.

@@ -1,14 +1,9 @@
 #include "palette_panel.h"
 #include "imgui.h"
-#include "IconsFontAwesome6.h"
+#include "icon_manager.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
-
-static ImFont* s_icon_font = nullptr;
-void panels::SetPaletteIconFont(ImFont* font) {
-    s_icon_font = font;
-}
 
 // Labelled float drag (H/S/V style: accent-colored single-letter + full-width input)
 static bool num_row(const char* id, const char* label, float* v, float speed, float lo, float hi, const char* fmt) {
@@ -71,12 +66,10 @@ void panels::DrawPalette(PaletteState& state) {
         ImGui::InvisibleButton("##swatches", {sw_w, h});
         ImGui::SameLine();
 
-        if (s_icon_font)
-            ImGui::PushFont(s_icon_font);
-        if (ImGui::Button(ICON_FA_LEFT_RIGHT "##swap", {swap_w, h}))
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        if (ImGui::ImageButton("##swap", icon_manager::get("swap"), {swap_w, h}))
             std::swap(state.primary_color, state.secondary_color);
-        if (s_icon_font)
-            ImGui::PopFont();
+        ImGui::PopStyleVar();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Swap colors");
     }

@@ -54,6 +54,8 @@ Key methods:
 | `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `AppState` |
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations + `blend_pixel` (Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity) |
+| `icon_manager.h/cpp` | `icon_manager::init(dir)`, `::get(name)` → `ImTextureID`, `::shutdown()` — lazily loads SVGs from `icons/` via lunasvg (32×32, ARGB→RGBA swizzle + un-premultiply), uploads as GL textures, caches by name; missing files return texture 0 |
+| `cursor_manager.h/cpp` | `cursor_manager::init(dir)`, `::set_for_tool(tool_index, mouse_pressed)`, `::shutdown()` — loads `point_scan.svg`, `eyedropper.svg`, `pan_tool.svg`, `pan_tool_alt.svg` as SDL color cursors; tool 8 (Move) uses pan_tool / pan_tool_alt based on `mouse_pressed`; tool 10 (Color Picker) uses eyedropper; all others use point_scan |
 | `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/U/M/S/[/] tool shortcuts (U=Circle); Ctrl+A select-all, Ctrl+C/X copy/cut (locked layer blocked), Ctrl+V paste (locked layer blocked), Delete/Backspace erase selection (locked layer blocked), Escape deselect/cancel-float |
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`) — calls `BuildDefaultLayout` automatically on first launch (when no ini node exists) before registering the DockSpace; docks 5 panels: Tools, Canvas, Color, Layers, Timeline; Log floats freely when toggled |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |

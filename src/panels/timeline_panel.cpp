@@ -2,17 +2,12 @@
 #include "app_state.h"
 #include "log.h"
 #include "imgui.h"
-#include "IconsFontAwesome6.h"
+#include "icon_manager.h"
 #include <algorithm>
 #include <cstdio>
 
-static ImFont* s_timeline_icon_font = nullptr;
-static bool    s_playing            = false;
-static double  s_next_frame_at      = 0.0;
-
-void panels::SetTimelineIconFont(ImFont* font) {
-    s_timeline_icon_font = font;
-}
+static bool   s_playing        = false;
+static double s_next_frame_at  = 0.0;
 
 // Returns true if this frame card was clicked
 static bool draw_frame_card(int idx, bool is_active, uint16_t duration_ms) {
@@ -109,50 +104,42 @@ void panels::DrawTimeline(CanvasState& cs) {
 
     // Transport controls
     const float TBTN = 22.0f;
-    if (s_timeline_icon_font)
-        ImGui::PushFont(s_timeline_icon_font);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
-    if (ImGui::Button(ICON_FA_BACKWARD_STEP "##prev", {TBTN, TBTN})) {
+    if (ImGui::ImageButton("##prev", icon_manager::get("skip_previous"), {TBTN, TBTN})) {
         s_playing = false;
         cs.active_frame = (cs.active_frame - 1 + (int)cs.frames.size()) % (int)cs.frames.size();
         cs.rebuild_composite();
     }
-    if (ImGui::IsItemHovered()) {
-        if (s_timeline_icon_font) ImGui::PopFont();
+    if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Previous frame");
-        if (s_timeline_icon_font) ImGui::PushFont(s_timeline_icon_font);
-    }
     ImGui::SameLine(0, 4);
 
-    if (ImGui::Button(s_playing ? ICON_FA_PAUSE "##play" : ICON_FA_PLAY "##play", {TBTN, TBTN})) {
-        s_playing = !s_playing;
-        if (s_playing) {
-            if ((int)cs.frames.size() <= 1)
-                s_playing = false;
-            else
-                s_next_frame_at = ImGui::GetTime() + 1.0 / (double)cs.fps;
+    {
+        const char* play_icon = s_playing ? "pause" : "play";
+        if (ImGui::ImageButton("##play", icon_manager::get(play_icon), {TBTN, TBTN})) {
+            s_playing = !s_playing;
+            if (s_playing) {
+                if ((int)cs.frames.size() <= 1)
+                    s_playing = false;
+                else
+                    s_next_frame_at = ImGui::GetTime() + 1.0 / (double)cs.fps;
+            }
         }
-    }
-    if (ImGui::IsItemHovered()) {
-        if (s_timeline_icon_font) ImGui::PopFont();
-        ImGui::SetTooltip(s_playing ? "Pause" : "Play");
-        if (s_timeline_icon_font) ImGui::PushFont(s_timeline_icon_font);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(s_playing ? "Pause" : "Play");
     }
     ImGui::SameLine(0, 4);
 
-    if (ImGui::Button(ICON_FA_FORWARD_STEP "##next", {TBTN, TBTN})) {
+    if (ImGui::ImageButton("##next", icon_manager::get("skip_next"), {TBTN, TBTN})) {
         s_playing = false;
         cs.active_frame = (cs.active_frame + 1) % (int)cs.frames.size();
         cs.rebuild_composite();
     }
-    if (ImGui::IsItemHovered()) {
-        if (s_timeline_icon_font) ImGui::PopFont();
+    if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Next frame");
-        if (s_timeline_icon_font) ImGui::PushFont(s_timeline_icon_font);
-    }
 
-    if (s_timeline_icon_font)
-        ImGui::PopFont();
+    ImGui::PopStyleVar();
 
     ImGui::SameLine(0, 8);
 

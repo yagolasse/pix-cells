@@ -3,7 +3,8 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
-#include "IconsFontAwesome6.h"
+#include "icon_manager.h"
+#include "cursor_manager.h"
 #include "workbench.h"
 #include "app_state.h"
 #include "panels/menu_bar.h"
@@ -97,17 +98,11 @@ int main(int /*argc*/, char* /*argv*/[]) {
     }
 
     io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 15.0f);
-    {
-        static const ImWchar ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
-        ImFont* icon_font             = io.Fonts->AddFontFromFileTTF("fonts/fa-solid-900.ttf", 16.0f, nullptr, ranges);
-        panels::SetIconFont(icon_font);
-        panels::SetPaletteIconFont(icon_font);
-        panels::SetLayersIconFont(icon_font);
-        panels::SetTimelineIconFont(icon_font);
-    }
 
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330 core");
+    icon_manager::init("icons");
+    cursor_manager::init("icons");
 
     AppState app;
 
@@ -275,6 +270,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         if (!panels::DrawMenuBar(app, window, show_log))
             running = false;
 
+        cursor_manager::set_for_tool(app.tools.active_tool, ImGui::IsMouseDown(ImGuiMouseButton_Left));
         panels::DrawTools(app.tools);
         panels::DrawCanvas(app.canvas, app.tools, app.palette, app.selection);
         panels::DrawLayers(app.canvas);
@@ -292,6 +288,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
         SDL_GL_SwapWindow(window);
     }
 
+    cursor_manager::shutdown();
+    icon_manager::shutdown();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();

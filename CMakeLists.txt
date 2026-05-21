@@ -54,6 +54,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
+# lunasvg — SVG rasterizer
+FetchContent_Declare(
+    lunasvg
+    GIT_REPOSITORY https://github.com/sammycage/lunasvg.git
+    GIT_TAG        v3.2.1
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(lunasvg)
+
 # pix-cells-core — core logic as a static library (linkable by tests)
 add_library(pix-cells-core STATIC
     src/app_state.cpp
@@ -65,7 +74,6 @@ add_library(pix-cells-core STATIC
 target_include_directories(pix-cells-core PUBLIC
     src
     ${stb_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/vendor/icons_font_awesome
 )
 target_compile_options(pix-cells-core PRIVATE
     $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
@@ -73,6 +81,8 @@ target_link_libraries(pix-cells-core PUBLIC imgui_lib)
 
 add_executable(pix-cells
     src/main.cpp
+    src/icon_manager.cpp
+    src/cursor_manager.cpp
     src/workbench.cpp
     src/panels/menu_bar.cpp
     src/panels/canvas_panel.cpp
@@ -84,11 +94,15 @@ add_executable(pix-cells
 )
 target_compile_options(pix-cells PRIVATE
     $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
-target_link_libraries(pix-cells PRIVATE pix-cells-core SDL3::SDL3-static OpenGL::GL)
+target_link_libraries(pix-cells PRIVATE pix-cells-core SDL3::SDL3-static OpenGL::GL lunasvg)
 
 add_custom_command(TARGET pix-cells POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/fonts $<TARGET_FILE_DIR:pix-cells>/fonts
+)
+add_custom_command(TARGET pix-cells POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/icons $<TARGET_FILE_DIR:pix-cells>/icons
 )
 
 enable_testing()

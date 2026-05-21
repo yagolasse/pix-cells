@@ -24,7 +24,15 @@
       "Bash(rtk read *)",
       "Bash(rtk find *)",
       "Bash(rtk grep *)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(mv \"add_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg\" add.svg)",
+      "Bash(mv \"back_hand_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg\" hand.svg)",
+      "Bash(mv \"brush_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg\" brush.svg)",
+      "Bash(mv \"circle_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg\" circle.svg)",
+      "Bash(mv \"circle_24dp_E3E3E3_FILL1_wght400_GRAD0_opsz24.svg\" circle_filled.svg)",
+      "Bash(mv \"pan_tool_alt_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg\" pan_tool_alt.svg)",
+      "Bash(mv \"pan_tool_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg\" pan_tool.svg)",
+      "Bash(rm hand.svg)"
     ]
   }
 }
