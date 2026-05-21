@@ -77,37 +77,44 @@ static void draw_rect(CanvasState& cs, int x0, int y0, int x1, int y1, uint32_t 
     }
 }
 
+// Bresenham ellipse-in-rect (Zingl). Fits the bounding box [x0,x1]×[y0,y1] exactly,
+// handling odd AND even diameters, so a 1px drag change grows the shape by 1px. When
+// `filled`, each scanline's left/right edge points are span-filled, so the fill is derived
+// from the same edges as the outline — identical silhouette, no single-pixel pole nub.
+template <class Plot>
+static void rasterize_ellipse(int x0, int y0, int x1, int y1, bool filled, Plot plot) {
+    if (x0 == x1 && y0 == y1) { plot(x0, y0); return; }
+    long a = std::abs(x1 - x0), b = std::abs(y1 - y0), b1 = b & 1;
+    long dx = 4 * (1 - a) * b * b, dy = 4 * (b1 + 1) * a * a;
+    long err = dx + dy + b1 * a * a, e2;
+    if (x0 > x1) { x0 = x1; x1 += a; }
+    if (y0 > y1) y0 = y1;
+    y0 += (b + 1) / 2; y1 = y0 - b1;
+    a *= 8 * a; b1 = 8 * b * b;
+    do {
+        if (filled) {
+            for (int x = x0; x <= x1; x++) { plot(x, y0); plot(x, y1); }
+        } else {
+            plot(x1, y0); plot(x0, y0); plot(x0, y1); plot(x1, y1);
+        }
+        e2 = 2 * err;
+        if (e2 <= dy) { y0++; y1--; err += dy += a; }
+        if (e2 >= dx || 2 * err > dy) { x0++; x1--; err += dx += b1; }
+    } while (x0 <= x1);
+    while (y0 - y1 < b) {  // finish the tips of flat (near-1px) ellipses
+        if (filled) {
+            for (int x = x0 - 1; x <= x1 + 1; x++) { plot(x, y0); plot(x, y1); }
+        } else {
+            plot(x0 - 1, y0); plot(x1 + 1, y0);
+            plot(x0 - 1, y1); plot(x1 + 1, y1);
+        }
+        y0++; y1--;
+    }
+}
+
 static void draw_ellipse(CanvasState& cs, int x0, int y0, int x1, int y1, uint32_t color, bool filled) {
-    int cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    int rx = std::abs(x1 - x0) / 2, ry = std::abs(y1 - y0) / 2;
-    if (rx == 0 && ry == 0) {
-        cs.active().set(cx, cy, color);
-        return;
-    }
-    if (filled) {
-        for (int y = -ry; y <= ry; y++) {
-            float t = (rx > 0 && ry > 0) ? (float)(rx * rx) * (1.0f - (float)(y * y) / (float)(ry * ry)) : 0.0f;
-            int xw  = (t > 0.0f) ? (int)std::round(std::sqrt(t)) : 0;
-            for (int x = -xw; x <= xw; x++)
-                cs.active().set(cx + x, cy + y, color);
-        }
-    } else {
-        // Dual scan: row-by-row then column-by-column — guarantees gap-free outline.
-        // round() instead of floor() places pixels at the nearest boundary, eliminating
-        // extra dots near the poles that floor-truncation causes.
-        for (int dy = -ry; dy <= ry; dy++) {
-            float t = (ry > 0) ? (float)(rx * rx) * (1.0f - (float)(dy * dy) / (float)(ry * ry)) : 0.0f;
-            int xw  = (t > 0.0f) ? (int)std::round(std::sqrt(t)) : 0;
-            cs.active().set(cx - xw, cy + dy, color);
-            cs.active().set(cx + xw, cy + dy, color);
-        }
-        for (int dx = -rx; dx <= rx; dx++) {
-            float t = (rx > 0) ? (float)(ry * ry) * (1.0f - (float)(dx * dx) / (float)(rx * rx)) : 0.0f;
-            int yw  = (t > 0.0f) ? (int)std::round(std::sqrt(t)) : 0;
-            cs.active().set(cx + dx, cy - yw, color);
-            cs.active().set(cx + dx, cy + yw, color);
-        }
-    }
+    rasterize_ellipse(x0, y0, x1, y1, filled,
+                      [&](int x, int y) { cs.active().set(x, y, color); });
 }
 
 static void nn_scale(const std::vector<uint32_t>& src, int sw, int sh,
@@ -371,29 +378,9 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 for (int x = minx; x <= maxx; x++) { draw_px(x, miny); draw_px(x, maxy); }
                 for (int y = miny + 1; y < maxy; y++) { draw_px(minx, y); draw_px(maxx, y); }
             }
-        } else if (t == 6 || t == 7) {  // Ellipse — dual-scan mirrors draw_ellipse()
-            int ecx = (shape_sx + epx) / 2, ecy = (shape_sy + epy) / 2;
-            int rx  = std::abs(epx - shape_sx) / 2, ry = std::abs(epy - shape_sy) / 2;
-            if (rx == 0 && ry == 0) {
-                draw_px(ecx, ecy);
-            } else if (t == 7) {
-                for (int dy = -ry; dy <= ry; dy++) {
-                    float ft = (rx > 0 && ry > 0) ? (float)(rx*rx)*(1.0f-(float)(dy*dy)/(float)(ry*ry)) : 0.0f;
-                    int xw = (ft > 0.0f) ? (int)std::round(std::sqrt(ft)) : 0;
-                    for (int x = -xw; x <= xw; x++) draw_px(ecx + x, ecy + dy);
-                }
-            } else {
-                for (int dy = -ry; dy <= ry; dy++) {
-                    float ft = (ry > 0) ? (float)(rx*rx)*(1.0f-(float)(dy*dy)/(float)(ry*ry)) : 0.0f;
-                    int xw = (ft > 0.0f) ? (int)std::round(std::sqrt(ft)) : 0;
-                    draw_px(ecx - xw, ecy + dy); draw_px(ecx + xw, ecy + dy);
-                }
-                for (int dx = -rx; dx <= rx; dx++) {
-                    float ft = (rx > 0) ? (float)(ry*ry)*(1.0f-(float)(dx*dx)/(float)(rx*rx)) : 0.0f;
-                    int yw = (ft > 0.0f) ? (int)std::round(std::sqrt(ft)) : 0;
-                    draw_px(ecx + dx, ecy - yw); draw_px(ecx + dx, ecy + yw);
-                }
-            }
+        } else if (t == 6 || t == 7) {  // Ellipse — shares rasterize_ellipse() with commit
+            rasterize_ellipse(shape_sx, shape_sy, epx, epy, t == 7,
+                              [&](int x, int y) { draw_px(x, y); });
         } else if (t == 9) {  // Select — marching ants (vector UI overlay, not a drawing output)
             float ssx = cur_origin.x + shape_sx * z, ssy = cur_origin.y + shape_sy * z;
             float sex = cur_origin.x + (px + 1) * z,  sey = cur_origin.y + (py + 1) * z;
