@@ -313,32 +313,79 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     int px            = (int)((io.MousePos.x - cur_origin.x) / cs.zoom);
     int py            = (int)((io.MousePos.y - cur_origin.y) / cs.zoom);
 
-    // Shape preview overlay — draw while shape dragging (suppressed when floating, uses float pixels as preview)
+    // Shape preview overlay — pixel-exact, mirrors the committed drawing algorithms
     if (shape_dragging && !sel.floating) {
-        float ssx      = cur_origin.x + shape_sx * cs.zoom;
-        float ssy      = cur_origin.y + shape_sy * cs.zoom;
-        float sex      = cur_origin.x + (px + 1) * cs.zoom;
-        float sey      = cur_origin.y + (py + 1) * cs.zoom;
         ImU32 prev_col = (ImGui::ColorConvertFloat4ToU32(palette.primary_color) & 0x00FFFFFFu) | 0xCC000000u;
-        ImVec2 p1 = {ssx, ssy}, p2 = {sex, sey};
+        float z = cs.zoom;
+
+        auto draw_px = [&](int cx, int cy) {
+            if (cx < 0 || cx >= cs.width() || cy < 0 || cy >= cs.height()) return;
+            float sx = cur_origin.x + cx * z;
+            float sy = cur_origin.y + cy * z;
+            dl->AddRectFilled({sx, sy}, {sx + z, sy + z}, prev_col);
+        };
+
+        auto stamp = [&](int cx, int cy) {
+            int half = tools.brush_size / 2;
+            for (int dy = -half; dy <= half; dy++)
+                for (int dx = -half; dx <= half; dx++) {
+                    if (tools.circle_brush && dx * dx + dy * dy > half * half) continue;
+                    draw_px(cx + dx, cy + dy);
+                }
+        };
+
         int t = tools.active_tool;
-        if (t == 3) {
-            dl->AddLine(p1, {cur_origin.x + px * cs.zoom, cur_origin.y + py * cs.zoom}, prev_col, 1.5f);
-        } else if (t == 4 || t == 5) {
-            if (t == 5)
-                dl->AddRectFilled(p1, p2, prev_col);
-            else
-                dl->AddRect(p1, p2, prev_col, 0.0f, 0, 1.5f);
-        } else if (t == 6 || t == 7) {
-            float ecx = (p1.x + p2.x) * 0.5f, ecy = (p1.y + p2.y) * 0.5f;
-            float erx = std::abs(p2.x - p1.x) * 0.5f, ery = std::abs(p2.y - p1.y) * 0.5f;
-            if (t == 7)
-                dl->AddEllipseFilled({ecx, ecy}, {erx, ery}, prev_col);
-            else
-                dl->AddEllipse({ecx, ecy}, {erx, ery}, prev_col, 0.0f, 0, 1.5f);
-        } else if (t == 9) {
-            dl->AddRect(p1, p2, IM_COL32(255,255,255,200), 0, 0, 1.5f);
-            dl->AddRect({p1.x+1,p1.y+1},{p2.x-1,p2.y-1}, IM_COL32(0,0,0,200), 0, 0, 1.0f);
+        if (t == 3) {  // Line — Bresenham + brush stamp
+            int x0 = shape_sx, y0 = shape_sy, x1 = px, y1 = py;
+            int adx = std::abs(x1 - x0), stepx = x0 < x1 ? 1 : -1;
+            int ady = -std::abs(y1 - y0), stepy = y0 < y1 ? 1 : -1;
+            int err = adx + ady;
+            while (true) {
+                stamp(x0, y0);
+                if (x0 == x1 && y0 == y1) break;
+                int e2 = 2 * err;
+                if (e2 >= ady) { err += ady; x0 += stepx; }
+                if (e2 <= adx) { err += adx; y0 += stepy; }
+            }
+        } else if (t == 4 || t == 5) {  // Rect
+            int minx = std::min(shape_sx, px), maxx = std::max(shape_sx, px);
+            int miny = std::min(shape_sy, py), maxy = std::max(shape_sy, py);
+            if (t == 5) {
+                for (int y = miny; y <= maxy; y++)
+                    for (int x = minx; x <= maxx; x++)
+                        draw_px(x, y);
+            } else {
+                for (int x = minx; x <= maxx; x++) { draw_px(x, miny); draw_px(x, maxy); }
+                for (int y = miny + 1; y < maxy; y++) { draw_px(minx, y); draw_px(maxx, y); }
+            }
+        } else if (t == 6 || t == 7) {  // Ellipse — dual-scan mirrors draw_ellipse()
+            int ecx = (shape_sx + px) / 2, ecy = (shape_sy + py) / 2;
+            int rx  = std::abs(px - shape_sx) / 2, ry = std::abs(py - shape_sy) / 2;
+            if (rx == 0 && ry == 0) {
+                draw_px(ecx, ecy);
+            } else if (t == 7) {
+                for (int dy = -ry; dy <= ry; dy++) {
+                    float ft = (rx > 0 && ry > 0) ? (float)(rx*rx)*(1.0f-(float)(dy*dy)/(float)(ry*ry)) : 0.0f;
+                    int xw = (ft > 0.0f) ? (int)std::sqrt(ft) : 0;
+                    for (int x = -xw; x <= xw; x++) draw_px(ecx + x, ecy + dy);
+                }
+            } else {
+                for (int dy = -ry; dy <= ry; dy++) {
+                    float ft = (ry > 0) ? (float)(rx*rx)*(1.0f-(float)(dy*dy)/(float)(ry*ry)) : 0.0f;
+                    int xw = (ft > 0.0f) ? (int)std::sqrt(ft) : 0;
+                    draw_px(ecx - xw, ecy + dy); draw_px(ecx + xw, ecy + dy);
+                }
+                for (int dx = -rx; dx <= rx; dx++) {
+                    float ft = (rx > 0) ? (float)(ry*ry)*(1.0f-(float)(dx*dx)/(float)(rx*rx)) : 0.0f;
+                    int yw = (ft > 0.0f) ? (int)std::sqrt(ft) : 0;
+                    draw_px(ecx + dx, ecy - yw); draw_px(ecx + dx, ecy + yw);
+                }
+            }
+        } else if (t == 9) {  // Select — marching ants (vector UI overlay, not a drawing output)
+            float ssx = cur_origin.x + shape_sx * z, ssy = cur_origin.y + shape_sy * z;
+            float sex = cur_origin.x + (px + 1) * z,  sey = cur_origin.y + (py + 1) * z;
+            dl->AddRect({ssx,ssy},{sex,sey}, IM_COL32(255,255,255,200), 0, 0, 1.5f);
+            dl->AddRect({ssx+1,ssy+1},{sex-1,sey-1}, IM_COL32(0,0,0,200), 0, 0, 1.0f);
         }
     }
 
