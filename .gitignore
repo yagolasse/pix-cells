@@ -11,3 +11,4 @@ _deps/
 *.log
 temp/
 imgui.ini
+.claude/settings.local.json

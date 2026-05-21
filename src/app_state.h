@@ -19,6 +19,12 @@ struct Frame {
     uint16_t           duration_ms = 100;
 };
 
+struct HistoryState {
+    std::vector<Frame> frames;
+    int                active_frame = 0;
+    int                active_layer = 0;
+};
+
 struct CanvasState {
     std::vector<Frame>             frames;
     int                            active_frame = 0;
@@ -33,8 +39,8 @@ struct CanvasState {
     ImVec4                         checker_color1 = { 220/255.f, 220/255.f, 220/255.f, 1.f };
     ImVec4                         checker_color2 = { 170/255.f, 170/255.f, 170/255.f, 1.f };
 
-    std::deque<std::vector<Frame>> undo_stack;  // full frame-stack snapshots
-    std::deque<std::vector<Frame>> redo_stack;
+    std::deque<HistoryState>       undo_stack;  // frame stack + selection snapshots
+    std::deque<HistoryState>       redo_stack;
     static constexpr int           MAX_HISTORY = 50;
 
     std::vector<Layer>&       active_layers()       { return frames[active_frame].layers; }

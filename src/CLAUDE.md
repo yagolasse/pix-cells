@@ -39,8 +39,8 @@ Key methods:
 | `active_layer_locked()` | Returns `bool` — true if the active layer has `locked=true`; use to guard all pixel-write operations |
 | `active_layers()` | Returns `vector<Layer>&` for the active frame's layer stack |
 | `rebuild_composite()` | Composites active frame's visible layers → `composite` applying per-layer opacity and blend mode (Normal/Multiply/Screen/Overlay/Add); sets `dirty=true` |
-| `push_snapshot()` | Copies full `frames` vector onto `undo_stack`, clears `redo_stack` |
-| `undo()` / `redo()` | Swaps `frames` vectors, calls `rebuild_composite()` |
+| `push_snapshot()` | Pushes a `HistoryState` (full `frames` vector + `active_frame` + `active_layer`) onto `undo_stack`, clears `redo_stack` |
+| `undo()` / `redo()` | Restores `frames` **and** `active_frame`/`active_layer` from the snapshot, calls `rebuild_composite()` — keeps the selection valid when the layer count changes |
 | `new_canvas(w,h)` | Resets to one frame with one transparent layer, clears undo/redo |
 
 ### Dirty flag

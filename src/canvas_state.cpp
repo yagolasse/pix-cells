@@ -74,25 +74,31 @@ void CanvasState::rebuild_composite() {
 }
 
 void CanvasState::push_snapshot() {
-    undo_stack.push_back(frames);
+    undo_stack.push_back({ frames, active_frame, active_layer });
     if ((int)undo_stack.size() > MAX_HISTORY) undo_stack.pop_front();
     redo_stack.clear();
 }
 
 void CanvasState::undo() {
     if (undo_stack.empty()) return;
-    redo_stack.push_back(frames);
-    frames = std::move(undo_stack.back());
+    redo_stack.push_back({ frames, active_frame, active_layer });
+    HistoryState snap = std::move(undo_stack.back());
     undo_stack.pop_back();
+    frames       = std::move(snap.frames);
+    active_frame = snap.active_frame;
+    active_layer = snap.active_layer;
     rebuild_composite();
     Log("Undo (%d steps remain)", (int)undo_stack.size());
 }
 
 void CanvasState::redo() {
     if (redo_stack.empty()) return;
-    undo_stack.push_back(frames);
-    frames = std::move(redo_stack.back());
+    undo_stack.push_back({ frames, active_frame, active_layer });
+    HistoryState snap = std::move(redo_stack.back());
     redo_stack.pop_back();
+    frames       = std::move(snap.frames);
+    active_frame = snap.active_frame;
+    active_layer = snap.active_layer;
     rebuild_composite();
     Log("Redo (%d steps remain)", (int)redo_stack.size());
 }
