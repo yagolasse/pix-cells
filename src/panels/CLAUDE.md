@@ -15,6 +15,7 @@ Each panel is a self-contained ImGui window. Panels receive references only to t
 ## canvas_panel internals
 - Texture recreated when `cs.width()/height()` changes; updated via `glTexSubImage2D` when `cs.dirty`.
 - **Sampler fix**: ImGui v1.92+ binds a LINEAR sampler before each draw. Inject `DrawCallback_SetSamplerNearest` / `DrawCallback_SetSamplerLinear` around `ImGui::Image()` to preserve `GL_NEAREST`.
+- **Initial centering**: `cs.needs_center` triggers a one-time pan calculation to center the canvas in the panel. Centering is deferred until `GetContentRegionAvail()` returns the same value on two consecutive frames — on first launch (no `imgui.ini`), docking layout takes a few frames to settle and the available size is wrong until then. A `static ImVec2 prev_avail` tracks the previous frame's size for this comparison.
 - **Zoom-to-cursor**: on scroll, adjusts `cs.pan` so the canvas pixel under the mouse stays fixed: `pan.x = mouse.x - (mouse.x - base.x - pan.x) / old_zoom * new_zoom - base.x`.
 - `was_painting` static tracks stroke continuity; `push_snapshot()` fires once on stroke start (not per pixel).
 - `base` = `ImGui::GetCursorScreenPos()` before `SetCursorScreenPos(origin)` — used as the fixed anchor for pan math.

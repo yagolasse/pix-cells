@@ -213,13 +213,21 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
 
     ImGuiIO& io = ImGui::GetIO();
 
-    // Center canvas in the window on first render after creation
+    // Center canvas once the docking layout has settled.
+    // On first launch (no imgui.ini), the panel resizes over several frames as docking applies.
+    // We compare avail against the previous frame's value; only center when both are stable.
     if (cs.needs_center) {
-        ImVec2 avail    = ImGui::GetContentRegionAvail();
-        float W         = cs.width() * cs.zoom;
-        float H         = cs.height() * cs.zoom;
-        cs.pan          = {(avail.x - W) * 0.5f, (avail.y - H) * 0.5f};
-        cs.needs_center = false;
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        if (avail.x > 0 && avail.y > 0) {
+            static ImVec2 prev_avail = {0, 0};
+            if (avail.x == prev_avail.x && avail.y == prev_avail.y) {
+                float W         = cs.width() * cs.zoom;
+                float H         = cs.height() * cs.zoom;
+                cs.pan          = {(avail.x - W) * 0.5f, (avail.y - H) * 0.5f};
+                cs.needs_center = false;
+            }
+            prev_avail = avail;
+        }
     }
 
     // Pan with middle-mouse drag
