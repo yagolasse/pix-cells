@@ -1,5 +1,7 @@
 #include "pixc_io.h"
+#include "app_state.h"
 #include "log.h"
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
@@ -40,7 +42,7 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
     const char magic[4] = { 'P', 'I', 'X', 'C' };
     fwrite(magic, 1, 4, f);
 
-    uint16_t version     = 1;
+    uint16_t version     = 2;
     uint16_t w           = (uint16_t)cs.width();
     uint16_t h           = (uint16_t)cs.height();
     uint16_t frame_count = (uint16_t)cs.frames.size();
@@ -87,8 +89,21 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
         }
     }
 
+    // TAGS (version 2+)
+    uint16_t tag_count = (uint16_t)cs.tags.size();
+    fwrite(&tag_count, sizeof(uint16_t), 1, f);
+    for (const auto& t : cs.tags) {
+        write_str(f, t.name);
+        uint16_t ts = (uint16_t)t.start;
+        uint16_t te = (uint16_t)t.end;
+        fwrite(&ts, sizeof(uint16_t), 1, f);
+        fwrite(&te, sizeof(uint16_t), 1, f);
+    }
+    int16_t active_tag = (int16_t)cs.active_tag;
+    fwrite(&active_tag, sizeof(int16_t), 1, f);
+
     fclose(f);
-    Log("pixc_io::save: saved \"%s\" (%d frames, %dx%d)", path.c_str(), (int)frame_count, (int)w, (int)h);
+    Log("pixc_io::save: saved \"%s\" (%d frames, %d tags, %dx%d)", path.c_str(), (int)frame_count, (int)tag_count, (int)w, (int)h);
     return true;
 }
 
@@ -113,7 +128,7 @@ bool pixc_io::load(AppState& state, const std::string& path) {
 
     uint16_t version = 0;
     fread(&version, sizeof(uint16_t), 1, f);
-    if (version != 1) {
+    if (version < 1 || version > 2) {
         Log("pixc_io::load: unsupported version %d in \"%s\"", (int)version, path.c_str());
         fclose(f);
         return false;
@@ -180,11 +195,35 @@ bool pixc_io::load(AppState& state, const std::string& path) {
 
     fclose(f);
 
+    // TAGS (version 2+)
+    state.canvas.tags.clear();
+    state.canvas.active_tag = -1;
+    if (version >= 2) {
+        uint16_t tag_count = 0;
+        fread(&tag_count, sizeof(uint16_t), 1, f);
+        state.canvas.tags.reserve(tag_count);
+        int last = (int)frame_count - 1;
+        for (int ti = 0; ti < (int)tag_count; ti++) {
+            AnimTag t;
+            read_str(f, t.name);
+            uint16_t ts = 0, te = 0;
+            fread(&ts, sizeof(uint16_t), 1, f);
+            fread(&te, sizeof(uint16_t), 1, f);
+            t.start = std::clamp((int)ts, 0, last);
+            t.end   = std::clamp((int)te, t.start, last);
+            state.canvas.tags.push_back(std::move(t));
+        }
+        int16_t active_tag = -1;
+        fread(&active_tag, sizeof(int16_t), 1, f);
+        int at = (int)active_tag;
+        state.canvas.active_tag = (at >= 0 && at < (int)state.canvas.tags.size()) ? at : -1;
+    }
+
     state.canvas.active_frame = 0;
     state.canvas.active_layer = 0;
     state.canvas.needs_center = true;
     state.canvas.rebuild_composite();
 
-    Log("pixc_io::load: loaded \"%s\" (%d frames, %dx%d)", path.c_str(), (int)frame_count, (int)w, (int)h);
+    Log("pixc_io::load: loaded \"%s\" (v%d, %d frames, %d tags, %dx%d)", path.c_str(), (int)version, (int)frame_count, (int)state.canvas.tags.size(), (int)w, (int)h);
     return true;
 }

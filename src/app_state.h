@@ -19,6 +19,12 @@ struct Frame {
     uint16_t           duration_ms = 100;
 };
 
+struct AnimTag {
+    std::string name  = "tag";
+    int         start = 0;   // inclusive frame index
+    int         end   = 0;   // inclusive frame index
+};
+
 struct HistoryState {
     std::vector<Frame> frames;
     int                active_frame = 0;
@@ -27,6 +33,8 @@ struct HistoryState {
 
 struct CanvasState {
     std::vector<Frame>             frames;
+    std::vector<AnimTag>           tags;
+    int                            active_tag   = -1; // -1 = play all frames
     int                            active_frame = 0;
     int                            active_layer = 0;
     float                          fps          = 12.0f;
@@ -56,11 +64,14 @@ struct CanvasState {
     int     height() const;
     Canvas& active();
 
+    void composite_frame(int frame_idx, std::vector<uint32_t>& out) const;
     void rebuild_composite();
     void push_snapshot();
     void undo();
     void redo();
     void new_canvas(int w, int h);
+    void duplicate_frame(int idx);
+    void delete_frame(int idx);
 };
 
 struct ToolsState {

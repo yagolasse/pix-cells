@@ -23,6 +23,9 @@ Layer (in Frame.layers)
 
 Frame (in CanvasState.frames)
   layers (vector<Layer>), duration_ms (uint16_t, default 100ms)
+
+AnimTag (in CanvasState.tags)
+  name (string), start (int, inclusive), end (int, inclusive)
 ```
 
 ### Pixel format
@@ -38,7 +41,10 @@ Key methods:
 | `active()` | Returns `Canvas&` for `frames[active_frame].layers[active_layer]` |
 | `active_layer_locked()` | Returns `bool` — true if the active layer has `locked=true`; use to guard all pixel-write operations |
 | `active_layers()` | Returns `vector<Layer>&` for the active frame's layer stack |
-| `rebuild_composite()` | Composites active frame's visible layers → `composite` applying per-layer opacity and blend mode (Normal/Multiply/Screen/Overlay/Add); sets `dirty=true` |
+| `composite_frame(idx, out)` | Composites `frames[idx]`'s visible layers into `out` (resized to `width*height`); does not touch `composite` or `dirty` — used by the timeline thumbnail renderer |
+| `rebuild_composite()` | Calls `composite_frame(active_frame, composite)`; sets `dirty=true` |
+| `duplicate_frame(idx)` | `push_snapshot()`, inserts copy of `frames[idx]` after it, adjusts tag ranges, sets `active_frame`, `rebuild_composite()` |
+| `delete_frame(idx)` | No-ops if only one frame; else `push_snapshot()`, erases, adjusts/clamps tag ranges and `active_frame`, `rebuild_composite()` |
 | `push_snapshot()` | Pushes a `HistoryState` (full `frames` vector + `active_frame` + `active_layer`) onto `undo_stack`, clears `redo_stack` |
 | `undo()` / `redo()` | Restores `frames` **and** `active_frame`/`active_layer` from the snapshot, calls `rebuild_composite()` — keeps the selection valid when the layer count changes |
 | `new_canvas(w,h)` | Resets to one frame with one transparent layer, clears undo/redo |
@@ -70,7 +76,7 @@ Binary, little-endian (native byte order via `fread`/`fwrite`). Extension `.pixc
 ```
 HEADER  (16 bytes)
   [0-3]   char[4]   magic         'P' 'I' 'X' 'C'
-  [4-5]   uint16    version       currently 1
+  [4-5]   uint16    version       2 (v1 = no TAGS block)
   [6-7]   uint16    width         canvas width in pixels
   [8-9]   uint16    height        canvas height in pixels
   [10-11] uint16    frame_count
@@ -97,9 +103,19 @@ FRAMES  (×frame_count)
     float32   opacity     0–1
     uint8     blend_mode  0=Normal 1=Multiply 2=Screen 3=Overlay 4=Add
     uint32[width × height]  pixels   RGBA8, R in bits 0–7, row-major
+
+TAGS  (version 2+ only)
+  uint16    tag_count
+  per tag (×tag_count):
+    uint8     name_len
+    char[name_len]  tag_name
+    uint16    start       inclusive frame index
+    uint16    end         inclusive frame index
+  int16     active_tag   -1 = all frames
 ```
 
 Notes:
 - `ToolsState` and `PaletteState.selected_swatch` / `recent_colors` are **not** persisted.
 - String encoding: 1-byte length prefix, then raw bytes, max 255 chars (`write_str` / `read_str` in `pixc_io.cpp`).
 - On load, `active_frame` and `active_layer` reset to 0; `needs_center` is set so the canvas re-centers.
+- Version 1 files load cleanly with no tags and `active_tag = -1`.
