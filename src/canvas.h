@@ -14,7 +14,7 @@ struct Canvas {
         if (in_bounds(x, y))
             pixels[y * width + x] = rgba;
     }
-    uint32_t get(int x, int y) const { return pixels[y * width + x]; }
+    uint32_t get(int x, int y) const { return in_bounds(x, y) ? pixels[y * width + x] : 0x00000000u; }
     void fill(uint32_t rgba) { std::fill(pixels.begin(), pixels.end(), rgba); }
     void resize(int w, int h) {
         width  = w;

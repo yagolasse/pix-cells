@@ -1,3 +1,5 @@
+Use the Agent tool to spawn a subagent with `model: "haiku"` and `subagent_type: "claude"` to carry out all steps below. Pass it the full contents of this prompt as its task. Do not do the work inline.
+
 Run the mandatory post-change verification for pix-cells and update the CLAUDE.md documentation files so they accurately reflect the current state of the codebase.
 
 ## Files to keep in sync

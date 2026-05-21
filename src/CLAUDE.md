@@ -12,8 +12,9 @@ AppState
   PaletteState   palette   — primary_color, secondary_color (ImVec4 RGBA 0-1),
                              swatches (vector<ImVec4>), selected_swatch (int),
                              palette_name (string), recent_colors (vector<ImVec4>, max 8)
-  SelectionState selection — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive),
-                             floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer),
+  SelectionState selection — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive;
+                             NOT clamped — may be negative or exceed canvas dimensions when dragged/scaled past the edge),
+                             floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer; float_x/y may be off-canvas),
                              clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
 
 Layer (in Frame.layers)
@@ -50,7 +51,7 @@ Key methods:
 
 | File | Role |
 |------|------|
-| `canvas.h` | `Canvas` struct: `width`, `height`, `pixels` (RGBA8 row-major); `set/get/fill/in_bounds` |
+| `canvas.h` | `Canvas` struct: `width`, `height`, `pixels` (RGBA8 row-major); `set/get/fill/in_bounds`. Both `set` and `get` are bounds-safe — `set` no-ops out-of-bounds, `get` returns `0x00000000` (transparent). This lets off-canvas selection regions be read/written without clipping at call sites. |
 | `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `AppState` |
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations + `blend_pixel` (Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity) |

@@ -278,10 +278,13 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             blink ? IM_COL32(0,0,0,255) : IM_COL32(255,255,255,255), 0, 0, 1.0f);
     }
 
-    // Floating selection pixel overlay — drawn on top of composite
+    // Floating selection pixel overlay — drawn on top of composite. Only the portion that
+    // falls within the canvas is shown, so the user sees exactly what survives commit
+    // (off-canvas pixels are dropped by commit_floating's bounds-checked writes).
     if (sel.floating) {
         for (int fy = 0; fy < sel.float_h; fy++) {
             for (int fx = 0; fx < sel.float_w; fx++) {
+                if (!cs.active().in_bounds(sel.float_x + fx, sel.float_y + fy)) continue;
                 uint32_t pv = sel.float_pixels[fy * sel.float_w + fx];
                 if (((pv >> 24) & 0xFF) == 0) continue;
                 float sx = origin.x + (sel.float_x + fx) * cs.zoom;
@@ -444,9 +447,63 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 }
             }
         } else if (tools.active_tool >= 3 && tools.active_tool <= 7) {
-            // Shape tools — start drag on click
+            // Shape drag-start handled by the unified window-rect block below
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
+        } else if (tools.active_tool == 8) {
+            was_painting = false;
+            last_px      = {-1.0f, -1.0f};
+        } else if (tools.active_tool == 9) {
+            // Selection click handled by the unified window-rect block below
+            was_painting = false;
+            last_px      = {-1.0f, -1.0f};
+        } else if (tools.active_tool == 10) {
+            was_painting = false;
+            last_px      = {-1.0f, -1.0f};
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
+                palette.primary_color = ImGui::ColorConvertU32ToFloat4(cs.active().get(px, py));
+                Log("Color pick at (%d,%d) #%08X", px, py, cs.active().get(px, py));
+            }
+        } else {
+            bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+            if (is_painting && !was_painting) {
+                if (cs.active_layer_locked()) {
+                    Log("Layer locked");
+                } else {
+                    cs.push_snapshot();
+                    Log("Stroke start at (%d,%d) tool=%d size=%d", px, py, tools.active_tool, tools.brush_size);
+                }
+            }
+            if (is_painting && !cs.active_layer_locked()) {
+                if (last_px.x < 0.0f)
+                    paint_pixel(cs, px, py, color, tools.brush_size, tools.circle_brush);
+                else
+                    bresenham(cs, (int)last_px.x, (int)last_px.y, px, py, color, tools.brush_size, tools.circle_brush);
+                last_px = {(float)px, (float)py};
+                cs.rebuild_composite();
+            } else if (!is_painting) {
+                last_px = {-1.0f, -1.0f};
+            }
+            was_painting = is_painting;
+        }
+    } else {
+        // Mouse left the canvas — reset brush state but keep shape/handle drags alive
+        last_px      = {-1.0f, -1.0f};
+        was_painting = false;
+    }
+
+    // Unified shape/selection click handler — single source of truth for tools 3-7 and 9.
+    // Fires anywhere in the canvas window (over the image OR the margin when zoomed out),
+    // so drags can start/move/lift off-canvas. IsWindowHovered is unreliable in docked
+    // layouts, so we use a direct screen-rect check. The IsItemHovered block above only
+    // resets brush state for these tools, so there is no double-handling.
+    {
+        ImVec2 wpos  = ImGui::GetWindowPos();
+        ImVec2 wsize = ImGui::GetWindowSize();
+        bool mouse_in_win = io.MousePos.x >= wpos.x && io.MousePos.x < wpos.x + wsize.x
+                         && io.MousePos.y >= wpos.y && io.MousePos.y < wpos.y + wsize.y;
+        if (mouse_in_win) {
+        if (tools.active_tool >= 3 && tools.active_tool <= 7) {
             if (!shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (cs.active_layer_locked()) {
                     Log("Layer locked");
@@ -458,12 +515,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                     Log("Shape start at (%d,%d) tool=%d", px, py, tools.active_tool);
                 }
             }
-        } else if (tools.active_tool == 8) {
-            was_painting = false;
-            last_px      = {-1.0f, -1.0f};
         } else if (tools.active_tool == 9) {
-            was_painting = false;
-            last_px      = {-1.0f, -1.0f};
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 // Priority 1: handle hit
                 int hit_h = -1;
@@ -523,40 +575,9 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                     shape_dragging = true;
                 }
             }
-        } else if (tools.active_tool == 10) {
-            was_painting = false;
-            last_px      = {-1.0f, -1.0f};
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
-                palette.primary_color = ImGui::ColorConvertU32ToFloat4(cs.active().get(px, py));
-                Log("Color pick at (%d,%d) #%08X", px, py, cs.active().get(px, py));
-            }
-        } else {
-            bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-            if (is_painting && !was_painting) {
-                if (cs.active_layer_locked()) {
-                    Log("Layer locked");
-                } else {
-                    cs.push_snapshot();
-                    Log("Stroke start at (%d,%d) tool=%d size=%d", px, py, tools.active_tool, tools.brush_size);
-                }
-            }
-            if (is_painting && !cs.active_layer_locked()) {
-                if (last_px.x < 0.0f)
-                    paint_pixel(cs, px, py, color, tools.brush_size, tools.circle_brush);
-                else
-                    bresenham(cs, (int)last_px.x, (int)last_px.y, px, py, color, tools.brush_size, tools.circle_brush);
-                last_px = {(float)px, (float)py};
-                cs.rebuild_composite();
-            } else if (!is_painting) {
-                last_px = {-1.0f, -1.0f};
-            }
-            was_painting = is_painting;
         }
-    } else {
-        // Mouse left the canvas — reset brush state but keep shape/handle drags alive
-        last_px      = {-1.0f, -1.0f};
-        was_painting = false;
-    }
+        } // if (mouse_in_win && !IsItemHovered())
+    } // margin block
 
     // Update floating selection position during drag (continues outside canvas bounds)
     if (sel.floating && shape_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -569,19 +590,18 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
         sel.active = true;
     }
 
-    // Update handle drag bounds while mouse is held
+    // Update handle drag bounds while mouse is held — selection may extend beyond the canvas
     if (handle_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        int cw = cs.width(), ch = cs.height();
         int nx0 = handle_start_x0, ny0 = handle_start_y0;
         int nx1 = handle_start_x1, ny1 = handle_start_y1;
         if (k_hmoves[active_handle][0]) nx0 = px;
         if (k_hmoves[active_handle][1]) ny0 = py;
         if (k_hmoves[active_handle][2]) nx1 = px;
         if (k_hmoves[active_handle][3]) ny1 = py;
-        sel.x0 = std::clamp(std::min(nx0, nx1), 0, cw - 1);
-        sel.y0 = std::clamp(std::min(ny0, ny1), 0, ch - 1);
-        sel.x1 = std::clamp(std::max(nx0, nx1), 0, cw - 1);
-        sel.y1 = std::clamp(std::max(ny0, ny1), 0, ch - 1);
+        sel.x0 = std::min(nx0, nx1);
+        sel.y0 = std::min(ny0, ny1);
+        sel.x1 = std::max(nx0, nx1);
+        sel.y1 = std::max(ny0, ny1);
         if (sel.floating) {
             sel.float_x = sel.x0;
             sel.float_y = sel.y0;
@@ -616,11 +636,10 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             if (sel.floating) {
                 // Keep floating after mouse release — commit happens on tool switch or Escape
             } else {
-                int cw = cs.width(), ch = cs.height();
-                int ax = std::clamp(std::min(shape_sx, px), 0, cw - 1);
-                int ay = std::clamp(std::min(shape_sy, py), 0, ch - 1);
-                int bx = std::clamp(std::max(shape_sx, px), 0, cw - 1);
-                int by = std::clamp(std::max(shape_sy, py), 0, ch - 1);
+                int ax = std::min(shape_sx, px);
+                int ay = std::min(shape_sy, py);
+                int bx = std::max(shape_sx, px);
+                int by = std::max(shape_sy, py);
                 sel.active = (ax != bx || ay != by);
                 if (sel.active) { sel.x0 = ax; sel.y0 = ay; sel.x1 = bx; sel.y1 = by; }
             }
