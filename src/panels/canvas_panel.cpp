@@ -87,21 +87,23 @@ static void draw_ellipse(CanvasState& cs, int x0, int y0, int x1, int y1, uint32
     if (filled) {
         for (int y = -ry; y <= ry; y++) {
             float t = (rx > 0 && ry > 0) ? (float)(rx * rx) * (1.0f - (float)(y * y) / (float)(ry * ry)) : 0.0f;
-            int xw  = (t > 0.0f) ? (int)std::sqrt(t) : 0;
+            int xw  = (t > 0.0f) ? (int)std::round(std::sqrt(t)) : 0;
             for (int x = -xw; x <= xw; x++)
                 cs.active().set(cx + x, cy + y, color);
         }
     } else {
-        // Dual scan: row-by-row then column-by-column — guarantees gap-free outline
+        // Dual scan: row-by-row then column-by-column — guarantees gap-free outline.
+        // round() instead of floor() places pixels at the nearest boundary, eliminating
+        // extra dots near the poles that floor-truncation causes.
         for (int dy = -ry; dy <= ry; dy++) {
             float t = (ry > 0) ? (float)(rx * rx) * (1.0f - (float)(dy * dy) / (float)(ry * ry)) : 0.0f;
-            int xw  = (t > 0.0f) ? (int)std::sqrt(t) : 0;
+            int xw  = (t > 0.0f) ? (int)std::round(std::sqrt(t)) : 0;
             cs.active().set(cx - xw, cy + dy, color);
             cs.active().set(cx + xw, cy + dy, color);
         }
         for (int dx = -rx; dx <= rx; dx++) {
             float t = (rx > 0) ? (float)(ry * ry) * (1.0f - (float)(dx * dx) / (float)(rx * rx)) : 0.0f;
-            int yw  = (t > 0.0f) ? (int)std::sqrt(t) : 0;
+            int yw  = (t > 0.0f) ? (int)std::round(std::sqrt(t)) : 0;
             cs.active().set(cx + dx, cy - yw, color);
             cs.active().set(cx + dx, cy + yw, color);
         }
@@ -335,6 +337,14 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
         };
 
         int t = tools.active_tool;
+        // Shift constrains rect/circle to a square bounding box
+        int epx = px, epy = py;
+        if (io.KeyShift && (t == 4 || t == 5 || t == 6 || t == 7)) {
+            int ddx = px - shape_sx, ddy = py - shape_sy;
+            int d   = std::min(std::abs(ddx), std::abs(ddy));
+            epx     = shape_sx + (ddx < 0 ? -d : d);
+            epy     = shape_sy + (ddy < 0 ? -d : d);
+        }
         if (t == 3) {  // Line — Bresenham + brush stamp
             int x0 = shape_sx, y0 = shape_sy, x1 = px, y1 = py;
             int adx = std::abs(x1 - x0), stepx = x0 < x1 ? 1 : -1;
@@ -348,8 +358,8 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 if (e2 <= adx) { err += adx; y0 += stepy; }
             }
         } else if (t == 4 || t == 5) {  // Rect
-            int minx = std::min(shape_sx, px), maxx = std::max(shape_sx, px);
-            int miny = std::min(shape_sy, py), maxy = std::max(shape_sy, py);
+            int minx = std::min(shape_sx, epx), maxx = std::max(shape_sx, epx);
+            int miny = std::min(shape_sy, epy), maxy = std::max(shape_sy, epy);
             if (t == 5) {
                 for (int y = miny; y <= maxy; y++)
                     for (int x = minx; x <= maxx; x++)
@@ -359,25 +369,25 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 for (int y = miny + 1; y < maxy; y++) { draw_px(minx, y); draw_px(maxx, y); }
             }
         } else if (t == 6 || t == 7) {  // Ellipse — dual-scan mirrors draw_ellipse()
-            int ecx = (shape_sx + px) / 2, ecy = (shape_sy + py) / 2;
-            int rx  = std::abs(px - shape_sx) / 2, ry = std::abs(py - shape_sy) / 2;
+            int ecx = (shape_sx + epx) / 2, ecy = (shape_sy + epy) / 2;
+            int rx  = std::abs(epx - shape_sx) / 2, ry = std::abs(epy - shape_sy) / 2;
             if (rx == 0 && ry == 0) {
                 draw_px(ecx, ecy);
             } else if (t == 7) {
                 for (int dy = -ry; dy <= ry; dy++) {
                     float ft = (rx > 0 && ry > 0) ? (float)(rx*rx)*(1.0f-(float)(dy*dy)/(float)(ry*ry)) : 0.0f;
-                    int xw = (ft > 0.0f) ? (int)std::sqrt(ft) : 0;
+                    int xw = (ft > 0.0f) ? (int)std::round(std::sqrt(ft)) : 0;
                     for (int x = -xw; x <= xw; x++) draw_px(ecx + x, ecy + dy);
                 }
             } else {
                 for (int dy = -ry; dy <= ry; dy++) {
                     float ft = (ry > 0) ? (float)(rx*rx)*(1.0f-(float)(dy*dy)/(float)(ry*ry)) : 0.0f;
-                    int xw = (ft > 0.0f) ? (int)std::sqrt(ft) : 0;
+                    int xw = (ft > 0.0f) ? (int)std::round(std::sqrt(ft)) : 0;
                     draw_px(ecx - xw, ecy + dy); draw_px(ecx + xw, ecy + dy);
                 }
                 for (int dx = -rx; dx <= rx; dx++) {
                     float ft = (rx > 0) ? (float)(ry*ry)*(1.0f-(float)(dx*dx)/(float)(rx*rx)) : 0.0f;
-                    int yw = (ft > 0.0f) ? (int)std::sqrt(ft) : 0;
+                    int yw = (ft > 0.0f) ? (int)std::round(std::sqrt(ft)) : 0;
                     draw_px(ecx + dx, ecy - yw); draw_px(ecx + dx, ecy + yw);
                 }
             }
@@ -616,12 +626,20 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             }
         } else {
             uint32_t color = ImGui::ColorConvertFloat4ToU32(palette.primary_color);
-            switch (tools.active_tool) {
+            int cpx = px, cpy = py;
+            int ct  = tools.active_tool;
+            if (io.KeyShift && (ct == 4 || ct == 5 || ct == 6 || ct == 7)) {
+                int ddx = px - shape_sx, ddy = py - shape_sy;
+                int d   = std::min(std::abs(ddx), std::abs(ddy));
+                cpx     = shape_sx + (ddx < 0 ? -d : d);
+                cpy     = shape_sy + (ddy < 0 ? -d : d);
+            }
+            switch (ct) {
             case 3: bresenham(cs, shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush); break;
-            case 4: draw_rect(cs, shape_sx, shape_sy, px, py, color, false); break;
-            case 5: draw_rect(cs, shape_sx, shape_sy, px, py, color, true);  break;
-            case 6: draw_ellipse(cs, shape_sx, shape_sy, px, py, color, false); break;
-            case 7: draw_ellipse(cs, shape_sx, shape_sy, px, py, color, true);  break;
+            case 4: draw_rect(cs, shape_sx, shape_sy, cpx, cpy, color, false); break;
+            case 5: draw_rect(cs, shape_sx, shape_sy, cpx, cpy, color, true);  break;
+            case 6: draw_ellipse(cs, shape_sx, shape_sy, cpx, cpy, color, false); break;
+            case 7: draw_ellipse(cs, shape_sx, shape_sy, cpx, cpy, color, true);  break;
             }
             cs.rebuild_composite();
         }

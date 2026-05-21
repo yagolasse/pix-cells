@@ -142,12 +142,12 @@ int main(int /*argc*/, char* /*argv*/[]) {
                 Log("Tool: Line");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_R)) {
-                app.tools.active_tool = 4;
-                Log("Tool: Rect");
+                app.tools.active_tool = (app.tools.active_tool == 4) ? 5 : 4;
+                Log("Tool: %s", app.tools.active_tool == 4 ? "Rect" : "Filled Rect");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_U)) {
-                app.tools.active_tool = 6;
-                Log("Tool: Circle");
+                app.tools.active_tool = (app.tools.active_tool == 6) ? 7 : 6;
+                Log("Tool: %s", app.tools.active_tool == 6 ? "Circle" : "Filled Circle");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_M)) {
                 app.tools.active_tool = 8;
