@@ -1,129 +1,11 @@
 #include "canvas_panel.h"
+#include "raster.h"
 #include "log.h"
 #include "imgui.h"
 #include <SDL3/SDL_opengl.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <queue>
-
-static void paint_pixel(CanvasState& cs, int x, int y, uint32_t color, int brush_size, bool circle) {
-    int half = brush_size / 2;
-    for (int dy = -half; dy <= half; dy++)
-        for (int dx = -half; dx <= half; dx++) {
-            if (circle && dx * dx + dy * dy > half * half)
-                continue;
-            cs.active().set(x + dx, y + dy, color);
-        }
-}
-
-static void bresenham(CanvasState& cs, int x0, int y0, int x1, int y1, uint32_t color, int brush_size, bool circle) {
-    int dx = std::abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    int dy = -std::abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy;
-    while (true) {
-        paint_pixel(cs, x0, y0, color, brush_size, circle);
-        if (x0 == x1 && y0 == y1)
-            break;
-        int e2 = 2 * err;
-        if (e2 >= dy) {
-            err += dy;
-            x0 += sx;
-        }
-        if (e2 <= dx) {
-            err += dx;
-            y0 += sy;
-        }
-    }
-}
-
-static void flood_fill(CanvasState& cs, int sx, int sy, uint32_t new_col) {
-    uint32_t old_col = cs.active().get(sx, sy);
-    if (old_col == new_col)
-        return;
-    std::queue<std::pair<int, int>> q;
-    q.push({sx, sy});
-    cs.active().set(sx, sy, new_col);
-    const int ddx[] = {1, -1, 0, 0}, ddy[] = {0, 0, 1, -1};
-    while (!q.empty()) {
-        auto [x, y] = q.front();
-        q.pop();
-        for (int i = 0; i < 4; i++) {
-            int nx = x + ddx[i], ny = y + ddy[i];
-            if (cs.active().in_bounds(nx, ny) && cs.active().get(nx, ny) == old_col) {
-                cs.active().set(nx, ny, new_col);
-                q.push({nx, ny});
-            }
-        }
-    }
-}
-
-static void draw_rect(CanvasState& cs, int x0, int y0, int x1, int y1, uint32_t color, bool filled) {
-    int minx = std::min(x0, x1), maxx = std::max(x0, x1);
-    int miny = std::min(y0, y1), maxy = std::max(y0, y1);
-    if (filled) {
-        for (int y = miny; y <= maxy; y++)
-            for (int x = minx; x <= maxx; x++)
-                cs.active().set(x, y, color);
-    } else {
-        for (int x = minx; x <= maxx; x++) {
-            cs.active().set(x, miny, color);
-            cs.active().set(x, maxy, color);
-        }
-        for (int y = miny + 1; y < maxy; y++) {
-            cs.active().set(minx, y, color);
-            cs.active().set(maxx, y, color);
-        }
-    }
-}
-
-// Bresenham ellipse-in-rect (Zingl). Fits the bounding box [x0,x1]×[y0,y1] exactly,
-// handling odd AND even diameters, so a 1px drag change grows the shape by 1px. When
-// `filled`, each scanline's left/right edge points are span-filled, so the fill is derived
-// from the same edges as the outline — identical silhouette, no single-pixel pole nub.
-template <class Plot>
-static void rasterize_ellipse(int x0, int y0, int x1, int y1, bool filled, Plot plot) {
-    if (x0 == x1 && y0 == y1) { plot(x0, y0); return; }
-    long a = std::abs(x1 - x0), b = std::abs(y1 - y0), b1 = b & 1;
-    long dx = 4 * (1 - a) * b * b, dy = 4 * (b1 + 1) * a * a;
-    long err = dx + dy + b1 * a * a, e2;
-    if (x0 > x1) { x0 = x1; x1 += a; }
-    if (y0 > y1) y0 = y1;
-    y0 += (b + 1) / 2; y1 = y0 - b1;
-    a *= 8 * a; b1 = 8 * b * b;
-    do {
-        if (filled) {
-            for (int x = x0; x <= x1; x++) { plot(x, y0); plot(x, y1); }
-        } else {
-            plot(x1, y0); plot(x0, y0); plot(x0, y1); plot(x1, y1);
-        }
-        e2 = 2 * err;
-        if (e2 <= dy) { y0++; y1--; err += dy += a; }
-        if (e2 >= dx || 2 * err > dy) { x0++; x1--; err += dx += b1; }
-    } while (x0 <= x1);
-    while (y0 - y1 < b) {  // finish the tips of flat (near-1px) ellipses
-        if (filled) {
-            for (int x = x0 - 1; x <= x1 + 1; x++) { plot(x, y0); plot(x, y1); }
-        } else {
-            plot(x0 - 1, y0); plot(x1 + 1, y0);
-            plot(x0 - 1, y1); plot(x1 + 1, y1);
-        }
-        y0++; y1--;
-    }
-}
-
-static void draw_ellipse(CanvasState& cs, int x0, int y0, int x1, int y1, uint32_t color, bool filled) {
-    rasterize_ellipse(x0, y0, x1, y1, filled,
-                      [&](int x, int y) { cs.active().set(x, y, color); });
-}
-
-static void nn_scale(const std::vector<uint32_t>& src, int sw, int sh,
-                     std::vector<uint32_t>& dst, int dw, int dh) {
-    dst.resize(dw * dh);
-    for (int y = 0; y < dh; y++)
-        for (int x = 0; x < dw; x++)
-            dst[y * dw + x] = src[(y * sh / dh) * sw + (x * sw / dw)];
-}
 
 static void lift_selection(CanvasState& cs, SelectionState& sel) {
     cs.push_snapshot();
@@ -205,7 +87,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     ImGui::Begin("Canvas");
 
     // Commit floating selection automatically when tool changes away from rect select
-    if (sel.floating && tools.active_tool != 9) {
+    if (sel.floating && tools.active_tool != tool::RectSelect) {
         commit_floating(cs, sel);
         handle_dragging = false;
         active_handle   = -1;
@@ -312,7 +194,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     // Selection resize handles — 8 handles around the bounding rect
     // Layout: TL=0 TM=1 TR=2 RM=3 BR=4 BM=5 BL=6 LM=7
     ImVec2 hpos[8] = {};
-    if (sel.active && tools.active_tool == 9) {
+    if (sel.active && tools.active_tool == tool::RectSelect) {
         float sx0 = origin.x + sel.x0 * cs.zoom;
         float sy0 = origin.y + sel.y0 * cs.zoom;
         float sx1 = origin.x + (sel.x1 + 1) * cs.zoom;
@@ -357,13 +239,13 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
         int t = tools.active_tool;
         // Shift constrains rect/circle to a square bounding box
         int epx = px, epy = py;
-        if (io.KeyShift && (t == 4 || t == 5 || t == 6 || t == 7)) {
+        if (io.KeyShift && tool::is_shape(t)) {
             int ddx = px - shape_sx, ddy = py - shape_sy;
             int d   = std::min(std::abs(ddx), std::abs(ddy));
             epx     = shape_sx + (ddx < 0 ? -d : d);
             epy     = shape_sy + (ddy < 0 ? -d : d);
         }
-        if (t == 3) {  // Line — Bresenham + brush stamp
+        if (t == tool::Line) {  // Line — Bresenham + brush stamp
             int x0 = shape_sx, y0 = shape_sy, x1 = px, y1 = py;
             int adx = std::abs(x1 - x0), stepx = x0 < x1 ? 1 : -1;
             int ady = -std::abs(y1 - y0), stepy = y0 < y1 ? 1 : -1;
@@ -375,10 +257,10 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 if (e2 >= ady) { err += ady; x0 += stepx; }
                 if (e2 <= adx) { err += adx; y0 += stepy; }
             }
-        } else if (t == 4 || t == 5) {  // Rect
+        } else if (t == tool::Rect || t == tool::FilledRect) {  // Rect
             int minx = std::min(shape_sx, epx), maxx = std::max(shape_sx, epx);
             int miny = std::min(shape_sy, epy), maxy = std::max(shape_sy, epy);
-            if (t == 5) {
+            if (t == tool::FilledRect) {
                 for (int y = miny; y <= maxy; y++)
                     for (int x = minx; x <= maxx; x++)
                         draw_px(x, y);
@@ -386,10 +268,10 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 for (int x = minx; x <= maxx; x++) { draw_px(x, miny); draw_px(x, maxy); }
                 for (int y = miny + 1; y < maxy; y++) { draw_px(minx, y); draw_px(maxx, y); }
             }
-        } else if (t == 6 || t == 7) {  // Ellipse — shares rasterize_ellipse() with commit
-            rasterize_ellipse(shape_sx, shape_sy, epx, epy, t == 7,
+        } else if (t == tool::Circle || t == tool::FilledCircle) {  // Ellipse — shares rasterize_ellipse() with commit
+            raster::rasterize_ellipse(shape_sx, shape_sy, epx, epy, t == tool::FilledCircle,
                               [&](int x, int y) { draw_px(x, y); });
-        } else if (t == 9) {  // Select — marching ants (vector UI overlay, not a drawing output)
+        } else if (t == tool::RectSelect) {  // Select — marching ants (vector UI overlay, not a drawing output)
             float ssx = cur_origin.x + shape_sx * z, ssy = cur_origin.y + shape_sy * z;
             float sex = cur_origin.x + (px + 1) * z,  sey = cur_origin.y + (py + 1) * z;
             dl->AddRect({ssx,ssy},{sex,sey}, IM_COL32(255,255,255,200), 0, 0, 1.5f);
@@ -398,7 +280,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     }
 
     // Move tool — left-drag pans just like middle-mouse
-    if (tools.active_tool == 8 && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f)) {
+    if (tools.active_tool == tool::Move && ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f)) {
         cs.pan.x += io.MouseDelta.x;
         cs.pan.y += io.MouseDelta.y;
     }
@@ -427,9 +309,9 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             }
         }
 
-        uint32_t color = (tools.active_tool == 1) ? 0x00000000u : ImGui::ColorConvertFloat4ToU32(palette.primary_color);
+        uint32_t color = (tools.active_tool == tool::Eraser) ? 0x00000000u : ImGui::ColorConvertFloat4ToU32(palette.primary_color);
 
-        if (tools.active_tool == 2) {
+        if (tools.active_tool == tool::Fill) {
             was_painting = false;
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (cs.active_layer_locked()) {
@@ -437,22 +319,22 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                 } else {
                     cs.push_snapshot();
                     Log("Flood fill at (%d,%d) color #%08X", px, py, color);
-                    flood_fill(cs, px, py, color);
+                    raster::flood_fill(cs.active(), px, py, color);
                     cs.rebuild_composite();
                 }
             }
-        } else if (tools.active_tool >= 3 && tools.active_tool <= 7) {
+        } else if (tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) {
             // Shape drag-start handled by the unified window-rect block below
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
-        } else if (tools.active_tool == 8) {
+        } else if (tools.active_tool == tool::Move) {
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
-        } else if (tools.active_tool == 9) {
+        } else if (tools.active_tool == tool::RectSelect) {
             // Selection click handled by the unified window-rect block below
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
-        } else if (tools.active_tool == 10) {
+        } else if (tools.active_tool == tool::ColorPicker) {
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
@@ -471,9 +353,9 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             }
             if (is_painting && !cs.active_layer_locked()) {
                 if (last_px.x < 0.0f)
-                    paint_pixel(cs, px, py, color, tools.brush_size, tools.circle_brush);
+                    raster::paint_pixel(cs.active(), px, py, color, tools.brush_size, tools.circle_brush);
                 else
-                    bresenham(cs, (int)last_px.x, (int)last_px.y, px, py, color, tools.brush_size, tools.circle_brush);
+                    raster::bresenham(cs.active(), (int)last_px.x, (int)last_px.y, px, py, color, tools.brush_size, tools.circle_brush);
                 last_px = {(float)px, (float)py};
                 cs.rebuild_composite();
             } else if (!is_painting) {
@@ -498,7 +380,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
         bool mouse_in_win = io.MousePos.x >= wpos.x && io.MousePos.x < wpos.x + wsize.x
                          && io.MousePos.y >= wpos.y && io.MousePos.y < wpos.y + wsize.y;
         if (mouse_in_win) {
-        if (tools.active_tool >= 3 && tools.active_tool <= 7) {
+        if (tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) {
             if (!shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (cs.active_layer_locked()) {
                     Log("Layer locked");
@@ -510,7 +392,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
                     Log("Shape start at (%d,%d) tool=%d", px, py, tools.active_tool);
                 }
             }
-        } else if (tools.active_tool == 9) {
+        } else if (tools.active_tool == tool::RectSelect) {
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 // Priority 1: handle hit
                 int hit_h = -1;
@@ -611,7 +493,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             if (new_w > 0 && new_h > 0 &&
                 (new_w != sel.float_w || new_h != sel.float_h)) {
                 std::vector<uint32_t> scaled;
-                nn_scale(sel.float_pixels, sel.float_w, sel.float_h, scaled, new_w, new_h);
+                raster::nn_scale(sel.float_pixels, sel.float_w, sel.float_h, scaled, new_w, new_h);
                 sel.float_pixels = std::move(scaled);
                 sel.float_w = new_w;
                 sel.float_h = new_h;
@@ -627,7 +509,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     // Commit shape on mouse release regardless of hover state
     if (shape_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         Log("Shape commit tool=%d (%d,%d)->(%d,%d)", tools.active_tool, shape_sx, shape_sy, px, py);
-        if (tools.active_tool == 9) {
+        if (tools.active_tool == tool::RectSelect) {
             if (sel.floating) {
                 // Keep floating after mouse release — commit happens on tool switch or Escape
             } else {
@@ -642,18 +524,18 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             uint32_t color = ImGui::ColorConvertFloat4ToU32(palette.primary_color);
             int cpx = px, cpy = py;
             int ct  = tools.active_tool;
-            if (io.KeyShift && (ct == 4 || ct == 5 || ct == 6 || ct == 7)) {
+            if (io.KeyShift && tool::is_shape(ct)) {
                 int ddx = px - shape_sx, ddy = py - shape_sy;
                 int d   = std::min(std::abs(ddx), std::abs(ddy));
                 cpx     = shape_sx + (ddx < 0 ? -d : d);
                 cpy     = shape_sy + (ddy < 0 ? -d : d);
             }
             switch (ct) {
-            case 3: bresenham(cs, shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush); break;
-            case 4: draw_rect(cs, shape_sx, shape_sy, cpx, cpy, color, false); break;
-            case 5: draw_rect(cs, shape_sx, shape_sy, cpx, cpy, color, true);  break;
-            case 6: draw_ellipse(cs, shape_sx, shape_sy, cpx, cpy, color, false); break;
-            case 7: draw_ellipse(cs, shape_sx, shape_sy, cpx, cpy, color, true);  break;
+            case tool::Line:       raster::bresenham(cs.active(), shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush); break;
+            case tool::Rect:       raster::draw_rect(cs.active(), shape_sx, shape_sy, cpx, cpy, color, false); break;
+            case tool::FilledRect: raster::draw_rect(cs.active(), shape_sx, shape_sy, cpx, cpy, color, true);  break;
+            case tool::Circle:     raster::draw_ellipse(cs.active(), shape_sx, shape_sy, cpx, cpy, color, false); break;
+            case tool::FilledCircle: raster::draw_ellipse(cs.active(), shape_sx, shape_sy, cpx, cpy, color, true);  break;
             }
             cs.rebuild_composite();
         }

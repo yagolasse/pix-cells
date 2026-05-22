@@ -6,6 +6,13 @@
 #include <cstring>
 #include <string>
 
+static void push_ghost_style() {
+    ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(1, 1, 1, 0.15f));
+}
+static void pop_ghost_style() { ImGui::PopStyleColor(3); }
+
 static ImVec4 layer_thumb(const Layer& layer) {
     const Canvas& c = layer.canvas;
     int pts[5][2]   = {{c.width / 2, c.height / 2},
@@ -98,29 +105,25 @@ void panels::DrawLayers(CanvasState& cs) {
         // Eye icon (transparent button)
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(1, 1, 1, 0.15f));
+        push_ghost_style();
         const char* eye_icon = layer.visible ? "visibility" : "visibility_off";
         if (ImGui::ImageButton("##eye", icon_manager::get(eye_icon), {20, 20})) {
             layer.visible = !layer.visible;
             Log("Layer \"%s\" %s", layer.name.c_str(), layer.visible ? "shown" : "hidden");
             cs.rebuild_composite();
         }
-        ImGui::PopStyleColor(3);
+        pop_ghost_style();
 
         ImGui::SameLine(0, 5);
 
         // Lock icon (transparent button)
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(1, 1, 1, 0.15f));
+        push_ghost_style();
         const char* lock_icon = layer.locked ? "lock" : "lock_open";
         if (ImGui::ImageButton("##lck", icon_manager::get(lock_icon), {20, 20})) {
             layer.locked = !layer.locked;
             Log("Layer \"%s\" %s", layer.name.c_str(), layer.locked ? "locked" : "unlocked");
         }
-        ImGui::PopStyleColor(3);
+        pop_ghost_style();
         ImGui::PopStyleVar();
 
         ImGui::SameLine(0, 4);
@@ -167,7 +170,7 @@ void panels::DrawLayers(CanvasState& cs) {
 
         // Opacity %
         ImGui::SameLine();
-        ImGui::TextDisabled("%d%%", (int)(layer.opacity * 100.0f + 0.5f));
+        ImGui::TextDisabled("%d%%", opacity_pct(layer.opacity));
 
         ImGui::PopID();
     }
@@ -183,10 +186,10 @@ void panels::DrawLayers(CanvasState& cs) {
         ImGui::Text("Layer: \"%s\"", layer.name.c_str());
         ImGui::Spacing();
 
-        int op_pct = (int)(layer.opacity * 100.0f + 0.5f);
+        int op_pct = opacity_pct(layer.opacity);
         ImGui::SetNextItemWidth(-1);
         if (ImGui::SliderInt("##opacity", &op_pct, 0, 100, "Opacity: %d%%")) {
-            layer.opacity = op_pct / 100.0f;
+            layer.opacity = pct_opacity(op_pct);
             cs.rebuild_composite();
         }
 

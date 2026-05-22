@@ -3,10 +3,16 @@
 #include "icon_manager.h"
 #include <algorithm>
 
-void panels::DrawTools(ToolsState& state) {
-    static bool s_symmetry = false;
-    static bool s_onion    = false;
+static bool active_icon_btn(const char* id, ImTextureID tex, float sz, bool is_active) {
+    if (is_active)
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    bool clicked = ImGui::ImageButton(id, tex, ImVec2(sz, sz));
+    if (is_active)
+        ImGui::PopStyleColor();
+    return clicked;
+}
 
+void panels::DrawTools(ToolsState& state) {
     const float ICON = 22.0f;          // rendered icon size
     const float FP   = 4.0f;          // frame padding (margin around icon)
     const float BTN  = ICON + FP * 2; // total button footprint
@@ -37,13 +43,8 @@ void panels::DrawTools(ToolsState& state) {
 
     for (int i = 0; i < (int)std::size(tool_defs); i++) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
-        bool active = (state.active_tool == i);
-        if (active)
-            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        if (ImGui::ImageButton(tool_defs[i].id, icon_manager::get(tool_defs[i].icon), ImVec2(ICON, ICON)))
+        if (active_icon_btn(tool_defs[i].id, icon_manager::get(tool_defs[i].icon), ICON, state.active_tool == i))
             state.active_tool = i;
-        if (active)
-            ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", tool_defs[i].tip);
     }
@@ -60,9 +61,9 @@ void panels::DrawTools(ToolsState& state) {
         const char* icon_off;
         const char* tip;
     } view_defs[] = {
-        {&s_symmetry,      "symmetry",  "symmetry",  "Symmetry"},
-        {&state.show_grid, "grid",      "grid_off",  "Grid"},
-        {&s_onion,         "onion_skin","onion_skin", "Onion skin"},
+        {&state.symmetry,   "symmetry",  "symmetry",  "Symmetry"},
+        {&state.show_grid,  "grid",      "grid_off",  "Grid"},
+        {&state.onion_skin, "onion_skin","onion_skin", "Onion skin"},
     };
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FP, FP));
@@ -70,12 +71,8 @@ void panels::DrawTools(ToolsState& state) {
     for (auto& v : view_defs) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
         bool active = *v.val;
-        if (active)
-            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        if (ImGui::ImageButton(v.tip, icon_manager::get(active ? v.icon_on : v.icon_off), ImVec2(ICON, ICON)))
+        if (active_icon_btn(v.tip, icon_manager::get(active ? v.icon_on : v.icon_off), ICON, active))
             *v.val = !*v.val;
-        if (active)
-            ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", v.tip);
     }
@@ -87,8 +84,8 @@ void panels::DrawTools(ToolsState& state) {
     ImGui::Spacing();
 
     int t = state.active_tool;
-    bool show_brush_size  = (t == 0 || t == 1 || t == 3);
-    bool show_brush_shape = (t == 0 || t == 1);
+    bool show_brush_size  = (t == tool::Brush || t == tool::Eraser || t == tool::Line);
+    bool show_brush_shape = (t == tool::Brush || t == tool::Eraser);
 
     if (show_brush_size) {
         {
@@ -112,25 +109,15 @@ void panels::DrawTools(ToolsState& state) {
         const float SZ     = ICON * 0.75f;
         const float SZ_BTN = SZ + FP * 2;
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FP, FP));
-        bool sq = !state.circle_brush;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (avail - SZ_BTN) * 0.5f));
-        if (sq)
-            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        if (ImGui::ImageButton("##bsh0", icon_manager::get("square_filled"), ImVec2(SZ, SZ)))
+        if (active_icon_btn("##bsh0", icon_manager::get("square_filled"), SZ, !state.circle_brush))
             state.circle_brush = false;
-        if (sq)
-            ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Square brush");
 
-        bool circ = state.circle_brush;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (avail - SZ_BTN) * 0.5f));
-        if (circ)
-            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        if (ImGui::ImageButton("##bsh1", icon_manager::get("circle_filled"), ImVec2(SZ, SZ)))
+        if (active_icon_btn("##bsh1", icon_manager::get("circle_filled"), SZ, state.circle_brush))
             state.circle_brush = true;
-        if (circ)
-            ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Circle brush");
         ImGui::PopStyleVar();

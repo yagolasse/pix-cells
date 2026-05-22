@@ -70,6 +70,7 @@ add_library(pix-cells-core STATIC
     src/log.cpp
     src/png_io.cpp
     src/pixc_io.cpp
+    src/raster.cpp
 )
 target_include_directories(pix-cells-core PUBLIC
     src
@@ -107,8 +108,10 @@ add_custom_command(TARGET pix-cells POST_BUILD
 
 enable_testing()
 
-add_executable(test_pixc tests/test_pixc.cpp)
-target_link_libraries(test_pixc PRIVATE pix-cells-core)
-target_compile_options(test_pixc PRIVATE
-    $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
-add_test(NAME test_pixc COMMAND test_pixc)
+foreach(t test_pixc test_blend test_composite test_frames test_history test_raster)
+    add_executable(${t} tests/${t}.cpp)
+    target_link_libraries(${t} PRIVATE pix-cells-core)
+    target_compile_options(${t} PRIVATE
+        $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
+    add_test(NAME ${t} COMMAND ${t})
+endforeach()

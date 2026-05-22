@@ -75,12 +75,21 @@ struct CanvasState {
 };
 
 struct ToolsState {
-    int  active_tool  = 0; // 0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker
+    int  active_tool  = 0; // see tool:: constants below
     int  brush_size   = 1;
     bool circle_brush = false; // circular stamp for Brush/Eraser
     bool shape_filled = false; // Rect/Circle: filled vs outline
     bool show_grid    = false;
+    bool symmetry   = false;
+    bool onion_skin = false;
 };
+
+namespace tool {
+    constexpr int Brush = 0, Eraser = 1, Fill = 2, Line = 3,
+                  Rect = 4, FilledRect = 5, Circle = 6, FilledCircle = 7,
+                  Move = 8, RectSelect = 9, ColorPicker = 10;
+    constexpr bool is_shape(int t) { return t >= Rect && t <= FilledCircle; }
+}
 
 struct SelectionState {
     bool active      = false;
@@ -97,6 +106,10 @@ struct SelectionState {
     std::vector<uint32_t> clipboard;
     int  clipboard_w  = 0, clipboard_h  = 0;
     int  clipboard_ox = 0, clipboard_oy = 0; // paste origin
+
+    int  width()  const { return x1 - x0 + 1; }
+    int  height() const { return y1 - y0 + 1; }
+    bool contains(int x, int y) const { return x >= x0 && x <= x1 && y >= y0 && y <= y1; }
 };
 
 struct PaletteState {
@@ -117,3 +130,6 @@ struct AppState {
     PaletteState   palette;
     SelectionState selection;
 };
+
+inline int   opacity_pct(float f) { return static_cast<int>(f * 100.0f + 0.5f); }
+inline float pct_opacity(int p)   { return p / 100.0f; }

@@ -7,8 +7,8 @@ All runtime state lives in `AppState` (`app_state.h`):
 ```
 AppState
   CanvasState    canvas    — frames, composite buffer, zoom/pan, undo/redo stacks
-  ToolsState     tools     — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker),
-                             brush_size, circle_brush, shape_filled
+  ToolsState     tools     — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
+                             brush_size, circle_brush, shape_filled, show_grid, symmetry, onion_skin
   PaletteState   palette   — primary_color, secondary_color (ImVec4 RGBA 0-1),
                              swatches (vector<ImVec4>), selected_swatch (int),
                              palette_name (string), recent_colors (vector<ImVec4>, max 8)
@@ -60,7 +60,9 @@ Key methods:
 | `canvas.h` | `Canvas` struct: `width`, `height`, `pixels` (RGBA8 row-major); `set/get/fill/in_bounds`. Both `set` and `get` are bounds-safe — `set` no-ops out-of-bounds, `get` returns `0x00000000` (transparent). This lets off-canvas selection regions be read/written without clipping at call sites. |
 | `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `AppState` |
 | `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
-| `canvas_state.cpp` | `CanvasState` method implementations + `blend_pixel` (Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity) |
+| `canvas_state.cpp` | `CanvasState` method implementations (uses `blend_pixel` from `blend.h`) |
+| `blend.h` | `blend_pixel(dst, src, mode)` — Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity (RGBA8, R in bits 0–7); shared by `canvas_state.cpp` compositing and `png_io.cpp` sprite-sheet export |
+| `raster.h/cpp` | `namespace raster` pure pixel-drawing algorithms operating on `Canvas&` (no ImGui/GL): `paint_pixel`, `bresenham`, `flood_fill`, `draw_rect`, `draw_ellipse`, `nn_scale`, and the `rasterize_ellipse(x0,y0,x1,y1,filled,plot)` template (header-only, emits points via a `plot` callback; shared by `draw_ellipse` and the canvas shape preview). Linked into `pix-cells-core` so tests can exercise them |
 | `icon_manager.h/cpp` | `icon_manager::init(dir)`, `::get(name)` → `ImTextureID`, `::shutdown()` — lazily loads SVGs from `icons/` via lunasvg (32×32, ARGB→RGBA swizzle + un-premultiply), uploads as GL textures, caches by name; missing files return texture 0 |
 | `cursor_manager.h/cpp` | `cursor_manager::init(dir)`, `::set_for_tool(tool_index, mouse_pressed)`, `::shutdown()` — loads `point_scan.svg`, `eyedropper.svg`, `pan_tool.svg`, `pan_tool_alt.svg` as SDL color cursors; tool 8 (Move) uses pan_tool / pan_tool_alt based on `mouse_pressed`; tool 10 (Color Picker) uses eyedropper; all others use point_scan |
 | `main.cpp` | SDL3+ImGui init, main loop, Ctrl+Z/Y undo/redo, B/E/F/L/R/U/M/S/[/] tool shortcuts; R cycles Rect↔FilledRect (4↔5), U cycles Circle↔FilledCircle (6↔7); Ctrl+A select-all, Ctrl+C/X copy/cut (locked layer blocked), Ctrl+V paste (locked layer blocked), Delete/Backspace erase selection (locked layer blocked), Escape deselect/cancel-float |

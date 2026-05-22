@@ -193,8 +193,6 @@ bool pixc_io::load(AppState& state, const std::string& path) {
         state.canvas.frames.push_back(std::move(frame));
     }
 
-    fclose(f);
-
     // TAGS (version 2+)
     state.canvas.tags.clear();
     state.canvas.active_tag = -1;
@@ -218,6 +216,8 @@ bool pixc_io::load(AppState& state, const std::string& path) {
         int at = (int)active_tag;
         state.canvas.active_tag = (at >= 0 && at < (int)state.canvas.tags.size()) ? at : -1;
     }
+
+    fclose(f);
 
     state.canvas.active_frame = 0;
     state.canvas.active_layer = 0;

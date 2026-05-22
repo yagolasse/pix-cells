@@ -7,6 +7,7 @@
 #include "stb_image_write.h"
 #pragma GCC diagnostic pop
 #include "png_io.h"
+#include "blend.h"
 #include "log.h"
 #include <cstring>
 #include <cmath>
@@ -25,32 +26,6 @@ bool png_io::load(Canvas& c, const std::string& path) {
     std::memcpy(c.pixels.data(), data, w * h * 4);
     stbi_image_free(data);
     return true;
-}
-
-// Porter-Duff "over" for per-frame compositing (local copy to avoid state mutation)
-static uint32_t sheet_blend_over(uint32_t dst, uint32_t src) {
-    float sa = ((src >> 24) & 0xFF) / 255.0f;
-    if (sa <= 0.0f) return dst;
-    if (sa >= 1.0f) return src;
-
-    float da = ((dst >> 24) & 0xFF) / 255.0f;
-    float sr = ( src        & 0xFF) / 255.0f;
-    float sg = ((src >>  8) & 0xFF) / 255.0f;
-    float sb = ((src >> 16) & 0xFF) / 255.0f;
-    float dr = ( dst        & 0xFF) / 255.0f;
-    float dg = ((dst >>  8) & 0xFF) / 255.0f;
-    float db = ((dst >> 16) & 0xFF) / 255.0f;
-
-    float oa = sa + da * (1.0f - sa);
-    if (oa == 0.0f) return 0;
-    float or_ = (sr * sa + dr * da * (1.0f - sa)) / oa;
-    float og  = (sg * sa + dg * da * (1.0f - sa)) / oa;
-    float ob  = (sb * sa + db * da * (1.0f - sa)) / oa;
-
-    return ((uint32_t)(oa  * 255.0f) << 24)
-         | ((uint32_t)(ob  * 255.0f) << 16)
-         | ((uint32_t)(og  * 255.0f) <<  8)
-         |  (uint32_t)(or_ * 255.0f);
 }
 
 bool png_io::save_sprite_sheet(const CanvasState& cs,
@@ -103,7 +78,7 @@ bool png_io::save_sprite_sheet(const CanvasState& cs,
                     uint8_t a = (uint8_t)(((src >> 24) & 0xFF) * layer.opacity);
                     src = (src & 0x00FFFFFF) | ((uint32_t)a << 24);
                 }
-                frame_composite[i] = sheet_blend_over(frame_composite[i], src);
+                frame_composite[i] = blend_pixel(frame_composite[i], src, layer.blend_mode);
             }
         }
 

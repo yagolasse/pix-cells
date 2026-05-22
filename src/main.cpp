@@ -126,39 +126,39 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
         if (!ImGui::GetIO().WantTextInput) {
             if (ImGui::IsKeyPressed(ImGuiKey_B)) {
-                app.tools.active_tool = 0;
+                app.tools.active_tool = tool::Brush;
                 Log("Tool: Brush");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_E)) {
-                app.tools.active_tool = 1;
+                app.tools.active_tool = tool::Eraser;
                 Log("Tool: Eraser");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_F)) {
-                app.tools.active_tool = 2;
+                app.tools.active_tool = tool::Fill;
                 Log("Tool: Fill");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_L)) {
-                app.tools.active_tool = 3;
+                app.tools.active_tool = tool::Line;
                 Log("Tool: Line");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_R)) {
-                app.tools.active_tool = (app.tools.active_tool == 4) ? 5 : 4;
-                Log("Tool: %s", app.tools.active_tool == 4 ? "Rect" : "Filled Rect");
+                app.tools.active_tool = (app.tools.active_tool == tool::Rect) ? tool::FilledRect : tool::Rect;
+                Log("Tool: %s", app.tools.active_tool == tool::Rect ? "Rect" : "Filled Rect");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_U)) {
-                app.tools.active_tool = (app.tools.active_tool == 6) ? 7 : 6;
-                Log("Tool: %s", app.tools.active_tool == 6 ? "Circle" : "Filled Circle");
+                app.tools.active_tool = (app.tools.active_tool == tool::Circle) ? tool::FilledCircle : tool::Circle;
+                Log("Tool: %s", app.tools.active_tool == tool::Circle ? "Circle" : "Filled Circle");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_M)) {
-                app.tools.active_tool = 8;
+                app.tools.active_tool = tool::Move;
                 Log("Tool: Move");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_S)) {
-                app.tools.active_tool = 9;
+                app.tools.active_tool = tool::RectSelect;
                 Log("Tool: Rect Select");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_I)) {
-                app.tools.active_tool = 10;
+                app.tools.active_tool = tool::ColorPicker;
                 Log("Tool: Color Picker");
             }
             if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
@@ -199,8 +199,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
             if (app.selection.active) {
                 // Copy
                 if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C)) {
-                    int sw = app.selection.x1 - app.selection.x0 + 1;
-                    int sh = app.selection.y1 - app.selection.y0 + 1;
+                    int sw = app.selection.width(), sh = app.selection.height();
                     app.selection.clipboard.resize(sw * sh);
                     app.selection.clipboard_w  = sw;
                     app.selection.clipboard_h  = sh;
@@ -217,8 +216,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
                     if (app.canvas.active_layer_locked()) {
                         Log("Layer locked");
                     } else {
-                        int sw = app.selection.x1 - app.selection.x0 + 1;
-                        int sh = app.selection.y1 - app.selection.y0 + 1;
+                        int sw = app.selection.width(), sh = app.selection.height();
                         app.selection.clipboard.resize(sw * sh);
                         app.selection.clipboard_w  = sw;
                         app.selection.clipboard_h  = sh;
@@ -241,8 +239,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
                     if (app.canvas.active_layer_locked()) {
                         Log("Layer locked");
                     } else {
-                        int sw = app.selection.x1 - app.selection.x0 + 1;
-                        int sh = app.selection.y1 - app.selection.y0 + 1;
+                        int sw = app.selection.width(), sh = app.selection.height();
                         app.canvas.push_snapshot();
                         Canvas& c = app.canvas.active();
                         for (int y = 0; y < sh; y++)
