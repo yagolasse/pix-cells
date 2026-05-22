@@ -59,7 +59,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 
 **Requirements**: CMake 3.20+, a C++20 compiler, OpenGL 3.3.
 
-Dependencies (SDL3, Dear ImGui docking branch, stb) are fetched automatically by CMake.
+Dependencies (SDL3, Dear ImGui docking branch, stb, lunasvg) are fetched automatically by CMake.
 
 ```bash
 cmake -B build
@@ -80,9 +80,14 @@ ctest --test-dir build --output-on-failure
 pix-cells/
 ├── src/
 │   ├── app_state.h/cpp      — All runtime state: AppState, CanvasState, ToolsState,
-│   │                          PaletteState, SelectionState, Layer, Frame
+│   │                          PaletteState, SelectionState, Layer, Frame; tool:: constants
 │   ├── canvas.h             — Canvas struct (pixels, width, height, get/set/fill)
-│   ├── canvas_state.cpp     — Composite, blend modes, undo/redo stack
+│   ├── canvas_state.cpp     — Composite, frame/layer ops, undo/redo stack
+│   ├── blend.h              — blend_pixel(): Porter-Duff "over" + blend modes (shared)
+│   ├── raster.h/cpp         — raster:: pure pixel algorithms (brush, line, fill,
+│   │                          rect, ellipse, nn-scale) on Canvas&; in pix-cells-core
+│   ├── icon_manager.h/cpp   — Loads/caches SVG icons (lunasvg) as GL textures
+│   ├── cursor_manager.h/cpp — Per-tool SDL cursors from SVGs
 │   ├── main.cpp             — SDL3+ImGui init, main loop, keyboard shortcuts
 │   ├── workbench.h/cpp      — Fullscreen dockspace, default layout (DockBuilder)
 │   ├── log.h/cpp            — Log() writes to file + 500-entry ring buffer
@@ -90,17 +95,17 @@ pix-cells/
 │   ├── pixc_io.h/cpp        — .pixc binary format save/load
 │   └── panels/
 │       ├── canvas_panel     — GL texture, zoom/pan, tool input, selection overlay
-│       ├── tools_panel      — Tool buttons (Font Awesome icons), view toggles
+│       ├── tools_panel      — Tool buttons (SVG icons via icon_manager), view toggles
 │       ├── palette_panel    — Color picker, swatch grid, recent colors
 │       ├── layers_panel     — Layer list, opacity, blend mode, lock/visibility
-│       ├── timeline_panel   — Frame strip, transport controls, playback
+│       ├── timeline_panel   — Frame strip, transport controls, playback, tags
 │       ├── menu_bar         — File/Edit/View menus, async file dialogs
 │       └── log_panel        — Log viewer with auto-scroll
-├── fonts/
-│   ├── Ubuntu-Regular.ttf   — UI font (15px)
-│   └── fa-solid-900.ttf     — Font Awesome 6 Solid icons (16px)
-└── vendor/
-    └── icons_font_awesome/  — IconsFontAwesome6.h icon defines
+├── tests/                   — Unit tests (blend, composite, frames, history, raster,
+│                              pixc), one ctest target per area
+├── icons/                   — SVG icon set rasterized at runtime via lunasvg
+└── fonts/
+    └── Ubuntu-Regular.ttf   — UI font (15px)
 ```
 
 ### Data model
@@ -114,7 +119,7 @@ Binary, little-endian (`fread`/`fwrite` native byte order). Extension `.pixc`.
 ```
 HEADER  (16 bytes)
   [0-3]   char[4]   magic         'P' 'I' 'X' 'C'
-  [4-5]   uint16    version       currently 1
+  [4-5]   uint16    version       currently 2 (v1 = no TAGS block)
   [6-7]   uint16    width         canvas width in pixels
   [8-9]   uint16    height        canvas height in pixels
   [10-11] uint16    frame_count
@@ -141,12 +146,21 @@ FRAMES  (×frame_count)
     float32   opacity     0–1
     uint8     blend_mode  0=Normal 1=Multiply 2=Screen 3=Overlay 4=Add
     uint32[width × height]  pixels   RGBA8, R in bits 0–7, row-major
+
+TAGS  (version 2+ only)
+  uint16    tag_count
+  per tag (×tag_count):
+    uint8     name_len
+    char[name_len]  tag_name
+    uint16    start       inclusive frame index
+    uint16    end         inclusive frame index
+  int16     active_tag    -1 = all frames
 ```
 
 Notes:
 - Strings use a 1-byte length prefix, then raw bytes (max 255 chars).
 - `ToolsState` and palette UI state (`selected_swatch`, `recent_colors`) are not persisted.
-- On load, `active_frame` and `active_layer` reset to 0.
+- On load, `active_frame` and `active_layer` reset to 0; tag ranges are clamped to the frame count. Version 1 files load cleanly with no tags.
 
 ---
 
@@ -158,4 +172,5 @@ Notes:
 | UI | Dear ImGui — docking branch (v1.92+) |
 | Renderer | OpenGL 3.3 core |
 | Image I/O | stb\_image / stb\_image\_write |
+| Icons | SVG rasterized at runtime via lunasvg |
 | Build | CMake 3.20+, FetchContent |

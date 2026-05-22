@@ -35,11 +35,12 @@ Icons are SVG files in `icons/` rasterized at runtime via lunasvg. `icon_manager
 SDL cursors are managed by `cursor_manager` (`src/cursor_manager.h/cpp`). `set_for_tool(tool_index, mouse_pressed)` is called each frame in `main.cpp`. Move tool (8) uses `pan_tool.svg` / `pan_tool_alt.svg` depending on `mouse_pressed`; Color Picker (10) uses `eyedropper.svg`; all others use `point_scan.svg`.
 
 ## Adding a new tool
-1. Add a comment in `app_state.h` `ToolsState` documenting the new index.
+Tool indices are named constants in the `tool::` namespace in `app_state.h` (`tool::Brush`, `tool::RectSelect`, …) with a `tool::is_shape(t)` helper — use these instead of bare integers.
+1. Add a constant to the `tool::` namespace in `app_state.h` (and extend `is_shape()` if the new tool is a shape).
 2. Add an entry to `tool_defs[]` in `tools_panel.cpp` with the SVG icon name, `##tN` id, and tooltip. Place the corresponding `name.svg` in `icons/`.
 3. Add a handler branch in `canvas_panel.cpp`:
    - Brush-like tools: inside `IsItemHovered` in the `else` branch (these only act over the canvas image).
-   - Shape tools (click-drag) and selection: drag-START lives in the **unified `if (mouse_in_win)` block** (a `GetWindowPos`/`GetWindowSize` screen-rect check), so drags can begin over the image OR in the margin. The matching `IsItemHovered` branch is reduced to just resetting `was_painting`/`last_px` (so the tool doesn't fall through to the brush `else`). Extend the `active_tool >= 3 && active_tool <= 7` range there; commit in the `shape_dragging` `else` block's switch; add a pixel-exact preview branch in `if (shape_dragging)` using `draw_px` / `stamp` lambdas (see existing t==3/4/5/6/7 branches).
-   - Non-pixel tools (e.g. selection): add an `else if` branch in the unified `mouse_in_win` block; handle commit in the `tools.active_tool == 9` branch of the release block (skips `rebuild_composite`).
-4. Update `active_tool == 8` (Move) and `active_tool == 9` (RectSelect) checks in `canvas_panel.cpp` if inserting before them.
-5. Add a keyboard shortcut in `main.cpp` if desired.
+   - Shape tools (click-drag) and selection: drag-START lives in the **unified `if (mouse_in_win)` block** (a `GetWindowPos`/`GetWindowSize` screen-rect check), so drags can begin over the image OR in the margin. The matching `IsItemHovered` branch is reduced to just resetting `was_painting`/`last_px` (so the tool doesn't fall through to the brush `else`). Extend the `active_tool >= tool::Line && active_tool <= tool::FilledCircle` range there; commit in the `shape_dragging` `else` block's switch (cases use `tool::` constants and call the `raster::` drawing functions — `raster::bresenham`/`draw_rect`/`draw_ellipse` — on `cs.active()`); add a pixel-exact preview branch in `if (shape_dragging)` using `draw_px` / `stamp` lambdas (see the existing `tool::Line`/`Rect`/`FilledRect`/`Circle`/`FilledCircle` branches).
+   - Non-pixel tools (e.g. selection): add an `else if` branch in the unified `mouse_in_win` block; handle commit in the `tools.active_tool == tool::RectSelect` branch of the release block (skips `rebuild_composite`).
+4. Update the `tool::Move` and `tool::RectSelect` checks in `canvas_panel.cpp` if inserting before them.
+5. Add a keyboard shortcut in `main.cpp` if desired (the shortcuts assign `tool::` constants).
