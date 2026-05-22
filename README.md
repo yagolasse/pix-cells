@@ -39,6 +39,9 @@ A pixel art editor built in C++20 with Dear ImGui.
 - 8-column swatch grid with add, remove, and sort
 - Recent colors row (last 8 used)
 - Ships with a built-in PICO-8 palette
+- **Import / Export** palettes via the "edit" button in the Color panel:
+  - **HEX** (`.hex` / `.txt`) — one `#RRGGBB` per line; compatible with Lospec exports
+  - **GPL** (`.gpl`) — GIMP Palette format; compatible with GIMP, Aseprite, and Lospec exports
 
 ### File I/O
 - **`.pixc`** — native binary format preserving all frames, layers, opacity, blend modes, and palette
@@ -93,6 +96,7 @@ pix-cells/
 │   ├── log.h/cpp            — Log() writes to file + 500-entry ring buffer
 │   ├── png_io.h/cpp         — PNG save/load/sprite-sheet via stb_image
 │   ├── pixc_io.h/cpp        — .pixc binary format save/load
+│   ├── palette_io.h/cpp     — Palette import/export (.hex and .gpl)
 │   └── panels/
 │       ├── canvas_panel     — GL texture, zoom/pan, tool input, selection overlay
 │       ├── tools_panel      — Tool buttons (SVG icons via icon_manager), view toggles
@@ -102,7 +106,7 @@ pix-cells/
 │       ├── menu_bar         — File/Edit/View menus, async file dialogs
 │       └── log_panel        — Log viewer with auto-scroll
 ├── tests/                   — Unit tests (blend, composite, frames, history, raster,
-│                              pixc), one ctest target per area
+│                              pixc, palette_io), one ctest target per area
 ├── icons/                   — SVG icon set rasterized at runtime via lunasvg
 └── fonts/
     └── Ubuntu-Regular.ttf   — UI font (15px)
