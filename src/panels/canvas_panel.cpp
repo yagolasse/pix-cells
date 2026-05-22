@@ -53,6 +53,8 @@ static constexpr bool k_hmoves[8][4] = {
 
 void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& palette, SelectionState& sel) {
     static GLuint texture = 0;
+    static GLuint onion_tex[2] = {0, 0};
+    static std::vector<uint32_t> onion_buf;
     static int tex_w = 0, tex_h = 0;
     static ImVec2 last_px       = {-1.0f, -1.0f};
     static bool was_painting    = false;
@@ -68,12 +70,21 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     if (texture == 0 || tex_w != cs.width() || tex_h != cs.height()) {
         if (texture != 0)
             glDeleteTextures(1, &texture);
+        if (onion_tex[0] != 0)
+            glDeleteTextures(2, onion_tex);
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cs.width(), cs.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
                      cs.composite.data());
+        glGenTextures(2, onion_tex);
+        for (int i = 0; i < 2; i++) {
+            glBindTexture(GL_TEXTURE_2D, onion_tex[i]);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cs.width(), cs.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        }
         tex_w    = cs.width();
         tex_h    = cs.height();
         cs.dirty = false;
@@ -82,6 +93,21 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE,
                         cs.composite.data());
         cs.dirty = false;
+    }
+
+    if (tools.onion_skin) {
+        bool show_prev = tools.onion_skin_mode != 2 && cs.active_frame > 0;
+        bool show_next = tools.onion_skin_mode != 1 && cs.active_frame < (int)cs.frames.size() - 1;
+        if (show_prev) {
+            cs.composite_frame(cs.active_frame - 1, onion_buf);
+            glBindTexture(GL_TEXTURE_2D, onion_tex[0]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, onion_buf.data());
+        }
+        if (show_next) {
+            cs.composite_frame(cs.active_frame + 1, onion_buf);
+            glBindTexture(GL_TEXTURE_2D, onion_tex[1]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, onion_buf.data());
+        }
     }
 
     ImGui::Begin("Canvas");
@@ -144,6 +170,16 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
     ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
     if (pio.DrawCallback_SetSamplerNearest)
         dl->AddCallback(pio.DrawCallback_SetSamplerNearest, nullptr);
+
+    if (tools.onion_skin) {
+        ImVec2 onion_max = {origin.x + W, origin.y + H};
+        if (tools.onion_skin_mode != 2 && cs.active_frame > 0)
+            dl->AddImage((ImTextureID)(uintptr_t)onion_tex[0], origin, onion_max,
+                         {0, 0}, {1, 1}, IM_COL32(255, 128, 128, 128));
+        if (tools.onion_skin_mode != 1 && cs.active_frame < (int)cs.frames.size() - 1)
+            dl->AddImage((ImTextureID)(uintptr_t)onion_tex[1], origin, onion_max,
+                         {0, 0}, {1, 1}, IM_COL32(128, 128, 255, 128));
+    }
 
     ImGui::SetCursorScreenPos(origin);
     ImGui::Image((ImTextureID)(uintptr_t)texture, {W, H});

@@ -79,6 +79,13 @@ void panels::DrawTools(ToolsState& state) {
 
     ImGui::PopStyleVar();
 
+    if (state.onion_skin) {
+        ImGui::Spacing();
+        const char* modes[] = {"Both", "Previous", "Next"};
+        ImGui::SetNextItemWidth(avail);
+        ImGui::Combo("##onion_mode", &state.onion_skin_mode, modes, 3);
+    }
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
