@@ -81,7 +81,8 @@ struct ToolsState {
     bool circle_brush = false; // circular stamp for Brush/Eraser
     bool shape_filled = false; // Rect/Circle: filled vs outline
     bool show_grid    = false;
-    bool symmetry   = false;
+    bool symmetry      = false;
+    int  symmetry_mode = 0; // 0=Horizontal, 1=Vertical, 2=Both
     bool onion_skin = false;
     int  onion_skin_mode = 0; // 0=Both, 1=Previous only, 2=Next only
     bool mouse_over_canvas = false;

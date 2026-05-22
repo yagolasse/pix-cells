@@ -9,7 +9,7 @@ AppState
   CanvasState    canvas        — frames, composite buffer, zoom/pan, undo/redo stacks, unsaved_changes (bool)
   std::string    project_path  — path to .pixc file (empty = untitled); set on successful load/save
   ToolsState     tools         — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
-                                 brush_size, circle_brush, shape_filled, show_grid, symmetry, onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), mouse_over_canvas (bool)
+                                 brush_size, circle_brush, shape_filled, show_grid, symmetry, symmetry_mode (0=Horizontal 1=Vertical 2=Both), onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), mouse_over_canvas (bool)
   PaletteState   palette       — primary_color, secondary_color (ImVec4 RGBA 0-1),
                                  swatches (vector<ImVec4>), selected_swatch (int),
                                  palette_name (string), recent_colors (vector<ImVec4>, max 8)

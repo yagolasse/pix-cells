@@ -201,6 +201,19 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         }
     }
 
+    // Symmetry axis guide lines
+    if (tools.symmetry) {
+        ImU32 axis_col = IM_COL32(255, 0, 255, 140);
+        if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) {
+            float ax = origin.x + cs.width() * 0.5f * cs.zoom;
+            dl->AddLine({ax, origin.y}, {ax, origin.y + H}, axis_col, 1.0f);
+        }
+        if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) {
+            float ay = origin.y + cs.height() * 0.5f * cs.zoom;
+            dl->AddLine({origin.x, ay}, {origin.x + W, ay}, axis_col, 1.0f);
+        }
+    }
+
     // Marching ants selection overlay
     if (sel.active) {
         ImVec2 sp1 = {origin.x + sel.x0 * cs.zoom,          origin.y + sel.y0 * cs.zoom};
@@ -257,11 +270,20 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         ImU32 prev_col = (ImGui::ColorConvertFloat4ToU32(palette.primary_color) & 0x00FFFFFFu) | 0xCC000000u;
         float z = cs.zoom;
 
-        auto draw_px = [&](int cx, int cy) {
+        auto draw_px_base = [&](int cx, int cy) {
             if (cx < 0 || cx >= cs.width() || cy < 0 || cy >= cs.height()) return;
             float sx = cur_origin.x + cx * z;
             float sy = cur_origin.y + cy * z;
             dl->AddRectFilled({sx, sy}, {sx + z, sy + z}, prev_col);
+        };
+        auto draw_px = [&](int cx, int cy) {
+            int W2 = cs.width(), H2 = cs.height();
+            draw_px_base(cx, cy);
+            if (tools.symmetry) {
+                if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) draw_px_base(W2-1-cx, cy);
+                if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) draw_px_base(cx, H2-1-cy);
+                if (tools.symmetry_mode == 2) draw_px_base(W2-1-cx, H2-1-cy);
+            }
         };
 
         auto stamp = [&](int cx, int cy) {
@@ -325,6 +347,28 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         cs.pan.y += io.MouseDelta.y;
     }
 
+    // Symmetry helpers — call fn for the primary position plus all mirrored variants.
+    // Defined here (before IsItemHovered and the mouse_in_win blocks) so both the
+    // brush/fill path and the shape-commit path can reach them.
+    auto sym_pt = [&](int x, int y, auto fn) {
+        fn(x, y);
+        if (tools.symmetry) {
+            int SW = cs.width(), SH = cs.height();
+            if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) fn(SW-1-x, y);
+            if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) fn(x, SH-1-y);
+            if (tools.symmetry_mode == 2) fn(SW-1-x, SH-1-y);
+        }
+    };
+    auto sym_seg = [&](int x0, int y0, int x1, int y1, auto fn) {
+        fn(x0, y0, x1, y1);
+        if (tools.symmetry) {
+            int SW = cs.width(), SH = cs.height();
+            if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) fn(SW-1-x0, y0, SW-1-x1, y1);
+            if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) fn(x0, SH-1-y0, x1, SH-1-y1);
+            if (tools.symmetry_mode == 2) fn(SW-1-x0, SH-1-y0, SW-1-x1, SH-1-y1);
+        }
+    };
+
     if (ImGui::IsItemHovered()) {
         if (io.MouseWheel != 0.0f) {
             float dir = io.MouseWheel > 0.0f ? 1.0f : -1.0f;
@@ -359,7 +403,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 } else {
                     cs.push_snapshot();
                     Log("Flood fill at (%d,%d) color #%08X", px, py, color);
-                    raster::flood_fill(cs.active(), px, py, color);
+                    sym_pt(px, py, [&](int x, int y) { raster::flood_fill(cs.active(), x, y, color); });
                     cs.rebuild_composite();
                 }
             }
@@ -394,9 +438,13 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
             }
             if (is_painting && !cs.active_layer_locked()) {
                 if (last_px.x < 0.0f)
-                    raster::paint_pixel(cs.active(), px, py, color, tools.brush_size, tools.circle_brush);
+                    sym_pt(px, py, [&](int x, int y) {
+                        raster::paint_pixel(cs.active(), x, y, color, tools.brush_size, tools.circle_brush);
+                    });
                 else
-                    raster::bresenham(cs.active(), (int)last_px.x, (int)last_px.y, px, py, color, tools.brush_size, tools.circle_brush);
+                    sym_seg((int)last_px.x, (int)last_px.y, px, py, [&](int x0, int y0, int x1, int y1) {
+                        raster::bresenham(cs.active(), x0, y0, x1, y1, color, tools.brush_size, tools.circle_brush);
+                    });
                 last_px = {(float)px, (float)py};
                 cs.rebuild_composite();
             } else if (!is_painting) {
@@ -573,13 +621,15 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 cpx   = shape_sx + (ddx < 0 ? -d : d);
                 cpy   = shape_sy + (ddy < 0 ? -d : d);
             }
-            switch (ct) {
-            case tool::Line:       raster::bresenham(cs.active(), shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush); break;
-            case tool::Rect:       raster::draw_rect(cs.active(), shape_sx, shape_sy, cpx, cpy, color, false); break;
-            case tool::FilledRect: raster::draw_rect(cs.active(), shape_sx, shape_sy, cpx, cpy, color, true);  break;
-            case tool::Circle:     raster::draw_ellipse(cs.active(), shape_sx, shape_sy, cpx, cpy, color, false); break;
-            case tool::FilledCircle: raster::draw_ellipse(cs.active(), shape_sx, shape_sy, cpx, cpy, color, true);  break;
-            }
+            sym_seg(shape_sx, shape_sy, cpx, cpy, [&](int x0, int y0, int x1, int y1) {
+                switch (ct) {
+                case tool::Line:         raster::bresenham(cs.active(), x0, y0, x1, y1, color, tools.brush_size, tools.circle_brush); break;
+                case tool::Rect:         raster::draw_rect(cs.active(), x0, y0, x1, y1, color, false); break;
+                case tool::FilledRect:   raster::draw_rect(cs.active(), x0, y0, x1, y1, color, true);  break;
+                case tool::Circle:       raster::draw_ellipse(cs.active(), x0, y0, x1, y1, color, false); break;
+                case tool::FilledCircle: raster::draw_ellipse(cs.active(), x0, y0, x1, y1, color, true);  break;
+                }
+            });
             cs.rebuild_composite();
         }
         shape_dragging = false;

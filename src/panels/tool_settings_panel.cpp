@@ -17,11 +17,12 @@ void panels::DrawToolSettings(ToolsState& state) {
     ImGui::Begin("Tool Settings");
 
     int t = state.active_tool;
-    bool show_onion_mode  = state.onion_skin;
-    bool show_brush_size  = (t == tool::Brush || t == tool::Eraser || t == tool::Line);
-    bool show_brush_shape = (t == tool::Brush || t == tool::Eraser);
+    bool show_symmetry_mode = state.symmetry;
+    bool show_onion_mode    = state.onion_skin;
+    bool show_brush_size    = (t == tool::Brush || t == tool::Eraser || t == tool::Line);
+    bool show_brush_shape   = (t == tool::Brush || t == tool::Eraser);
 
-    if (!show_onion_mode && !show_brush_size && !show_brush_shape) {
+    if (!show_symmetry_mode && !show_onion_mode && !show_brush_size && !show_brush_shape) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("No settings");
         ImGui::End();
@@ -30,7 +31,22 @@ void panels::DrawToolSettings(ToolsState& state) {
 
     bool first = true;
 
+    if (show_symmetry_mode) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Mirror:");
+        ImGui::SameLine();
+        const char* sym_modes[] = {"Horizontal", "Vertical", "Both"};
+        ImGui::SetNextItemWidth(90.0f);
+        ImGui::Combo("##sym_mode", &state.symmetry_mode, sym_modes, 3);
+        first = false;
+    }
+
     if (show_onion_mode) {
+        if (!first) {
+            ImGui::SameLine(0, 8.0f);
+            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+            ImGui::SameLine(0, 8.0f);
+        }
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Onion:");
         ImGui::SameLine();
