@@ -120,6 +120,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     }
 
     ImGuiIO& io = ImGui::GetIO();
+    bool any_popup = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
 
     // Center canvas once the docking layout has settled.
     // On first launch (no imgui.ini), the panel resizes over several frames as docking applies.
@@ -277,9 +278,12 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         int epx = px, epy = py;
         if (io.KeyShift && tool::is_shape(t)) {
             int ddx = px - shape_sx, ddy = py - shape_sy;
-            int d   = std::min(std::abs(ddx), std::abs(ddy));
-            epx     = shape_sx + (ddx < 0 ? -d : d);
-            epy     = shape_sy + (ddy < 0 ? -d : d);
+            int ax = std::abs(ddx), ay = std::abs(ddy);
+            // 1-pixel hysteresis: when deltas are ≤1 apart (pen near 45°), round up
+            // instead of down so 1-pixel tablet jitter doesn't oscillate between N and N+1.
+            int d = (std::abs(ax - ay) <= 1) ? std::max(ax, ay) : std::min(ax, ay);
+            epx   = shape_sx + (ddx < 0 ? -d : d);
+            epy   = shape_sy + (ddy < 0 ? -d : d);
         }
         if (t == tool::Line) {  // Line — Bresenham + brush stamp
             int x0 = shape_sx, y0 = shape_sy, x1 = px, y1 = py;
@@ -417,7 +421,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         bool mouse_in_win = io.MousePos.x >= wpos.x && io.MousePos.x < wpos.x + wsize.x
                          && io.MousePos.y >= wpos.y && io.MousePos.y < wpos.y + wsize.y;
         tools.mouse_over_canvas = mouse_in_win;
-        if (mouse_in_win) {
+        if (mouse_in_win && !any_popup) {
         if (tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) {
             if (!shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (cs.active_layer_locked()) {
@@ -564,9 +568,10 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
             int ct  = tools.active_tool;
             if (io.KeyShift && tool::is_shape(ct)) {
                 int ddx = px - shape_sx, ddy = py - shape_sy;
-                int d   = std::min(std::abs(ddx), std::abs(ddy));
-                cpx     = shape_sx + (ddx < 0 ? -d : d);
-                cpy     = shape_sy + (ddy < 0 ? -d : d);
+                int ax = std::abs(ddx), ay = std::abs(ddy);
+                int d = (std::abs(ax - ay) <= 1) ? std::max(ax, ay) : std::min(ax, ay);
+                cpx   = shape_sx + (ddx < 0 ? -d : d);
+                cpy   = shape_sy + (ddy < 0 ? -d : d);
             }
             switch (ct) {
             case tool::Line:       raster::bresenham(cs.active(), shape_sx, shape_sy, px, py, color, tools.brush_size, tools.circle_brush); break;

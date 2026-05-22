@@ -121,6 +121,9 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
+        bool any_popup = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+        if (!any_popup) {
+
         if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z))
             app.canvas.undo();
         if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y))
@@ -262,6 +265,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
                 }
             }
         }
+        } // !any_popup
 
         BeginWorkbench();
 
