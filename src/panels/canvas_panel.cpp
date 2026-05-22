@@ -338,8 +338,11 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
             was_painting = false;
             last_px      = {-1.0f, -1.0f};
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
-                palette.primary_color = ImGui::ColorConvertU32ToFloat4(cs.active().get(px, py));
-                Log("Color pick at (%d,%d) #%08X", px, py, cs.active().get(px, py));
+                uint32_t picked = cs.active().get(px, py);
+                if ((picked >> 24) != 0) {
+                    palette.primary_color = ImGui::ColorConvertU32ToFloat4(picked);
+                    Log("Color pick at (%d,%d) #%08X", px, py, picked);
+                }
             }
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
