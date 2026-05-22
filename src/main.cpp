@@ -106,13 +106,14 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
     AppState app;
 
-    bool running = true;
+    bool running       = true;
+    bool quit_requested = false;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL3_ProcessEvent(&event);
             if (event.type == SDL_EVENT_QUIT)
-                running = false;
+                quit_requested = true;
         }
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -264,7 +265,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         BeginWorkbench();
 
         static bool show_log = false;
-        if (!panels::DrawMenuBar(app, window, show_log))
+        if (!panels::DrawMenuBar(app, window, show_log, quit_requested))
             running = false;
 
         cursor_manager::set_for_tool(app.tools.active_tool, ImGui::IsMouseDown(ImGuiMouseButton_Left));

@@ -50,6 +50,7 @@ struct CanvasState {
     std::deque<HistoryState>       undo_stack;  // frame stack + selection snapshots
     std::deque<HistoryState>       redo_stack;
     static constexpr int           MAX_HISTORY = 50;
+    bool                           unsaved_changes = false;
 
     std::vector<Layer>&       active_layers()       { return frames[active_frame].layers; }
     const std::vector<Layer>& active_layers() const { return frames[active_frame].layers; }
@@ -129,6 +130,7 @@ struct AppState {
     ToolsState     tools;
     PaletteState   palette;
     SelectionState selection;
+    std::string    project_path;  // empty = untitled
 };
 
 inline int   opacity_pct(float f) { return static_cast<int>(f * 100.0f + 0.5f); }

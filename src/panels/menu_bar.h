@@ -3,6 +3,6 @@
 #include "app_state.h"
 
 namespace panels {
-// Returns false when the user chooses File > Quit.
-bool DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log);
+// Returns false when the user confirms quit. quit_requested is set by the SDL window-close event.
+bool DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bool& quit_requested);
 } // namespace panels

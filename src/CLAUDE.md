@@ -6,16 +6,17 @@ All runtime state lives in `AppState` (`app_state.h`):
 
 ```
 AppState
-  CanvasState    canvas    — frames, composite buffer, zoom/pan, undo/redo stacks
-  ToolsState     tools     — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
-                             brush_size, circle_brush, shape_filled, show_grid, symmetry, onion_skin
-  PaletteState   palette   — primary_color, secondary_color (ImVec4 RGBA 0-1),
-                             swatches (vector<ImVec4>), selected_swatch (int),
-                             palette_name (string), recent_colors (vector<ImVec4>, max 8)
-  SelectionState selection — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive;
-                             NOT clamped — may be negative or exceed canvas dimensions when dragged/scaled past the edge),
-                             floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer; float_x/y may be off-canvas),
-                             clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
+  CanvasState    canvas        — frames, composite buffer, zoom/pan, undo/redo stacks, unsaved_changes (bool)
+  std::string    project_path  — path to .pixc file (empty = untitled); set on successful load/save
+  ToolsState     tools         — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
+                                 brush_size, circle_brush, shape_filled, show_grid, symmetry, onion_skin
+  PaletteState   palette       — primary_color, secondary_color (ImVec4 RGBA 0-1),
+                                 swatches (vector<ImVec4>), selected_swatch (int),
+                                 palette_name (string), recent_colors (vector<ImVec4>, max 8)
+  SelectionState selection     — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive;
+                                 NOT clamped — may be negative or exceed canvas dimensions when dragged/scaled past the edge),
+                                 floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer; float_x/y may be off-canvas),
+                                 clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
 
 Layer (in Frame.layers)
   canvas (Canvas), name (string), visible (bool),
@@ -33,7 +34,7 @@ AnimTag (in CanvasState.tags)
 Matches `GL_RGBA / GL_UNSIGNED_BYTE`. `ImGui::ColorConvertFloat4ToU32` produces this layout.
 
 ### CanvasState (`canvas_state.cpp`)
-Owns `std::vector<Frame>` (each with its own layer stack) composited into a flat `composite` buffer for GPU upload. `active_frame` and `active_layer` index the currently-edited canvas. **Invariant**: `active_layer` must always be a valid index into `frames[active_frame].layers`; code that switches frames or adds frames is responsible for clamping/resetting it (timeline_panel clamps on switch, resets to 0 on new-frame creation).
+Owns `std::vector<Frame>` (each with its own layer stack) composited into a flat `composite` buffer for GPU upload. `active_frame` and `active_layer` index the currently-edited canvas. **Invariant**: `active_layer` must always be a valid index into `frames[active_frame].layers`; code that switches frames or adds frames is responsible for clamping/resetting it (timeline_panel clamps on switch, resets to 0 on new-frame creation). `unsaved_changes` (bool) tracks whether the canvas has been modified since the last successful save; set to true by `push_snapshot()`, `undo()`, and `redo()`; reset to false by `new_canvas()` and when a file is successfully loaded or saved (in menu_bar.cpp).
 
 Key methods:
 | Method | What it does |

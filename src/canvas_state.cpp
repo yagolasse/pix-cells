@@ -87,6 +87,7 @@ void CanvasState::push_snapshot() {
     undo_stack.push_back({ frames, active_frame, active_layer });
     if ((int)undo_stack.size() > MAX_HISTORY) undo_stack.pop_front();
     redo_stack.clear();
+    unsaved_changes = true;
 }
 
 void CanvasState::undo() {
@@ -97,6 +98,7 @@ void CanvasState::undo() {
     frames       = std::move(snap.frames);
     active_frame = snap.active_frame;
     active_layer = snap.active_layer;
+    unsaved_changes = true;
     rebuild_composite();
     Log("Undo (%d steps remain)", (int)undo_stack.size());
 }
@@ -109,6 +111,7 @@ void CanvasState::redo() {
     frames       = std::move(snap.frames);
     active_frame = snap.active_frame;
     active_layer = snap.active_layer;
+    unsaved_changes = true;
     rebuild_composite();
     Log("Redo (%d steps remain)", (int)redo_stack.size());
 }
@@ -127,6 +130,7 @@ void CanvasState::new_canvas(int w, int h) {
     needs_center = true;
     undo_stack.clear();
     redo_stack.clear();
+    unsaved_changes = false;
     composite.resize(w * h, 0x00000000);
     rebuild_composite();
     Log("New canvas: %dx%d", w, h);
