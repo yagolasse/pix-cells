@@ -19,6 +19,9 @@
 #include <algorithm>
 
 int main(int /*argc*/, char* /*argv*/[]) {
+    // Disable SDL's automatic pen→mouse event synthesis. We translate pen events
+    // to ImGui input manually so there is exactly one position source per frame.
+    SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "0");
     SDL_Init(SDL_INIT_VIDEO);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -107,11 +110,43 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
     AppState app;
 
-    bool running       = true;
+    bool running        = true;
     bool quit_requested = false;
+    bool pen_touching   = false;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            // Translate pen events to ImGui mouse input manually.
+            // SDL_HINT_PEN_MOUSE_EVENTS=0 suppresses SDL's synthetic SDL_PEN_MOUSEID
+            // mouse events, so this is now the sole position/button source for the pen.
+            if (event.type == SDL_EVENT_PEN_MOTION) {
+                ImGuiIO& pio = ImGui::GetIO();
+                pio.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+                pio.AddMousePosEvent(event.pmotion.x, event.pmotion.y);
+                continue;
+            }
+            if (event.type == SDL_EVENT_PEN_DOWN) {
+                pen_touching = true;
+                ImGuiIO& pio = ImGui::GetIO();
+                pio.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+                pio.AddMousePosEvent(event.ptouch.x, event.ptouch.y);
+                pio.AddMouseButtonEvent(0, true);
+                continue;
+            }
+            if (event.type == SDL_EVENT_PEN_UP) {
+                pen_touching = false;
+                ImGuiIO& pio = ImGui::GetIO();
+                pio.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
+                pio.AddMouseButtonEvent(0, false);
+                continue;
+            }
+            // While the pen is touching, suppress WM_MOUSEMOVE-sourced mouse motion
+            // events (integer cursor coords) that would otherwise overwrite the clean
+            // float-precision pen position set from SDL_EVENT_PEN_MOTION above.
+            if (pen_touching && event.type == SDL_EVENT_MOUSE_MOTION) {
+                continue;
+            }
+
             ImGui_ImplSDL3_ProcessEvent(&event);
             if (event.type == SDL_EVENT_QUIT)
                 quit_requested = true;
