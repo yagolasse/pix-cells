@@ -45,7 +45,7 @@ static void recent_row(PaletteState& state) {
 }
 
 void panels::DrawPalette(PaletteState& state) {
-    ImGui::Begin("Color");
+    ImGui::Begin("Color", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     const float avail = ImGui::GetContentRegionAvail().x;
     auto* dl          = ImGui::GetWindowDrawList();
@@ -160,11 +160,12 @@ void panels::DrawPalette(PaletteState& state) {
                 snprintf(hex_buf, sizeof(hex_buf), "%02X%02X%02X", r, g, b);
 
             // # hex input + Copy
+            const float hex_avail = ImGui::GetContentRegionAvail().x;
             const float copy_w = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f;
             const float lbl_w  = ImGui::CalcTextSize("#").x + 2.0f;
             ImGui::Text("#");
             ImGui::SameLine(0, 2);
-            ImGui::SetNextItemWidth(avail - lbl_w - copy_w - ImGui::GetStyle().ItemSpacing.x);
+            ImGui::SetNextItemWidth(hex_avail - lbl_w - copy_w - ImGui::GetStyle().ItemSpacing.x);
             if (ImGui::InputText("##hex", hex_buf, sizeof(hex_buf),
                                  ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase)) {
                 if (strlen(hex_buf) == 6) {
