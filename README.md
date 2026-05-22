@@ -99,13 +99,14 @@ pix-cells/
 │   ├── pixc_io.h/cpp        — .pixc binary format save/load
 │   ├── palette_io.h/cpp     — Palette import/export (.hex and .gpl)
 │   └── panels/
-│       ├── canvas_panel     — GL texture, zoom/pan, tool input, selection overlay
-│       ├── tools_panel      — Tool buttons (SVG icons via icon_manager), view toggles
-│       ├── palette_panel    — Color picker, swatch grid, recent colors
-│       ├── layers_panel     — Layer list, opacity, blend mode, lock/visibility
-│       ├── timeline_panel   — Frame strip, transport controls, playback, tags
-│       ├── menu_bar         — File/Edit/View menus, async file dialogs
-│       └── log_panel        — Log viewer with auto-scroll
+│       ├── canvas_panel        — GL texture, zoom/pan, tool input, selection overlay
+│       ├── tools_panel         — Tool buttons (SVG icons via icon_manager), view toggles
+│       ├── tool_settings_panel — Tool-specific settings (brush size, shape, onion skin mode)
+│       ├── palette_panel       — Color picker, swatch grid, recent colors
+│       ├── layers_panel        — Layer list, opacity, blend mode, lock/visibility
+│       ├── timeline_panel      — Frame strip, transport controls, playback, tags
+│       ├── menu_bar            — File/Edit/View menus, async file dialogs
+│       └── log_panel           — Log viewer with auto-scroll
 ├── tests/                   — Unit tests (blend, composite, frames, history, raster,
 │                              pixc, palette_io), one ctest target per area
 ├── icons/                   — SVG icon set rasterized at runtime via lunasvg

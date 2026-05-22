@@ -79,56 +79,5 @@ void panels::DrawTools(ToolsState& state) {
 
     ImGui::PopStyleVar();
 
-    if (state.onion_skin) {
-        ImGui::Spacing();
-        const char* modes[] = {"Both", "Previous", "Next"};
-        ImGui::SetNextItemWidth(avail);
-        ImGui::Combo("##onion_mode", &state.onion_skin_mode, modes, 3);
-    }
-
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
-
-    int t = state.active_tool;
-    bool show_brush_size  = (t == tool::Brush || t == tool::Eraser || t == tool::Line);
-    bool show_brush_shape = (t == tool::Brush || t == tool::Eraser);
-
-    if (show_brush_size) {
-        {
-            char lbl[12];
-            snprintf(lbl, sizeof(lbl), "%d px", state.brush_size);
-            float lw = ImGui::CalcTextSize(lbl).x;
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - lw) * 0.5f);
-            ImGui::TextDisabled("%s", lbl);
-        }
-        {
-            const float W = 36.0f;
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (avail - W) * 0.5f));
-            ImGui::SetNextItemWidth(W);
-            ImGui::DragInt("##bsz", &state.brush_size, 0.2f, 1, 32, "%d");
-            state.brush_size = std::clamp(state.brush_size, 1, 32);
-        }
-    }
-
-    if (show_brush_shape) {
-        ImGui::Spacing();
-        const float SZ     = ICON * 0.75f;
-        const float SZ_BTN = SZ + FP * 2;
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FP, FP));
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (avail - SZ_BTN) * 0.5f));
-        if (active_icon_btn("##bsh0", icon_manager::get("square_filled"), SZ, !state.circle_brush))
-            state.circle_brush = false;
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Square brush");
-
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + std::max(0.0f, (avail - SZ_BTN) * 0.5f));
-        if (active_icon_btn("##bsh1", icon_manager::get("circle_filled"), SZ, state.circle_brush))
-            state.circle_brush = true;
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Circle brush");
-        ImGui::PopStyleVar();
-    }
-
     ImGui::End();
 }

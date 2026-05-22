@@ -89,6 +89,7 @@ add_executable(pix-cells
     src/panels/menu_bar.cpp
     src/panels/canvas_panel.cpp
     src/panels/tools_panel.cpp
+    src/panels/tool_settings_panel.cpp
     src/panels/palette_panel.cpp
     src/panels/layers_panel.cpp
     src/panels/timeline_panel.cpp
