@@ -70,6 +70,7 @@ add_library(pix-cells-core STATIC
     src/log.cpp
     src/png_io.cpp
     src/pixc_io.cpp
+    src/palette_io.cpp
     src/raster.cpp
 )
 target_include_directories(pix-cells-core PUBLIC
@@ -108,7 +109,7 @@ add_custom_command(TARGET pix-cells POST_BUILD
 
 enable_testing()
 
-foreach(t test_pixc test_blend test_composite test_frames test_history test_raster)
+foreach(t test_pixc test_blend test_composite test_frames test_history test_raster test_palette_io)
     add_executable(${t} tests/${t}.cpp)
     target_link_libraries(${t} PRIVATE pix-cells-core)
     target_compile_options(${t} PRIVATE

@@ -1,9 +1,41 @@
 #include "palette_panel.h"
+#include "palette_io.h"
+#include "log.h"
 #include "imgui.h"
 #include "icon_manager.h"
+#include <SDL3/SDL.h>
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstring>
+
+// ── Palette file I/O (async SDL dialog) ──────────────────────────────────────
+
+enum class PalIOKind { Import, ExportGPL, ExportHEX };
+
+struct PalPendingIO {
+    bool        active = false;
+    PalIOKind   kind   = PalIOKind::Import;
+    std::string path;
+};
+
+static PalPendingIO s_pal_pending;
+
+static void pal_file_cb(void* ud, const char* const* list, int /*filter*/) {
+    if (list && list[0]) {
+        auto* p = static_cast<PalPendingIO*>(ud);
+        p->path   = list[0];
+        p->active = true;
+    }
+}
+
+static std::string pal_file_ext(const std::string& path) {
+    auto pos = path.rfind('.');
+    if (pos == std::string::npos) return {};
+    std::string ext = path.substr(pos + 1);
+    for (auto& c : ext) c = (char)std::tolower((unsigned char)c);
+    return ext;
+}
 
 // Labelled float drag (H/S/V style: accent-colored single-letter + full-width input)
 static bool num_row(const char* id, const char* label, float* v, float speed, float lo, float hi, const char* fmt) {
@@ -44,8 +76,33 @@ static void recent_row(PaletteState& state) {
     }
 }
 
-void panels::DrawPalette(PaletteState& state) {
-    ImGui::Begin("Color", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
+
+    // Process any completed async file dialog result.
+    if (s_pal_pending.active) {
+        switch (s_pal_pending.kind) {
+        case PalIOKind::Import: {
+            std::string ext = pal_file_ext(s_pal_pending.path);
+            bool ok = (ext == "gpl")
+                ? palette_io::load_gpl(state, s_pal_pending.path)
+                : palette_io::load_hex(state, s_pal_pending.path);
+            if (!ok)
+                Log("palette: import failed: %s", s_pal_pending.path.c_str());
+            break;
+        }
+        case PalIOKind::ExportGPL:
+            if (!palette_io::save_gpl(state, s_pal_pending.path))
+                Log("palette: GPL export failed: %s", s_pal_pending.path.c_str());
+            break;
+        case PalIOKind::ExportHEX:
+            if (!palette_io::save_hex(state, s_pal_pending.path))
+                Log("palette: HEX export failed: %s", s_pal_pending.path.c_str());
+            break;
+        }
+        s_pal_pending.active = false;
+    }
+
+    ImGui::Begin("Color");
 
     const float avail = ImGui::GetContentRegionAvail().x;
     auto* dl          = ImGui::GetWindowDrawList();
@@ -165,7 +222,7 @@ void panels::DrawPalette(PaletteState& state) {
             const float lbl_w  = ImGui::CalcTextSize("#").x + 2.0f;
             ImGui::Text("#");
             ImGui::SameLine(0, 2);
-            ImGui::SetNextItemWidth(hex_avail - lbl_w - copy_w - ImGui::GetStyle().ItemSpacing.x);
+            ImGui::SetNextItemWidth(hex_avail - lbl_w - copy_w - ImGui::GetStyle().ItemSpacing.x - 1.0f);
             if (ImGui::InputText("##hex", hex_buf, sizeof(hex_buf),
                                  ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase)) {
                 if (strlen(hex_buf) == 6) {
@@ -232,6 +289,36 @@ void panels::DrawPalette(PaletteState& state) {
                 state.palette_name = rename_buf;
                 ImGui::CloseCurrentPopup();
             }
+
+            ImGui::Spacing();
+
+            static SDL_DialogFileFilter s_import_filters[] = {
+                { "GPL Palette", "gpl"     },
+                { "HEX Palette", "hex;txt" },
+            };
+            if (ImGui::Button("Import...")) {
+                s_pal_pending.kind = PalIOKind::Import;
+                SDL_ShowOpenFileDialog(pal_file_cb, &s_pal_pending, window,
+                                       s_import_filters, 2, nullptr, false);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            static SDL_DialogFileFilter s_gpl_filter[] = { { "GPL Palette", "gpl" } };
+            if (ImGui::Button("Export GPL")) {
+                s_pal_pending.kind = PalIOKind::ExportGPL;
+                SDL_ShowSaveFileDialog(pal_file_cb, &s_pal_pending, window,
+                                       s_gpl_filter, 1, nullptr);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            static SDL_DialogFileFilter s_hex_filter[] = { { "HEX Palette", "hex" } };
+            if (ImGui::Button("Export HEX")) {
+                s_pal_pending.kind = PalIOKind::ExportHEX;
+                SDL_ShowSaveFileDialog(pal_file_cb, &s_pal_pending, window,
+                                       s_hex_filter, 1, nullptr);
+                ImGui::CloseCurrentPopup();
+            }
+
             ImGui::EndPopup();
         }
     }

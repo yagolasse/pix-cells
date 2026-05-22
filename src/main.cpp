@@ -273,7 +273,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         panels::DrawCanvas(app.canvas, app.tools, app.palette, app.selection);
         panels::DrawLayers(app.canvas);
         panels::DrawTimeline(app.canvas);
-        panels::DrawPalette(app.palette);
+        panels::DrawPalette(app.palette, window);
         if (show_log)
             panels::DrawLog(&show_log);
 
