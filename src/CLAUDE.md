@@ -33,7 +33,7 @@ AnimTag (in CanvasState.tags)
 Matches `GL_RGBA / GL_UNSIGNED_BYTE`. `ImGui::ColorConvertFloat4ToU32` produces this layout.
 
 ### CanvasState (`canvas_state.cpp`)
-Owns `std::vector<Frame>` (each with its own layer stack) composited into a flat `composite` buffer for GPU upload. `active_frame` and `active_layer` index the currently-edited canvas.
+Owns `std::vector<Frame>` (each with its own layer stack) composited into a flat `composite` buffer for GPU upload. `active_frame` and `active_layer` index the currently-edited canvas. **Invariant**: `active_layer` must always be a valid index into `frames[active_frame].layers`; code that switches frames or adds frames is responsible for clamping/resetting it (timeline_panel clamps on switch, resets to 0 on new-frame creation).
 
 Key methods:
 | Method | What it does |
