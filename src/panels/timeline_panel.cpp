@@ -303,6 +303,7 @@ void panels::DrawTimeline(CanvasState& cs) {
         if (draw_frame_card(i, i == cs.active_frame, in_range, tex, s_thumb_w, s_thumb_h)) {
             if (cs.active_frame != i) {
                 cs.active_frame = i;
+                cs.active_layer = std::min(cs.active_layer, (int)cs.frames[i].layers.size() - 1);
                 cs.rebuild_composite();
                 Log("Timeline: switched to frame %d", i + 1);
             }
@@ -327,6 +328,7 @@ void panels::DrawTimeline(CanvasState& cs) {
         f.layers.push_back(std::move(l));
         cs.frames.push_back(std::move(f));
         cs.active_frame = (int)cs.frames.size() - 1;
+        cs.active_layer = 0;
         cs.rebuild_composite();
         Log("Timeline: added frame %d", cs.active_frame + 1);
     }
