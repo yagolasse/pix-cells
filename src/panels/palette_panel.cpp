@@ -83,10 +83,15 @@ void panels::DrawPalette(PaletteState& state) {
         // ── HSV ───────────────────────────────────────────────────────────
         if (ImGui::BeginTabItem("HSV")) {
             ImGui::SetNextItemWidth(-1);
-            ImGui::ColorPicker4("##picker", (float*)&state.primary_color,
-                                ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
-                                    ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_PickerHueBar |
-                                    ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_NoLabel);
+            float saved_alpha = state.primary_color.w;
+            bool  picker_used = ImGui::ColorPicker4("##picker", (float*)&state.primary_color,
+                                                    ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
+                                                        ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_PickerHueBar |
+                                                        ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_NoLabel);
+            if (picker_used)
+                state.primary_color.w = 1.0f;
+            else
+                state.primary_color.w = saved_alpha;
 
             float h, s, v;
             ImGui::ColorConvertRGBtoHSV(state.primary_color.x, state.primary_color.y, state.primary_color.z, h, s, v);
@@ -106,9 +111,11 @@ void panels::DrawPalette(PaletteState& state) {
             num_row("##av", "A", &a_pct, 0.0f, 100.0f, 100.0f, "%.0f%%");
             ImGui::EndDisabled();
 
-            if (changed)
+            if (changed) {
                 ImGui::ColorConvertHSVtoRGB(h_deg / 360.0f, s_pct / 100.0f, v_pct / 100.0f, state.primary_color.x,
                                             state.primary_color.y, state.primary_color.z);
+                state.primary_color.w = 1.0f;
+            }
 
             recent_row(state);
             ImGui::EndTabItem();
