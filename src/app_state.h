@@ -84,6 +84,7 @@ struct ToolsState {
     bool symmetry   = false;
     bool onion_skin = false;
     int  onion_skin_mode = 0; // 0=Both, 1=Previous only, 2=Next only
+    bool mouse_over_canvas = false;
 };
 
 namespace tool {

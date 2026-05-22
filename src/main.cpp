@@ -268,7 +268,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         if (!panels::DrawMenuBar(app, window, show_log, quit_requested))
             running = false;
 
-        cursor_manager::set_for_tool(app.tools.active_tool, ImGui::IsMouseDown(ImGuiMouseButton_Left));
+        cursor_manager::set_for_tool(app.tools.active_tool, ImGui::IsMouseDown(ImGuiMouseButton_Left), app.tools.mouse_over_canvas);
         panels::DrawTools(app.tools);
         panels::DrawCanvas(app.canvas, app.tools, app.palette, app.selection);
         panels::DrawLayers(app.canvas);

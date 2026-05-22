@@ -50,7 +50,8 @@ A pixel art editor built in C++20 with Dear ImGui.
 
 ### View
 - Zoom to cursor (scroll wheel)
-- Symmetry toggle, grid overlay, onion skin
+- Symmetry toggle and pixel grid overlay
+- **Onion skin** — ghost the previous frame (red tint) and/or next frame (blue tint) under the active canvas; mode selector in the Tools panel to show both, previous only, or next only
 - Dockable panels — layout persists across sessions
 
 ### Undo / Redo

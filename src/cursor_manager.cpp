@@ -50,7 +50,11 @@ void cursor_manager::init(const char* icons_dir) {
     s_pan_pressed = load_cursor("pan_tool_alt", PAN_HOT_X,   PAN_HOT_Y);
 }
 
-void cursor_manager::set_for_tool(int tool_index, bool mouse_pressed) {
+void cursor_manager::set_for_tool(int tool_index, bool mouse_pressed, bool mouse_over_canvas) {
+    if (!mouse_over_canvas) {
+        SDL_SetCursor(SDL_GetDefaultCursor());
+        return;
+    }
     SDL_Cursor* cursor = nullptr;
     switch (tool_index) {
         case 8:  cursor = mouse_pressed ? s_pan_pressed : s_pan; break; // Move

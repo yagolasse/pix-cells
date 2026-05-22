@@ -51,7 +51,7 @@ static constexpr bool k_hmoves[8][4] = {
     {0,0,1,1}, {0,0,0,1}, {1,0,0,1}, {1,0,0,0}
 };
 
-void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& palette, SelectionState& sel) {
+void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palette, SelectionState& sel) {
     static GLuint texture = 0;
     static GLuint onion_tex[2] = {0, 0};
     static std::vector<uint32_t> onion_buf;
@@ -416,6 +416,7 @@ void panels::DrawCanvas(CanvasState& cs, const ToolsState& tools, PaletteState& 
         ImVec2 wsize = ImGui::GetWindowSize();
         bool mouse_in_win = io.MousePos.x >= wpos.x && io.MousePos.x < wpos.x + wsize.x
                          && io.MousePos.y >= wpos.y && io.MousePos.y < wpos.y + wsize.y;
+        tools.mouse_over_canvas = mouse_in_win;
         if (mouse_in_win) {
         if (tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) {
             if (!shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
