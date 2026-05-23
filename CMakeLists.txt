@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Suppress MSVC "use fopen_s instead of fopen" deprecation warnings — fopen is
+# standard C and switching to fopen_s would break GCC/Clang builds.
+add_compile_definitions($<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
+
 include(FetchContent)
 
 FetchContent_Declare(
