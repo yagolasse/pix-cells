@@ -97,6 +97,7 @@ void panels::DrawLayers(CanvasState& cs) {
         renaming_layer = -1;
 
     const float op_w = ImGui::CalcTextSize("100%").x + 4.0f;
+    int dnd_src = -1, dnd_dst = -1;
 
     for (int i = (int)layers.size() - 1; i >= 0; i--) {
         auto& layer = layers[i];
@@ -160,6 +161,18 @@ void panels::DrawLayers(CanvasState& cs) {
                 Log("Active layer: \"%s\"", layer.name.c_str());
                 cs.active_layer = i;
             }
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+                ImGui::SetDragDropPayload("LAYER_IDX", &i, sizeof(int));
+                ImGui::Text("%s", layer.name.c_str());
+                ImGui::EndDragDropSource();
+            }
+            if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload("LAYER_IDX")) {
+                    dnd_src = *(const int*)p->Data;
+                    dnd_dst = i;
+                }
+                ImGui::EndDragDropTarget();
+            }
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                 renaming_layer = i;
                 strncpy(rename_buf, layer.name.c_str(), sizeof(rename_buf) - 1);
@@ -173,6 +186,21 @@ void panels::DrawLayers(CanvasState& cs) {
         ImGui::TextDisabled("%d%%", opacity_pct(layer.opacity));
 
         ImGui::PopID();
+    }
+
+    if (dnd_src >= 0 && dnd_dst >= 0 && dnd_src != dnd_dst) {
+        cs.push_snapshot();
+        int new_active = cs.active_layer;
+        if      (cs.active_layer == dnd_src)                                                   new_active = dnd_dst;
+        else if (dnd_src > dnd_dst && cs.active_layer >= dnd_dst && cs.active_layer < dnd_src) new_active++;
+        else if (dnd_src < dnd_dst && cs.active_layer > dnd_src && cs.active_layer <= dnd_dst) new_active--;
+        if (dnd_src > dnd_dst)
+            std::rotate(layers.begin() + dnd_dst, layers.begin() + dnd_src, layers.begin() + dnd_src + 1);
+        else
+            std::rotate(layers.begin() + dnd_src, layers.begin() + dnd_src + 1, layers.begin() + dnd_dst + 1);
+        cs.active_layer = new_active;
+        cs.rebuild_composite();
+        Log("Layer moved: %d -> %d", dnd_src, dnd_dst);
     }
 
     // ── Properties section ─────────────────────────────────────────────

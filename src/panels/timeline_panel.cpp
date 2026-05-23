@@ -293,6 +293,7 @@ void panels::DrawTimeline(CanvasState& cs) {
     int pending = 0;  // 1 = duplicate, 2 = delete
     int pending_idx = -1;
     int nframes = (int)cs.frames.size();
+    int dnd_src = -1, dnd_dst = -1;
 
     for (int i = 0; i < nframes; i++) {
         if (i > 0) ImGui::SameLine(0.0f, 6.0f);
@@ -307,6 +308,18 @@ void panels::DrawTimeline(CanvasState& cs) {
                 cs.rebuild_composite();
                 Log("Timeline: switched to frame %d", i + 1);
             }
+        }
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+            ImGui::SetDragDropPayload("FRAME_IDX", &i, sizeof(int));
+            ImGui::Text("Frame %d", i + 1);
+            ImGui::EndDragDropSource();
+        }
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* p = ImGui::AcceptDragDropPayload("FRAME_IDX")) {
+                dnd_src = *(const int*)p->Data;
+                dnd_dst = i;
+            }
+            ImGui::EndDragDropTarget();
         }
         if (ImGui::BeginPopupContextItem("##frame_ctx")) {
             if (ImGui::MenuItem("Duplicate")) { pending = 1; pending_idx = i; }
@@ -338,6 +351,33 @@ void panels::DrawTimeline(CanvasState& cs) {
     // Apply deferred frame mutation after the loop
     if (pending == 1)      cs.duplicate_frame(pending_idx);
     else if (pending == 2) cs.delete_frame(pending_idx);
+
+    if (dnd_src >= 0 && dnd_dst >= 0 && dnd_src != dnd_dst) {
+        cs.push_snapshot();
+        int new_active = cs.active_frame;
+        if      (cs.active_frame == dnd_src)                                                    new_active = dnd_dst;
+        else if (dnd_src > dnd_dst && cs.active_frame >= dnd_dst && cs.active_frame < dnd_src) new_active++;
+        else if (dnd_src < dnd_dst && cs.active_frame > dnd_src && cs.active_frame <= dnd_dst) new_active--;
+        auto remap = [dnd_src, dnd_dst](int j) -> int {
+            if (j == dnd_src) return dnd_dst;
+            if (dnd_src > dnd_dst && j >= dnd_dst && j < dnd_src) return j + 1;
+            if (dnd_src < dnd_dst && j > dnd_src && j <= dnd_dst) return j - 1;
+            return j;
+        };
+        for (auto& tag : cs.tags) {
+            tag.start = remap(tag.start);
+            tag.end   = remap(tag.end);
+            if (tag.start > tag.end) std::swap(tag.start, tag.end);
+        }
+        if (dnd_src > dnd_dst)
+            std::rotate(cs.frames.begin() + dnd_dst, cs.frames.begin() + dnd_src, cs.frames.begin() + dnd_src + 1);
+        else
+            std::rotate(cs.frames.begin() + dnd_src, cs.frames.begin() + dnd_src + 1, cs.frames.begin() + dnd_dst + 1);
+        cs.active_frame = new_active;
+        cs.active_layer = std::min(cs.active_layer, (int)cs.frames[cs.active_frame].layers.size() - 1);
+        cs.rebuild_composite();
+        Log("Timeline: moved frame %d to position %d", dnd_src + 1, dnd_dst + 1);
+    }
 
     ImGui::End();
 }

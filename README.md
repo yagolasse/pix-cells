@@ -22,6 +22,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 ### Layers
 - Add, delete, rename, toggle visibility, and lock layers per frame
 - Per-layer **opacity** (0–100%) and **blend modes**: Normal, Multiply, Screen, Overlay, Add
+- Drag-and-drop to reorder layers
 - Locked layers block all pixel-write operations (brush, fill, paste, delete)
 
 ### Selection
@@ -32,6 +33,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 ### Animation
 - Multi-frame timeline with per-frame duration
 - Play/pause transport with configurable FPS
+- Drag-and-drop to reorder frames; animation tag ranges auto-adjust
 - Sprite-sheet export (grid layout, configurable columns)
 
 ### Palette
