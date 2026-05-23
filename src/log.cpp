@@ -23,7 +23,7 @@ void Log(const char* fmt, ...) {
         fflush(s_file);
     }
 
-    s_entries.push_back(buf);
+    s_entries.emplace_back(buf);
     if ((int)s_entries.size() > MAX_ENTRIES)
         s_entries.pop_front();
 }

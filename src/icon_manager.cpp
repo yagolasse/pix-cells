@@ -52,8 +52,7 @@ ImTextureID icon_manager::get(const char* name) {
     if (it != s_cache.end())
         return (ImTextureID)(uint64_t)it->second;
 
-    std::string path = s_icons_dir + "/" + name + ".svg";
-    auto doc = lunasvg::Document::loadFromFile(path);
+    auto doc = lunasvg::Document::loadFromFile(s_icons_dir + "/" + name + ".svg");
     if (!doc) {
         s_cache[name] = 0;
         return (ImTextureID)0;

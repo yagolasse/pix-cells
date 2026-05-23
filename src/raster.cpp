@@ -40,7 +40,7 @@ void flood_fill(Canvas& c, int sx, int sy, uint32_t new_col) {
     if (old_col == new_col)
         return;
     std::queue<std::pair<int, int>> q;
-    q.push({sx, sy});
+    q.emplace(sx, sy);
     c.set(sx, sy, new_col);
     const int ddx[] = {1, -1, 0, 0}, ddy[] = {0, 0, 1, -1};
     while (!q.empty()) {
@@ -50,7 +50,7 @@ void flood_fill(Canvas& c, int sx, int sy, uint32_t new_col) {
             int nx = x + ddx[i], ny = y + ddy[i];
             if (c.in_bounds(nx, ny) && c.get(nx, ny) == old_col) {
                 c.set(nx, ny, new_col);
-                q.push({nx, ny});
+                q.emplace(nx, ny);
             }
         }
     }
@@ -82,7 +82,7 @@ void draw_ellipse(Canvas& c, int x0, int y0, int x1, int y1, uint32_t color, boo
 
 void nn_scale(const std::vector<uint32_t>& src, int sw, int sh,
               std::vector<uint32_t>& dst, int dw, int dh) {
-    dst.resize(dw * dh);
+    dst.resize(static_cast<size_t>(dw) * dh);
     for (int y = 0; y < dh; y++)
         for (int x = 0; x < dw; x++)
             dst[y * dw + x] = src[(y * sh / dh) * sw + (x * sw / dw)];

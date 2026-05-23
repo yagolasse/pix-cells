@@ -37,7 +37,7 @@ static bool draw_frame_card(int idx, bool is_active, bool in_range,
         float avail_w = card_w - 2 * pad;
         float avail_h = card_h - 2 * pad;
         float scale = std::min(avail_w / (float)cw, avail_h / (float)ch);
-        float tw = cw * scale, th = ch * scale;
+        float tw = static_cast<float>(cw) * scale, th = static_cast<float>(ch) * scale;
         ImVec2 tp0 = { pos.x + (card_w - tw) * 0.5f, pos.y + (card_h - th) * 0.5f };
         ImVec2 tp1 = { tp0.x + tw, tp0.y + th };
         dl->AddImage(tex, tp0, tp1);

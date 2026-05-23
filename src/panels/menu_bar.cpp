@@ -7,7 +7,7 @@
 
 // --- SDL3 async file dialog helpers ---
 
-enum class IOKind { PixcSave, PixcOpen, PngExport, SpriteSheet };
+enum class IOKind : uint8_t { PixcSave, PixcOpen, PngExport, SpriteSheet };
 
 struct PendingIO {
     bool        active = false;

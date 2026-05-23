@@ -23,8 +23,7 @@ namespace {
     constexpr int PAN_HOT_X   = 16, PAN_HOT_Y  = 16;
 
     SDL_Cursor* load_cursor(const char* name, int hotx, int hoty) {
-        std::string path = s_icons_dir + "/" + name + ".svg";
-        auto doc = lunasvg::Document::loadFromFile(path);
+        auto doc = lunasvg::Document::loadFromFile(s_icons_dir + "/" + name + ".svg");
         if (!doc)
             return nullptr;
         auto bm = doc->renderToBitmap(CURSOR_SIZE, CURSOR_SIZE);

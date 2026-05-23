@@ -148,7 +148,7 @@ void panels::DrawLayers(CanvasState& cs) {
             bool cancel = ImGui::IsKeyPressed(ImGuiKey_Escape);
             if (done) {
                 if (rename_buf[0]) {
-                    Log("Layer renamed: \"%s\" -> \"%s\"", layer.name.c_str(), rename_buf);
+                    Log(R"(Layer renamed: "%s" -> "%s")", layer.name.c_str(), rename_buf);
                     layer.name = rename_buf;
                 }
                 renaming_layer = -1;

@@ -75,9 +75,9 @@ bool palette_io::load_hex(PaletteState& pal, const std::string& path) {
         if (strlen(p) == 6 && all_hex(p, 6)) {
             unsigned int val = 0;
             sscanf(p, "%6X", &val);
-            int r = (val >> 16) & 0xFF;
-            int g = (val >> 8) & 0xFF;
-            int b = val & 0xFF;
+            auto r = static_cast<float>((val >> 16) & 0xFF);
+            auto g = static_cast<float>((val >> 8) & 0xFF);
+            auto b = static_cast<float>(val & 0xFF);
             colors.push_back({r / 255.0f, g / 255.0f, b / 255.0f, 1.0f});
         }
         // Non-matching lines are silently skipped.

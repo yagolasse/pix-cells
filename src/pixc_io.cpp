@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 static bool write_str(FILE* f, const std::string& s) {
-    uint8_t len = (uint8_t)(s.size() > 255 ? 255 : s.size());
+    auto len = (uint8_t)(s.size() > 255 ? 255 : s.size());
     if (fwrite(&len, 1, 1, f) != 1) return false;
     if (len > 0 && fwrite(s.data(), 1, len, f) != len) return false;
     return true;
@@ -21,8 +21,7 @@ static bool read_str(FILE* f, std::string& s) {
     uint8_t len = 0;
     if (fread(&len, 1, 1, f) != 1) return false;
     s.resize(len);
-    if (len > 0 && fread(s.data(), 1, len, f) != len) return false;
-    return true;
+    return len == 0 || fread(s.data(), 1, len, f) == len;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,9 +42,9 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
     fwrite(magic, 1, 4, f);
 
     uint16_t version     = 2;
-    uint16_t w           = (uint16_t)cs.width();
-    uint16_t h           = (uint16_t)cs.height();
-    uint16_t frame_count = (uint16_t)cs.frames.size();
+    auto     w           = (uint16_t)cs.width();
+    auto     h           = (uint16_t)cs.height();
+    auto     frame_count = (uint16_t)cs.frames.size();
     float    fps         = cs.fps;
 
     fwrite(&version,     sizeof(uint16_t), 1, f);
@@ -56,7 +55,7 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
 
     // PALETTE
     const PaletteState& pal = state.palette;
-    uint16_t color_count = (uint16_t)pal.swatches.size();
+    auto color_count = (uint16_t)pal.swatches.size();
     fwrite(&color_count, sizeof(uint16_t), 1, f);
     for (const auto& c : pal.swatches) {
         fwrite(&c.x, sizeof(float), 1, f);
@@ -90,7 +89,7 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
     }
 
     // TAGS (version 2+)
-    uint16_t tag_count = (uint16_t)cs.tags.size();
+    auto tag_count = (uint16_t)cs.tags.size();
     fwrite(&tag_count, sizeof(uint16_t), 1, f);
     for (const auto& t : cs.tags) {
         write_str(f, t.name);
@@ -99,7 +98,7 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
         fwrite(&ts, sizeof(uint16_t), 1, f);
         fwrite(&te, sizeof(uint16_t), 1, f);
     }
-    int16_t active_tag = (int16_t)cs.active_tag;
+    auto active_tag = (int16_t)cs.active_tag;
     fwrite(&active_tag, sizeof(int16_t), 1, f);
 
     fclose(f);

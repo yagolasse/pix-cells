@@ -11,7 +11,7 @@
 
 // ── Palette file I/O (async SDL dialog) ──────────────────────────────────────
 
-enum class PalIOKind { Import, ExportGPL, ExportHEX };
+enum class PalIOKind : uint8_t { Import, ExportGPL, ExportHEX };
 
 struct PalPendingIO {
     bool        active = false;
@@ -228,8 +228,11 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
                 if (strlen(hex_buf) == 6) {
                     unsigned int parsed = 0;
                     sscanf(hex_buf, "%X", &parsed);
-                    state.primary_color = {((parsed >> 16) & 0xFF) / 255.0f, ((parsed >> 8) & 0xFF) / 255.0f,
-                                           (parsed & 0xFF) / 255.0f, 1.0f};
+                    state.primary_color = {
+                        static_cast<float>((parsed >> 16) & 0xFF) / 255.0f,
+                        static_cast<float>((parsed >> 8) & 0xFF) / 255.0f,
+                        static_cast<float>(parsed & 0xFF) / 255.0f,
+                        1.0f};
                 }
             }
             hex_editing = ImGui::IsItemActive();

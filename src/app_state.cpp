@@ -1,7 +1,10 @@
 #include "app_state.h"
 
 static ImVec4 hex_to_imvec4(uint32_t rgb) {
-    return {((rgb >> 16) & 0xFF) / 255.0f, ((rgb >> 8) & 0xFF) / 255.0f, (rgb & 0xFF) / 255.0f, 1.0f};
+    return {static_cast<float>((rgb >> 16) & 0xFF) / 255.0f,
+            static_cast<float>((rgb >> 8) & 0xFF) / 255.0f,
+            static_cast<float>(rgb & 0xFF) / 255.0f,
+            1.0f};
 }
 
 PaletteState::PaletteState() {
