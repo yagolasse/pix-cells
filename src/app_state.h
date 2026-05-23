@@ -136,5 +136,8 @@ struct AppState {
     std::string    project_path;  // empty = untitled
 };
 
+void lift_selection(CanvasState& cs, SelectionState& sel);
+void commit_floating(CanvasState& cs, SelectionState& sel);
+
 inline int   opacity_pct(float f) { return static_cast<int>(f * 100.0f + 0.5f); }
 inline float pct_opacity(int p)   { return p / 100.0f; }
