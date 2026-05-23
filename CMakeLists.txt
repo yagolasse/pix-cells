@@ -83,6 +83,7 @@ target_link_libraries(pix-cells-core PUBLIC imgui_lib)
 
 add_executable(pix-cells
     src/main.cpp
+    src/input_handler.cpp
     src/icon_manager.cpp
     src/cursor_manager.cpp
     src/workbench.cpp
@@ -108,9 +109,46 @@ add_custom_command(TARGET pix-cells POST_BUILD
         ${CMAKE_SOURCE_DIR}/icons $<TARGET_FILE_DIR:pix-cells>/icons
 )
 
+find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-18 clang-tidy-17 clang-tidy-16)
+if(CLANG_TIDY_EXE)
+    set(LINT_SOURCES
+        src/app_state.cpp
+        src/canvas_state.cpp
+        src/log.cpp
+        src/png_io.cpp
+        src/pixc_io.cpp
+        src/palette_io.cpp
+        src/raster.cpp
+        src/main.cpp
+        src/input_handler.cpp
+        src/icon_manager.cpp
+        src/cursor_manager.cpp
+        src/workbench.cpp
+        src/panels/menu_bar.cpp
+        src/panels/canvas_panel.cpp
+        src/panels/tools_panel.cpp
+        src/panels/tool_settings_panel.cpp
+        src/panels/palette_panel.cpp
+        src/panels/layers_panel.cpp
+        src/panels/timeline_panel.cpp
+        src/panels/log_panel.cpp
+    )
+    list(TRANSFORM LINT_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
+    add_custom_target(lint
+        COMMAND ${CLANG_TIDY_EXE}
+            -p ${CMAKE_BINARY_DIR}
+            --extra-arg=-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH
+            ${LINT_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Running clang-tidy..."
+    )
+else()
+    message(STATUS "clang-tidy not found — lint target unavailable")
+endif()
+
 enable_testing()
 
-foreach(t test_pixc test_blend test_composite test_frames test_history test_raster test_palette_io)
+foreach(t test_pixc test_blend test_composite test_frames test_history test_raster test_palette_io test_png_io)
     add_executable(${t} tests/${t}.cpp)
     target_link_libraries(${t} PRIVATE pix-cells-core)
     target_compile_options(${t} PRIVATE
