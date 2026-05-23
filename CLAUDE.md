@@ -14,8 +14,14 @@ A pixel art editor built in C++.
 ```bash
 cmake -B build
 cmake --build build
-ctest --test-dir build --output-on-failure
+ctest --test-dir build -C Debug --output-on-failure
 ```
+
+## Lint
+```bash
+cmake --build build --target lint
+```
+(Requires `clang-tidy` in PATH; if not found, the lint target is unavailable.)
 
 ## Rules
 - **Always build and run tests after every code change** — both must pass before reporting done.
