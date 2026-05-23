@@ -360,7 +360,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 new_zoom = std::floor((cs.zoom - 1.0f) / 4.0f) * 4.0f;
             else
                 new_zoom = cs.zoom + dir;
-            new_zoom = std::clamp(new_zoom, 1.0f, 32.0f);
+            new_zoom = std::clamp(new_zoom, 1.0f, 128.0f);
             if (new_zoom != cs.zoom) {
                 // Keep the canvas pixel under the cursor fixed in screen space
                 cs.pan.x = io.MousePos.x - (io.MousePos.x - base.x - cs.pan.x) / cs.zoom * new_zoom - base.x;

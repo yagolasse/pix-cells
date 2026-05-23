@@ -40,7 +40,12 @@ static bool draw_frame_card(int idx, bool is_active, bool in_range,
         float tw = static_cast<float>(cw) * scale, th = static_cast<float>(ch) * scale;
         ImVec2 tp0 = { pos.x + (card_w - tw) * 0.5f, pos.y + (card_h - th) * 0.5f };
         ImVec2 tp1 = { tp0.x + tw, tp0.y + th };
+        ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+        if (pio.DrawCallback_SetSamplerNearest)
+            dl->AddCallback(pio.DrawCallback_SetSamplerNearest, nullptr);
         dl->AddImage(tex, tp0, tp1);
+        if (pio.DrawCallback_SetSamplerLinear)
+            dl->AddCallback(pio.DrawCallback_SetSamplerLinear, nullptr);
     }
 
     // Dim cards that fall outside the active tag's playback range
@@ -109,8 +114,8 @@ static void update_thumbnails(CanvasState& cs) {
         glGenTextures((GLsizei)(nframes - old), s_thumbs.data() + old);
         for (size_t i = old; i < s_thumbs.size(); i++) {
             glBindTexture(GL_TEXTURE_2D, s_thumbs[i]);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cw, ch, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         }
     } else if ((int)s_thumbs.size() > nframes) {
