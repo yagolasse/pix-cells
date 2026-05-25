@@ -225,7 +225,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 base    = ImGui::GetCursorScreenPos();
-    ImVec2 origin  = {base.x + cs.pan.x, base.y + cs.pan.y};
+    ImVec2 origin  = {std::round(base.x + cs.pan.x), std::round(base.y + cs.pan.y)};
     float W        = cs.width() * cs.zoom;
     float H        = cs.height() * cs.zoom;
 
@@ -242,7 +242,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     draw_canvas_decorations(dl, cs, tools, sel, origin, W, H, drag, hpos);
 
     // Tool input — compute canvas coords early so shape commit can use them outside hovered block
-    ImVec2 cur_origin = {base.x + cs.pan.x, base.y + cs.pan.y};
+    ImVec2 cur_origin = {std::round(base.x + cs.pan.x), std::round(base.y + cs.pan.y)};
     int px            = (int)((io.MousePos.x - cur_origin.x) / cs.zoom);
     int py            = (int)((io.MousePos.y - cur_origin.y) / cs.zoom);
 
@@ -368,7 +368,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 cs.zoom  = new_zoom;
                 Log("Zoom: %.0fx", cs.zoom);
                 // Recompute after zoom/pan change
-                cur_origin = {base.x + cs.pan.x, base.y + cs.pan.y};
+                cur_origin = {std::round(base.x + cs.pan.x), std::round(base.y + cs.pan.y)};
                 px         = (int)((io.MousePos.x - cur_origin.x) / cs.zoom);
                 py         = (int)((io.MousePos.y - cur_origin.y) / cs.zoom);
             }
