@@ -5,7 +5,7 @@
             "label": "CMake: Generate (Debug)",
             "type": "shell",
             "command": "cmake",
-            "args": ["-B", "build", "-DCMAKE_BUILD_TYPE=Debug"],
+            "args": ["-B", "build", "-S", ".", "-DCMAKE_BUILD_TYPE=Debug"],
             "windows": {
                 "args": ["-B", "build"]
             },
@@ -23,7 +23,7 @@
             "label": "CMake: Generate (Release)",
             "type": "shell",
             "command": "cmake",
-            "args": ["-B", "build", "-DCMAKE_BUILD_TYPE=Release"],
+            "args": ["-B", "build", "-S", ".", "-DCMAKE_BUILD_TYPE=Release"],
             "windows": {
                 "args": ["-B", "build"]
             },
@@ -41,7 +41,7 @@
             "label": "CMake: Build (Debug)",
             "type": "shell",
             "command": "cmake",
-            "args": ["--build", "build", "--config", "Debug"],
+            "args": ["--build", "build", "--config", "Debug", "--parallel", "8"],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -59,7 +59,7 @@
             "label": "CMake: Build (Release)",
             "type": "shell",
             "command": "cmake",
-            "args": ["--build", "build", "--config", "Release"],
+            "args": ["--build", "build", "--config", "Release", "--parallel", "8"],
             "options": {
                 "cwd": "${workspaceFolder}"
             },

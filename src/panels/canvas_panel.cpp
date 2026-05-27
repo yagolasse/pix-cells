@@ -2,6 +2,7 @@
 #include "raster.h"
 #include "log.h"
 #include "imgui.h"
+#include "ui_scale.h"
 #include <SDL3/SDL_opengl.h>
 #include <algorithm>
 #include <cmath>
@@ -129,8 +130,9 @@ static void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const Tools
         for (int i = 0; i < 8; i++) {
             bool is_active = drag.handle_dragging && drag.active_handle == i;
             ImU32 hcol = is_active ? IM_COL32(255,200,50,255) : IM_COL32(255,255,255,220);
-            dl->AddRectFilled({hpos[i].x-3.5f,hpos[i].y-3.5f},{hpos[i].x+3.5f,hpos[i].y+3.5f}, hcol);
-            dl->AddRect({hpos[i].x-3.5f,hpos[i].y-3.5f},{hpos[i].x+3.5f,hpos[i].y+3.5f}, IM_COL32(0,0,0,200));
+            float hs = ui_scale::px(3.5f);
+            dl->AddRectFilled({hpos[i].x-hs,hpos[i].y-hs},{hpos[i].x+hs,hpos[i].y+hs}, hcol);
+            dl->AddRect({hpos[i].x-hs,hpos[i].y-hs},{hpos[i].x+hs,hpos[i].y+hs}, IM_COL32(0,0,0,200));
         }
     }
 }

@@ -2,6 +2,7 @@
 #include "log.h"
 #include "imgui.h"
 #include "icon_manager.h"
+#include "ui_scale.h"
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -36,7 +37,7 @@ void panels::DrawLayers(CanvasState& cs) {
     auto& layers = cs.frames[cs.active_frame].layers;
 
     const float avail   = ImGui::GetContentRegionAvail().x;
-    const float btn_sz  = 22.0f;
+    const float btn_sz  = ui_scale::px(22.0f);
     const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
     // ── Header: "Layers · N"  [+] [copy] [trash] ─────────────────────
@@ -108,7 +109,7 @@ void panels::DrawLayers(CanvasState& cs) {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         push_ghost_style();
         const char* eye_icon = layer.visible ? "visibility" : "visibility_off";
-        if (ImGui::ImageButton("##eye", icon_manager::get(eye_icon), {20, 20})) {
+        if (ImGui::ImageButton("##eye", icon_manager::get(eye_icon), {ui_scale::px(20.0f), ui_scale::px(20.0f)})) {
             layer.visible = !layer.visible;
             Log("Layer \"%s\" %s", layer.name.c_str(), layer.visible ? "shown" : "hidden");
             cs.rebuild_composite();
@@ -120,7 +121,7 @@ void panels::DrawLayers(CanvasState& cs) {
         // Lock icon (transparent button)
         push_ghost_style();
         const char* lock_icon = layer.locked ? "lock" : "lock_open";
-        if (ImGui::ImageButton("##lck", icon_manager::get(lock_icon), {20, 20})) {
+        if (ImGui::ImageButton("##lck", icon_manager::get(lock_icon), {ui_scale::px(20.0f), ui_scale::px(20.0f)})) {
             layer.locked = !layer.locked;
             Log("Layer \"%s\" %s", layer.name.c_str(), layer.locked ? "locked" : "unlocked");
         }
@@ -132,7 +133,7 @@ void panels::DrawLayers(CanvasState& cs) {
         // Thumbnail (24×24 color swatch)
         ImGui::ColorButton("##th", layer_thumb(layer),
                            ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_NoTooltip,
-                           {24, 24});
+                           {ui_scale::px(24.0f), ui_scale::px(24.0f)});
 
         ImGui::SameLine(0, 6);
 

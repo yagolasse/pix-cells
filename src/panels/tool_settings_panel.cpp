@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "icon_manager.h"
+#include "ui_scale.h"
 #include <algorithm>
 
 static bool active_icon_btn(const char* id, ImTextureID tex, float sz, bool is_active) {
@@ -36,7 +37,7 @@ void panels::DrawToolSettings(ToolsState& state) {
         ImGui::TextUnformatted("Mirror:");
         ImGui::SameLine();
         const char* sym_modes[] = {"Horizontal", "Vertical", "Both"};
-        ImGui::SetNextItemWidth(90.0f);
+        ImGui::SetNextItemWidth(ui_scale::px(90.0f));
         ImGui::Combo("##sym_mode", &state.symmetry_mode, sym_modes, 3);
         first = false;
     }
@@ -51,7 +52,7 @@ void panels::DrawToolSettings(ToolsState& state) {
         ImGui::TextUnformatted("Onion:");
         ImGui::SameLine();
         const char* modes[] = {"Both", "Previous", "Next"};
-        ImGui::SetNextItemWidth(80.0f);
+        ImGui::SetNextItemWidth(ui_scale::px(80.0f));
         ImGui::Combo("##onion_mode", &state.onion_skin_mode, modes, 3);
         first = false;
     }
@@ -65,7 +66,7 @@ void panels::DrawToolSettings(ToolsState& state) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("Size");
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(50.0f);
+        ImGui::SetNextItemWidth(ui_scale::px(50.0f));
         ImGui::DragInt("##bsz", &state.brush_size, 0.2f, 1, 32, "%d px");
         state.brush_size = std::clamp(state.brush_size, 1, 32);
         first = false;
@@ -77,8 +78,8 @@ void panels::DrawToolSettings(ToolsState& state) {
             ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
             ImGui::SameLine(0, 8.0f);
         }
-        const float FP = 4.0f;
-        const float SZ = 22.0f * 0.75f;
+        const float FP = ui_scale::px(4.0f);
+        const float SZ = ui_scale::px(22.0f * 0.75f);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FP, FP));
         if (active_icon_btn("##bsh0", icon_manager::get("square_filled"), SZ, !state.circle_brush))
             state.circle_brush = false;

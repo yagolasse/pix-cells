@@ -17,6 +17,7 @@
 #include "panels/log_panel.h"
 #include "input_handler.h"
 #include "log.h"
+#include "ui_scale.h"
 
 int main(int /*argc*/, char* /*argv*/[]) {
     // Disable SDL's automatic pen→mouse event synthesis. We translate pen events
@@ -101,7 +102,17 @@ int main(int /*argc*/, char* /*argv*/[]) {
         ImGui::GetStyle().ScrollbarRounding = 3.0f;
     }
 
-    io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 15.0f);
+    ImGuiStyle base_style = ImGui::GetStyle();
+
+    ImFont* scale_fonts[5];
+    scale_fonts[0] = io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 11.0f);
+    scale_fonts[1] = io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 15.0f);
+    scale_fonts[2] = io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 19.0f);
+    scale_fonts[3] = io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 23.0f);
+    scale_fonts[4] = io.Fonts->AddFontFromFileTTF("fonts/Ubuntu-Regular.ttf", 30.0f);
+
+    ui_scale::init(scale_fonts, base_style);
+    ui_scale::apply(ui_scale::load());
 
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330 core");

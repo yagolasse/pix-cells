@@ -87,6 +87,7 @@ target_link_libraries(pix-cells-core PUBLIC imgui_lib)
 
 add_executable(pix-cells
     src/main.cpp
+    src/ui_scale.cpp
     src/input_handler.cpp
     src/icon_manager.cpp
     src/cursor_manager.cpp
@@ -123,6 +124,7 @@ if(CLANG_TIDY_EXE)
         src/pixc_io.cpp
         src/palette_io.cpp
         src/raster.cpp
+        src/ui_scale.cpp
         src/main.cpp
         src/input_handler.cpp
         src/icon_manager.cpp

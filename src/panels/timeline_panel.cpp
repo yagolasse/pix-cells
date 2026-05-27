@@ -3,6 +3,7 @@
 #include "log.h"
 #include "imgui.h"
 #include "icon_manager.h"
+#include "ui_scale.h"
 #include <SDL3/SDL_opengl.h>
 #include <algorithm>
 #include <cstdio>
@@ -19,8 +20,8 @@ static int                 s_thumb_w = 0, s_thumb_h = 0;
 // Returns true if this frame card was clicked
 static bool draw_frame_card(int idx, bool is_active, bool in_range,
                             GLuint tex, int cw, int ch) {
-    float card_w = 56.0f;
-    float card_h = 64.0f;
+    float card_w = ui_scale::px(56.0f);
+    float card_h = ui_scale::px(64.0f);
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -73,8 +74,8 @@ static bool draw_frame_card(int idx, bool is_active, bool in_range,
 }
 
 static void draw_add_card() {
-    float card_w = 40.0f;
-    float card_h = 64.0f;
+    float card_w = ui_scale::px(40.0f);
+    float card_h = ui_scale::px(64.0f);
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -167,7 +168,7 @@ void panels::DrawTimeline(CanvasState& cs) {
     update_thumbnails(cs);
 
     // Transport controls
-    const float TBTN = 22.0f;
+    const float TBTN = ui_scale::px(22.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
     if (ImGui::ImageButton("##prev", icon_manager::get("skip_previous"), {TBTN, TBTN})) {
@@ -211,7 +212,7 @@ void panels::DrawTimeline(CanvasState& cs) {
 
     // Editable FPS + frame count
     int fps_i = (int)cs.fps;
-    ImGui::SetNextItemWidth(70.0f);
+    ImGui::SetNextItemWidth(ui_scale::px(70.0f));
     if (ImGui::DragInt("FPS", &fps_i, 0.2f, 1, 60))
         cs.fps = (float)std::clamp(fps_i, 1, 60);
     ImGui::SameLine(0, 8);
@@ -223,7 +224,7 @@ void panels::DrawTimeline(CanvasState& cs) {
     const char* tag_preview = (cs.active_tag >= 0 && cs.active_tag < (int)cs.tags.size())
         ? cs.tags[cs.active_tag].name.c_str()
         : "All frames";
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui_scale::px(120.0f));
     if (ImGui::BeginCombo("##tag", tag_preview)) {
         if (ImGui::Selectable("All frames", cs.active_tag < 0))
             cs.active_tag = -1;
@@ -250,16 +251,16 @@ void panels::DrawTimeline(CanvasState& cs) {
             char namebuf[64];
             std::strncpy(namebuf, tag.name.c_str(), sizeof(namebuf) - 1);
             namebuf[sizeof(namebuf) - 1] = '\0';
-            ImGui::SetNextItemWidth(110.0f);
+            ImGui::SetNextItemWidth(ui_scale::px(110.0f));
             if (ImGui::InputText("##name", namebuf, sizeof(namebuf)))
                 tag.name = namebuf;
             ImGui::SameLine();
             int s1 = tag.start + 1, e1 = tag.end + 1;
-            ImGui::SetNextItemWidth(50.0f);
+            ImGui::SetNextItemWidth(ui_scale::px(50.0f));
             if (ImGui::DragInt("##s", &s1, 0.1f, 1, last + 1))
                 tag.start = std::clamp(s1 - 1, 0, last);
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(50.0f);
+            ImGui::SetNextItemWidth(ui_scale::px(50.0f));
             if (ImGui::DragInt("##e", &e1, 0.1f, 1, last + 1))
                 tag.end = std::clamp(e1 - 1, 0, last);
             if (tag.end < tag.start) tag.end = tag.start;
@@ -283,7 +284,7 @@ void panels::DrawTimeline(CanvasState& cs) {
     }
 
     // Playhead slider
-    ImGui::SetNextItemWidth(200.0f);
+    ImGui::SetNextItemWidth(ui_scale::px(200.0f));
     int max_frame = std::max(0, (int)cs.frames.size() - 1);
     if (ImGui::SliderInt("##playhead", &cs.active_frame, 0, max_frame, "Frame %d")) {
         cs.rebuild_composite();
@@ -292,7 +293,7 @@ void panels::DrawTimeline(CanvasState& cs) {
     ImGui::Separator();
 
     // Scrollable frame card row
-    ImGui::BeginChild("##frame_scroll", ImVec2(0, 90.0f), false,
+    ImGui::BeginChild("##frame_scroll", ImVec2(0, ui_scale::px(90.0f)), false,
                        ImGuiWindowFlags_HorizontalScrollbar);
 
     int pending = 0;  // 1 = duplicate, 2 = delete

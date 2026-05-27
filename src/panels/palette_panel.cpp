@@ -3,6 +3,7 @@
 #include "log.h"
 #include "imgui.h"
 #include "icon_manager.h"
+#include "ui_scale.h"
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <cctype>
@@ -109,8 +110,8 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
 
     // ── A. Current / Previous swatches + Swap ─────────────────────────────
     {
-        const float swap_w = 26.0f;
-        const float h      = 34.0f;
+        const float swap_w = ui_scale::px(26.0f);
+        const float h      = ui_scale::px(34.0f);
         const float sw_w   = avail - swap_w - ImGui::GetStyle().ItemSpacing.x;
         ImVec2 p           = ImGui::GetCursorScreenPos();
 
@@ -287,7 +288,7 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
             static char rename_buf[64] = "";
             if (ImGui::IsWindowAppearing())
                 snprintf(rename_buf, sizeof(rename_buf), "%s", state.palette_name.c_str());
-            ImGui::SetNextItemWidth(120.0f);
+            ImGui::SetNextItemWidth(ui_scale::px(120.0f));
             if (ImGui::InputText("Name##ren", rename_buf, sizeof(rename_buf), ImGuiInputTextFlags_EnterReturnsTrue)) {
                 state.palette_name = rename_buf;
                 ImGui::CloseCurrentPopup();

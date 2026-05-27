@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "png_io.h"
 #include "pixc_io.h"
+#include "ui_scale.h"
 #include <algorithm>
 #include <cstring>
 
@@ -36,6 +37,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     static bool open_sprite_sheet         = false;
     static bool open_unsaved_quit         = false;
     static bool open_unsaved_new          = false;
+    static bool open_preferences          = false;
     static bool s_pending_quit_after_save = false;
     static bool s_pending_new_after_save  = false;
 
@@ -191,6 +193,9 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
             ImGui::Separator();
             if (ImGui::MenuItem("Canvas Settings..."))
                 open_canvas_settings = true;
+            ImGui::Separator();
+            if (ImGui::MenuItem("Preferences..."))
+                open_preferences = true;
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
@@ -254,6 +259,26 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         ImGui::EndPopup();
     }
 
+    // --- Preferences popup ---
+    if (open_preferences) { ImGui::OpenPopup("Preferences"); open_preferences = false; }
+    if (ImGui::BeginPopupModal("Preferences", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static const char* scale_labels[] = {"75%", "100%", "125%", "150%", "200%"};
+        static const float scale_values[] = {0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
+        float cur = ui_scale::get();
+        int sel = 1;
+        for (int i = 0; i < 5; ++i)
+            if (cur == scale_values[i]) { sel = i; break; }
+        ImGui::Text("UI Scale");
+        ImGui::SetNextItemWidth(ui_scale::px(120.0f));
+        if (ImGui::Combo("##uiscale", &sel, scale_labels, 5)) {
+            ui_scale::apply(scale_values[sel]);
+            ui_scale::save();
+        }
+        ImGui::Spacing();
+        if (ImGui::Button("Close")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+
     // --- New Canvas popup ---
     if (open_new_canvas) {
         ImGui::OpenPopup("New Canvas");
@@ -285,7 +310,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         ImGui::RadioButton("Grid",       &layout_idx, 2);
         static int cols = 4;
         if (layout_idx == 2) {
-            ImGui::SetNextItemWidth(80);
+            ImGui::SetNextItemWidth(ui_scale::px(80.0f));
             ImGui::InputInt("Columns", &cols, 1, 4);
             cols = std::clamp(cols, 1, 16);
         }

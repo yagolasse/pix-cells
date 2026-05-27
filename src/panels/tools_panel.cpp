@@ -1,6 +1,7 @@
 #include "tools_panel.h"
 #include "imgui.h"
 #include "icon_manager.h"
+#include "ui_scale.h"
 #include <algorithm>
 
 static bool active_icon_btn(const char* id, ImTextureID tex, float sz, bool is_active) {
@@ -13,8 +14,8 @@ static bool active_icon_btn(const char* id, ImTextureID tex, float sz, bool is_a
 }
 
 void panels::DrawTools(ToolsState& state) {
-    const float ICON = 22.0f;          // rendered icon size
-    const float FP   = 4.0f;          // frame padding (margin around icon)
+    const float ICON = ui_scale::px(22.0f);
+    const float FP   = ui_scale::px(4.0f);
     const float BTN  = ICON + FP * 2; // total button footprint
     ImGui::SetNextWindowSizeConstraints(ImVec2(BTN + 16.0f, 0), ImVec2(FLT_MAX, FLT_MAX));
     ImGui::Begin("Tools");
