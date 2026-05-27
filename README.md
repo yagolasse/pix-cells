@@ -55,7 +55,9 @@ A pixel art editor built in C++20 with Dear ImGui.
 - Symmetry toggle and pixel grid overlay
 - **Onion skin** — ghost the previous frame (red tint) and/or next frame (blue tint) under the active canvas; mode selector in the Tools panel to show both, previous only, or next only
 - **UI scaling** — adjust interface size from 75% to 200% via Edit > Preferences; setting persists across sessions
+- **Multi-document tabs** — open and switch between multiple projects in the same window; "+" button creates new blank document, tab X or Ctrl+W closes the active document (prompts to save if unsaved)
 - Dockable panels — layout persists across sessions
+- **Floating Preview panel** — mini-preview window with independent zoom (scroll to adjust 1–32×) and pan controls
 
 ### Undo / Redo
 - `Ctrl+Z` / `Ctrl+Y` — full undo/redo stack per session

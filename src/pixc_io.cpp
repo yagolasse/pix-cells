@@ -35,7 +35,7 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
         return false;
     }
 
-    const CanvasState& cs = state.canvas;
+    const CanvasState& cs = state.canvas();
 
     // HEADER
     const char magic[4] = { 'P', 'I', 'X', 'C' };
@@ -54,7 +54,7 @@ bool pixc_io::save(const AppState& state, const std::string& path) {
     fwrite(&fps,         sizeof(float),    1, f);
 
     // PALETTE
-    const PaletteState& pal = state.palette;
+    const PaletteState& pal = state.palette();
     auto color_count = (uint16_t)pal.swatches.size();
     fwrite(&color_count, sizeof(uint16_t), 1, f);
     for (const auto& c : pal.swatches) {
@@ -143,20 +143,20 @@ bool pixc_io::load(AppState& state, const std::string& path) {
     // PALETTE
     uint16_t color_count = 0;
     fread(&color_count, sizeof(uint16_t), 1, f);
-    state.palette.swatches.resize(color_count);
-    for (auto& c : state.palette.swatches) {
+    state.palette().swatches.resize(color_count);
+    for (auto& c : state.palette().swatches) {
         fread(&c.x, sizeof(float), 1, f);
         fread(&c.y, sizeof(float), 1, f);
         fread(&c.z, sizeof(float), 1, f);
         fread(&c.w, sizeof(float), 1, f);
     }
-    read_str(f, state.palette.palette_name);
+    read_str(f, state.palette().palette_name);
 
     // Reset canvas
-    state.canvas.new_canvas((int)w, (int)h);
-    state.canvas.fps = fps;
-    state.canvas.frames.clear();
-    state.canvas.frames.reserve(frame_count);
+    state.canvas().new_canvas((int)w, (int)h);
+    state.canvas().fps = fps;
+    state.canvas().frames.clear();
+    state.canvas().frames.reserve(frame_count);
 
     // FRAMES
     for (int fi = 0; fi < (int)frame_count; fi++) {
@@ -189,16 +189,16 @@ bool pixc_io::load(AppState& state, const std::string& path) {
             frame.layers.push_back(std::move(layer));
         }
 
-        state.canvas.frames.push_back(std::move(frame));
+        state.canvas().frames.push_back(std::move(frame));
     }
 
     // TAGS (version 2+)
-    state.canvas.tags.clear();
-    state.canvas.active_tag = -1;
+    state.canvas().tags.clear();
+    state.canvas().active_tag = -1;
     if (version >= 2) {
         uint16_t tag_count = 0;
         fread(&tag_count, sizeof(uint16_t), 1, f);
-        state.canvas.tags.reserve(tag_count);
+        state.canvas().tags.reserve(tag_count);
         int last = (int)frame_count - 1;
         for (int ti = 0; ti < (int)tag_count; ti++) {
             AnimTag t;
@@ -208,21 +208,21 @@ bool pixc_io::load(AppState& state, const std::string& path) {
             fread(&te, sizeof(uint16_t), 1, f);
             t.start = std::clamp((int)ts, 0, last);
             t.end   = std::clamp((int)te, t.start, last);
-            state.canvas.tags.push_back(std::move(t));
+            state.canvas().tags.push_back(std::move(t));
         }
         int16_t active_tag = -1;
         fread(&active_tag, sizeof(int16_t), 1, f);
         int at = (int)active_tag;
-        state.canvas.active_tag = (at >= 0 && at < (int)state.canvas.tags.size()) ? at : -1;
+        state.canvas().active_tag = (at >= 0 && at < (int)state.canvas().tags.size()) ? at : -1;
     }
 
     fclose(f);
 
-    state.canvas.active_frame = 0;
-    state.canvas.active_layer = 0;
-    state.canvas.needs_center = true;
-    state.canvas.rebuild_composite();
+    state.canvas().active_frame = 0;
+    state.canvas().active_layer = 0;
+    state.canvas().needs_center = true;
+    state.canvas().rebuild_composite();
 
-    Log("pixc_io::load: loaded \"%s\" (v%d, %d frames, %d tags, %dx%d)", path.c_str(), (int)version, (int)frame_count, (int)state.canvas.tags.size(), (int)w, (int)h);
+    Log("pixc_io::load: loaded \"%s\" (v%d, %d frames, %d tags, %dx%d)", path.c_str(), (int)version, (int)frame_count, (int)state.canvas().tags.size(), (int)w, (int)h);
     return true;
 }

@@ -2,5 +2,5 @@
 #include "app_state.h"
 
 namespace panels {
-void DrawCanvas(AppState& app);
+void DrawDocTabs(AppState& app);
 }

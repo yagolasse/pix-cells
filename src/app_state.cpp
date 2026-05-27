@@ -7,6 +7,8 @@ static ImVec4 hex_to_imvec4(uint32_t rgb) {
             1.0f};
 }
 
+AppState::AppState() { docs.emplace_back(); }
+
 PaletteState::PaletteState() {
     static const uint32_t pico8[24] = {
         0x1a1a1a, 0x3a3a3a, 0x5a5a5a, 0x7e7e7e, 0xa5a5a5, 0xcccccc, 0xf6efe0, 0xffffff,

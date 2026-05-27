@@ -1,5 +1,6 @@
 #include "canvas_panel.h"
 #include "raster.h"
+#include "pixc_io.h"
 #include "log.h"
 #include "imgui.h"
 #include "ui_scale.h"
@@ -23,6 +24,40 @@ struct CanvasDragState {
     bool handle_dragging  = false;
     int  handle_start_x0 = 0, handle_start_y0 = 0, handle_start_x1 = 0, handle_start_y1 = 0;
 };
+
+// Per-document GL and input state
+struct DocRenderState {
+    GLuint texture      = 0;
+    GLuint onion_tex[2] = {0, 0};
+    int    tex_w = 0, tex_h = 0;
+    ImVec2 last_px       = {-1.f, -1.f};
+    bool   was_painting  = false;
+    CanvasDragState drag;
+    ImVec2 prev_avail    = {0.f, 0.f};
+};
+
+static std::vector<DocRenderState> s_doc_render;
+static std::vector<uint32_t>       s_onion_buf;        // shared temp buf for onion skin upload
+static int                         s_tabclose_doc_idx = -1; // persists while unsaved-changes modal is open
+
+static void close_doc(AppState& app, int idx) {
+    if (idx < 0 || idx >= (int)app.docs.size()) return;
+    // Free GL textures
+    if (idx < (int)s_doc_render.size()) {
+        DocRenderState& drs = s_doc_render[idx];
+        if (drs.texture)      glDeleteTextures(1, &drs.texture);
+        if (drs.onion_tex[0]) glDeleteTextures(1, &drs.onion_tex[0]);
+        if (drs.onion_tex[1]) glDeleteTextures(1, &drs.onion_tex[1]);
+        s_doc_render.erase(s_doc_render.begin() + idx);
+    }
+    app.docs.erase(app.docs.begin() + idx);
+    // Always keep at least one document
+    if (app.docs.empty()) {
+        app.docs.emplace_back();
+        s_doc_render.emplace_back();
+    }
+    app.active_doc = std::min(app.active_doc, (int)app.docs.size() - 1);
+}
 
 static void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& tools,
                                   const GLuint* onion_tex, ImVec2 origin, float W, float H) {
@@ -137,39 +172,98 @@ static void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const Tools
     }
 }
 
-void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palette, SelectionState& sel) {
-    static GLuint texture = 0;
-    static GLuint onion_tex[2] = {0, 0};
-    static std::vector<uint32_t> onion_buf;
-    static int tex_w = 0, tex_h = 0;
-    static ImVec2 last_px       = {-1.0f, -1.0f};
-    static bool was_painting    = false;
-    static CanvasDragState drag;
+void panels::DrawCanvas(AppState& app) {
+    // Grow per-doc render state to match document count
+    while (s_doc_render.size() < app.docs.size()) s_doc_render.emplace_back();
 
-    // (Re)create texture on first call or if canvas dimensions changed
-    if (texture == 0 || tex_w != cs.width() || tex_h != cs.height()) {
-        if (texture != 0)
-            glDeleteTextures(1, &texture);
-        if (onion_tex[0] != 0)
-            glDeleteTextures(2, onion_tex);
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
+    ImGui::Begin("Canvas");
+
+    // --- Consume close signals from Ctrl+W / File>Close and tab X click ---
+    {
+        int close_idx = -1;
+        if (app.close_active_doc_requested) {
+            app.close_active_doc_requested = false;
+            close_idx = app.active_doc;
+        }
+        if (app.close_doc_idx_requested >= 0) {
+            close_idx = app.close_doc_idx_requested;
+            app.close_doc_idx_requested = -1;
+        }
+        if (close_idx >= 0 && close_idx < (int)app.docs.size()) {
+            if (app.docs[close_idx].canvas.unsaved_changes) {
+                s_tabclose_doc_idx = close_idx;
+                ImGui::OpenPopup("Unsaved Changes##tabclose");
+            } else {
+                close_doc(app, close_idx);
+            }
+        }
+    }
+
+    if (ImGui::BeginPopupModal("Unsaved Changes##tabclose", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Save changes before closing?");
+        ImGui::Spacing();
+        if (ImGui::Button("Save")) {
+            if (s_tabclose_doc_idx >= 0 && s_tabclose_doc_idx < (int)app.docs.size()) {
+                auto& d = app.docs[s_tabclose_doc_idx];
+                if (!d.project_path.empty()) {
+                    int prev = app.active_doc;
+                    app.active_doc = s_tabclose_doc_idx;
+                    if (pixc_io::save(app, d.project_path))
+                        app.canvas().unsaved_changes = false;
+                    app.active_doc = prev;
+                }
+                close_doc(app, s_tabclose_doc_idx);
+            }
+            s_tabclose_doc_idx = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Don't Save")) {
+            if (s_tabclose_doc_idx >= 0 && s_tabclose_doc_idx < (int)app.docs.size())
+                close_doc(app, s_tabclose_doc_idx);
+            s_tabclose_doc_idx = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            s_tabclose_doc_idx = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    // --- Bind state for the active document ---
+    CanvasState&    cs      = app.canvas();
+    ToolsState&     tools   = app.tools;
+    PaletteState&   palette = app.palette();
+    SelectionState& sel     = app.selection();
+    DocRenderState& drs     = s_doc_render[app.active_doc];
+
+    // --- (Re)create texture on first call or if canvas dimensions changed ---
+    if (drs.texture == 0 || drs.tex_w != cs.width() || drs.tex_h != cs.height()) {
+        if (drs.texture != 0)
+            glDeleteTextures(1, &drs.texture);
+        if (drs.onion_tex[0] != 0)
+            glDeleteTextures(2, drs.onion_tex);
+        glGenTextures(1, &drs.texture);
+        glBindTexture(GL_TEXTURE_2D, drs.texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cs.width(), cs.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
                      cs.composite.data());
-        glGenTextures(2, onion_tex);
+        glGenTextures(2, drs.onion_tex);
         for (int i = 0; i < 2; i++) {
-            glBindTexture(GL_TEXTURE_2D, onion_tex[i]);
+            glBindTexture(GL_TEXTURE_2D, drs.onion_tex[i]);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cs.width(), cs.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         }
-        tex_w    = cs.width();
-        tex_h    = cs.height();
-        cs.dirty = false;
+        drs.tex_w = cs.width();
+        drs.tex_h = cs.height();
+        cs.dirty  = false;
     } else if (cs.dirty) {
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, drs.texture);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE,
                         cs.composite.data());
         cs.dirty = false;
@@ -179,24 +273,22 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         bool show_prev = tools.onion_skin_mode != 2 && cs.active_frame > 0;
         bool show_next = tools.onion_skin_mode != 1 && cs.active_frame < (int)cs.frames.size() - 1;
         if (show_prev) {
-            cs.composite_frame(cs.active_frame - 1, onion_buf);
-            glBindTexture(GL_TEXTURE_2D, onion_tex[0]);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, onion_buf.data());
+            cs.composite_frame(cs.active_frame - 1, s_onion_buf);
+            glBindTexture(GL_TEXTURE_2D, drs.onion_tex[0]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, s_onion_buf.data());
         }
         if (show_next) {
-            cs.composite_frame(cs.active_frame + 1, onion_buf);
-            glBindTexture(GL_TEXTURE_2D, onion_tex[1]);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, onion_buf.data());
+            cs.composite_frame(cs.active_frame + 1, s_onion_buf);
+            glBindTexture(GL_TEXTURE_2D, drs.onion_tex[1]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, s_onion_buf.data());
         }
     }
-
-    ImGui::Begin("Canvas");
 
     // Commit floating selection automatically when tool changes away from rect select
     if (sel.floating && tools.active_tool != tool::RectSelect) {
         commit_floating(cs, sel);
-        drag.handle_dragging = false;
-        drag.active_handle   = -1;
+        drs.drag.handle_dragging = false;
+        drs.drag.active_handle   = -1;
     }
 
     ImGuiIO& io = ImGui::GetIO();
@@ -208,14 +300,13 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     if (cs.needs_center) {
         ImVec2 avail = ImGui::GetContentRegionAvail();
         if (avail.x > 0 && avail.y > 0) {
-            static ImVec2 prev_avail = {0, 0};
-            if (avail.x == prev_avail.x && avail.y == prev_avail.y) {
+            if (avail.x == drs.prev_avail.x && avail.y == drs.prev_avail.y) {
                 float W         = cs.width() * cs.zoom;
                 float H         = cs.height() * cs.zoom;
                 cs.pan          = {(avail.x - W) * 0.5f, (avail.y - H) * 0.5f};
                 cs.needs_center = false;
             }
-            prev_avail = avail;
+            drs.prev_avail = avail;
         }
     }
 
@@ -232,16 +323,16 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     float H        = cs.height() * cs.zoom;
 
     ImVec2 hpos[8] = {};
-    draw_canvas_overlays(dl, cs, tools, onion_tex, origin, W, H);
+    draw_canvas_overlays(dl, cs, tools, drs.onion_tex, origin, W, H);
 
     ImGui::SetCursorScreenPos(origin);
-    ImGui::Image((ImTextureID)(uintptr_t)texture, {W, H});
+    ImGui::Image((ImTextureID)(uintptr_t)drs.texture, {W, H});
 
     ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
     if (pio.DrawCallback_SetSamplerLinear)
         dl->AddCallback(pio.DrawCallback_SetSamplerLinear, nullptr);
 
-    draw_canvas_decorations(dl, cs, tools, sel, origin, W, H, drag, hpos);
+    draw_canvas_decorations(dl, cs, tools, sel, origin, W, H, drs.drag, hpos);
 
     // Tool input — compute canvas coords early so shape commit can use them outside hovered block
     ImVec2 cur_origin = {std::round(base.x + cs.pan.x), std::round(base.y + cs.pan.y)};
@@ -249,7 +340,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     int py            = (int)((io.MousePos.y - cur_origin.y) / cs.zoom);
 
     // Shape preview overlay — pixel-exact, mirrors the committed drawing algorithms
-    if (drag.shape_dragging && !sel.floating) {
+    if (drs.drag.shape_dragging && !sel.floating) {
         ImU32 prev_col = (ImGui::ColorConvertFloat4ToU32(palette.primary_color) & 0x00FFFFFFu) | 0xCC000000u;
         float z = cs.zoom;
 
@@ -282,16 +373,16 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         // Shift constrains rect/circle to a square bounding box
         int epx = px, epy = py;
         if (io.KeyShift && tool::is_shape(t)) {
-            int ddx = px - drag.shape_sx, ddy = py - drag.shape_sy;
+            int ddx = px - drs.drag.shape_sx, ddy = py - drs.drag.shape_sy;
             int ax = std::abs(ddx), ay = std::abs(ddy);
             // 1-pixel hysteresis: when deltas are ≤1 apart (pen near 45°), round up
             // instead of down so 1-pixel tablet jitter doesn't oscillate between N and N+1.
             int d = (std::abs(ax - ay) <= 1) ? std::max(ax, ay) : std::min(ax, ay);
-            epx   = drag.shape_sx + (ddx < 0 ? -d : d);
-            epy   = drag.shape_sy + (ddy < 0 ? -d : d);
+            epx   = drs.drag.shape_sx + (ddx < 0 ? -d : d);
+            epy   = drs.drag.shape_sy + (ddy < 0 ? -d : d);
         }
         if (t == tool::Line) {  // Line — Bresenham + brush stamp
-            int x0 = drag.shape_sx, y0 = drag.shape_sy, x1 = px, y1 = py;
+            int x0 = drs.drag.shape_sx, y0 = drs.drag.shape_sy, x1 = px, y1 = py;
             int adx = std::abs(x1 - x0), stepx = x0 < x1 ? 1 : -1;
             int ady = -std::abs(y1 - y0), stepy = y0 < y1 ? 1 : -1;
             int err = adx + ady;
@@ -303,8 +394,8 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 if (e2 <= adx) { err += adx; y0 += stepy; }
             }
         } else if (t == tool::Rect || t == tool::FilledRect) {  // Rect
-            int minx = std::min(drag.shape_sx, epx), maxx = std::max(drag.shape_sx, epx);
-            int miny = std::min(drag.shape_sy, epy), maxy = std::max(drag.shape_sy, epy);
+            int minx = std::min(drs.drag.shape_sx, epx), maxx = std::max(drs.drag.shape_sx, epx);
+            int miny = std::min(drs.drag.shape_sy, epy), maxy = std::max(drs.drag.shape_sy, epy);
             if (t == tool::FilledRect) {
                 for (int y = miny; y <= maxy; y++)
                     for (int x = minx; x <= maxx; x++)
@@ -314,10 +405,10 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 for (int y = miny + 1; y < maxy; y++) { draw_px(minx, y); draw_px(maxx, y); }
             }
         } else if (t == tool::Circle || t == tool::FilledCircle) {  // Ellipse — shares rasterize_ellipse() with commit
-            raster::rasterize_ellipse(drag.shape_sx, drag.shape_sy, epx, epy, t == tool::FilledCircle,
+            raster::rasterize_ellipse(drs.drag.shape_sx, drs.drag.shape_sy, epx, epy, t == tool::FilledCircle,
                               [&](int x, int y) { draw_px(x, y); });
         } else if (t == tool::RectSelect) {  // Select — marching ants (vector UI overlay, not a drawing output)
-            float ssx = cur_origin.x + static_cast<float>(drag.shape_sx) * z, ssy = cur_origin.y + static_cast<float>(drag.shape_sy) * z;
+            float ssx = cur_origin.x + static_cast<float>(drs.drag.shape_sx) * z, ssy = cur_origin.y + static_cast<float>(drs.drag.shape_sy) * z;
             float sex = cur_origin.x + static_cast<float>(px + 1) * z,  sey = cur_origin.y + static_cast<float>(py + 1) * z;
             dl->AddRect({ssx,ssy},{sex,sey}, IM_COL32(255,255,255,200), 0, 0, 1.5f);
             dl->AddRect({ssx+1,ssy+1},{sex-1,sey-1}, IM_COL32(0,0,0,200), 0, 0, 1.0f);
@@ -379,7 +470,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         uint32_t color = (tools.active_tool == tool::Eraser) ? 0x00000000u : ImGui::ColorConvertFloat4ToU32(palette.primary_color);
 
         if (tools.active_tool == tool::Fill) {
-            was_painting = false;
+            drs.was_painting = false;
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (cs.active_layer_locked()) {
                     Log("Layer locked");
@@ -393,11 +484,11 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         } else if ((tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) ||
                    tools.active_tool == tool::Move || tools.active_tool == tool::RectSelect) {
             // Drag-start handled by the unified window-rect block below
-            was_painting = false;
-            last_px      = {-1.0f, -1.0f};
+            drs.was_painting = false;
+            drs.last_px      = {-1.0f, -1.0f};
         } else if (tools.active_tool == tool::ColorPicker) {
-            was_painting = false;
-            last_px      = {-1.0f, -1.0f};
+            drs.was_painting = false;
+            drs.last_px      = {-1.0f, -1.0f};
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
                 uint32_t picked = cs.active().get(px, py);
                 palette.primary_color = ImGui::ColorConvertU32ToFloat4(picked);
@@ -405,7 +496,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
             }
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-            if (is_painting && !was_painting) {
+            if (is_painting && !drs.was_painting) {
                 if (cs.active_layer_locked()) {
                     Log("Layer locked");
                 } else {
@@ -414,25 +505,25 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                 }
             }
             if (is_painting && !cs.active_layer_locked()) {
-                if (last_px.x < 0.0f)
+                if (drs.last_px.x < 0.0f)
                     sym_pt(px, py, [&](int x, int y) {
                         raster::paint_pixel(cs.active(), x, y, color, tools.brush_size, tools.circle_brush);
                     });
                 else
-                    sym_seg((int)last_px.x, (int)last_px.y, px, py, [&](int x0, int y0, int x1, int y1) {
+                    sym_seg((int)drs.last_px.x, (int)drs.last_px.y, px, py, [&](int x0, int y0, int x1, int y1) {
                         raster::bresenham(cs.active(), x0, y0, x1, y1, color, tools.brush_size, tools.circle_brush);
                     });
-                last_px = {(float)px, (float)py};
+                drs.last_px = {(float)px, (float)py};
                 cs.rebuild_composite();
             } else if (!is_painting) {
-                last_px = {-1.0f, -1.0f};
+                drs.last_px = {-1.0f, -1.0f};
             }
-            was_painting = is_painting;
+            drs.was_painting = is_painting;
         }
     } else {
         // Mouse left the canvas — reset brush state but keep shape/handle drags alive
-        last_px      = {-1.0f, -1.0f};
-        was_painting = false;
+        drs.last_px      = {-1.0f, -1.0f};
+        drs.was_painting = false;
     }
 
     // Unified shape/selection click handler — single source of truth for tools 3-7 and 9.
@@ -448,14 +539,14 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
         tools.mouse_over_canvas = mouse_in_win;
         if (mouse_in_win && !any_popup) {
         if (tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) {
-            if (!drag.shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            if (!drs.drag.shape_dragging && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 if (cs.active_layer_locked()) {
                     Log("Layer locked");
                 } else {
                     cs.push_snapshot();
-                    drag.shape_sx       = px;
-                    drag.shape_sy       = py;
-                    drag.shape_dragging = true;
+                    drs.drag.shape_sx       = px;
+                    drs.drag.shape_sy       = py;
+                    drs.drag.shape_dragging = true;
                     Log("Shape start at (%d,%d) tool=%d", px, py, tools.active_tool);
                 }
             }
@@ -475,28 +566,28 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
 
                 if (hit_h >= 0) {
                     // Start handle drag
-                    drag.handle_dragging  = true;
-                    drag.active_handle    = hit_h;
-                    drag.handle_start_x0  = sel.x0;
-                    drag.handle_start_y0  = sel.y0;
-                    drag.handle_start_x1  = sel.x1;
-                    drag.handle_start_y1  = sel.y1;
+                    drs.drag.handle_dragging  = true;
+                    drs.drag.active_handle    = hit_h;
+                    drs.drag.handle_start_x0  = sel.x0;
+                    drs.drag.handle_start_y0  = sel.y0;
+                    drs.drag.handle_start_x1  = sel.x1;
+                    drs.drag.handle_start_y1  = sel.y1;
                 } else if (sel.floating) {
                     // Priority 2: re-drag or commit floating
                     bool inside_float = px >= sel.float_x && px < sel.float_x + sel.float_w
                                      && py >= sel.float_y && py < sel.float_y + sel.float_h;
                     if (inside_float) {
-                        drag.float_drag_ox  = px - sel.float_x;
-                        drag.float_drag_oy  = py - sel.float_y;
-                        drag.shape_dragging = true;
-                        drag.shape_sx = px; drag.shape_sy = py;
+                        drs.drag.float_drag_ox  = px - sel.float_x;
+                        drs.drag.float_drag_oy  = py - sel.float_y;
+                        drs.drag.shape_dragging = true;
+                        drs.drag.shape_sx = px; drs.drag.shape_sy = py;
                     } else {
                         // Click outside floating content — commit and start new selection
                         commit_floating(cs, sel);
-                        sel.active          = false;
-                        drag.shape_sx       = px;
-                        drag.shape_sy       = py;
-                        drag.shape_dragging = true;
+                        sel.active              = false;
+                        drs.drag.shape_sx       = px;
+                        drs.drag.shape_sy       = py;
+                        drs.drag.shape_dragging = true;
                     }
                 } else if (sel.active &&
                            px >= sel.x0 && px <= sel.x1 &&
@@ -506,27 +597,27 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
                         Log("Layer locked");
                     } else {
                         lift_selection(cs, sel);
-                        drag.float_drag_ox  = px - sel.float_x;
-                        drag.float_drag_oy  = py - sel.float_y;
-                        drag.shape_dragging = true;
-                        drag.shape_sx = px; drag.shape_sy = py;
+                        drs.drag.float_drag_ox  = px - sel.float_x;
+                        drs.drag.float_drag_oy  = py - sel.float_y;
+                        drs.drag.shape_dragging = true;
+                        drs.drag.shape_sx = px; drs.drag.shape_sy = py;
                     }
                 } else {
                     // Priority 4: start new selection drag
                     sel.active          = false;
-                    drag.shape_sx       = px;
-                    drag.shape_sy       = py;
-                    drag.shape_dragging = true;
+                    drs.drag.shape_sx   = px;
+                    drs.drag.shape_sy   = py;
+                    drs.drag.shape_dragging = true;
                 }
             }
         }
-        } // if (mouse_in_win && !IsItemHovered())
+        } // if (mouse_in_win && !any_popup)
     } // margin block
 
     // Update floating selection position during drag (continues outside canvas bounds)
-    if (sel.floating && drag.shape_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        sel.float_x = px - drag.float_drag_ox;
-        sel.float_y = py - drag.float_drag_oy;
+    if (sel.floating && drs.drag.shape_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        sel.float_x = px - drs.drag.float_drag_ox;
+        sel.float_y = py - drs.drag.float_drag_oy;
         sel.x0 = sel.float_x;
         sel.y0 = sel.float_y;
         sel.x1 = sel.float_x + sel.float_w - 1;
@@ -535,13 +626,13 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     }
 
     // Update handle drag bounds while mouse is held — selection may extend beyond the canvas
-    if (drag.handle_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        int nx0 = drag.handle_start_x0, ny0 = drag.handle_start_y0;
-        int nx1 = drag.handle_start_x1, ny1 = drag.handle_start_y1;
-        if (k_hmoves[drag.active_handle][0]) nx0 = px;
-        if (k_hmoves[drag.active_handle][1]) ny0 = py;
-        if (k_hmoves[drag.active_handle][2]) nx1 = px;
-        if (k_hmoves[drag.active_handle][3]) ny1 = py;
+    if (drs.drag.handle_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        int nx0 = drs.drag.handle_start_x0, ny0 = drs.drag.handle_start_y0;
+        int nx1 = drs.drag.handle_start_x1, ny1 = drs.drag.handle_start_y1;
+        if (k_hmoves[drs.drag.active_handle][0]) nx0 = px;
+        if (k_hmoves[drs.drag.active_handle][1]) ny0 = py;
+        if (k_hmoves[drs.drag.active_handle][2]) nx1 = px;
+        if (k_hmoves[drs.drag.active_handle][3]) ny1 = py;
         sel.x0 = std::min(nx0, nx1);
         sel.y0 = std::min(ny0, ny1);
         sel.x1 = std::max(nx0, nx1);
@@ -553,7 +644,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
     }
 
     // Commit handle drag on mouse release — scale floating content if dimensions changed
-    if (drag.handle_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+    if (drs.drag.handle_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         if (sel.floating) {
             int new_w = sel.x1 - sel.x0 + 1;
             int new_h = sel.y1 - sel.y0 + 1;
@@ -568,22 +659,22 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
             sel.float_x = sel.x0;
             sel.float_y = sel.y0;
         }
-        drag.handle_dragging = false;
-        drag.active_handle   = -1;
+        drs.drag.handle_dragging = false;
+        drs.drag.active_handle   = -1;
         Log("Handle resize: sel=(%d,%d)-(%d,%d)", sel.x0, sel.y0, sel.x1, sel.y1);
     }
 
     // Commit shape on mouse release regardless of hover state
-    if (drag.shape_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-        Log("Shape commit tool=%d (%d,%d)->(%d,%d)", tools.active_tool, drag.shape_sx, drag.shape_sy, px, py);
+    if (drs.drag.shape_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        Log("Shape commit tool=%d (%d,%d)->(%d,%d)", tools.active_tool, drs.drag.shape_sx, drs.drag.shape_sy, px, py);
         if (tools.active_tool == tool::RectSelect) {
             if (sel.floating) {
                 // Keep floating after mouse release — commit happens on tool switch or Escape
             } else {
-                int ax = std::min(drag.shape_sx, px);
-                int ay = std::min(drag.shape_sy, py);
-                int bx = std::max(drag.shape_sx, px);
-                int by = std::max(drag.shape_sy, py);
+                int ax = std::min(drs.drag.shape_sx, px);
+                int ay = std::min(drs.drag.shape_sy, py);
+                int bx = std::max(drs.drag.shape_sx, px);
+                int by = std::max(drs.drag.shape_sy, py);
                 sel.active = (ax != bx || ay != by);
                 if (sel.active) { sel.x0 = ax; sel.y0 = ay; sel.x1 = bx; sel.y1 = by; }
             }
@@ -592,13 +683,13 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
             int cpx = px, cpy = py;
             int ct  = tools.active_tool;
             if (io.KeyShift && tool::is_shape(ct)) {
-                int ddx = px - drag.shape_sx, ddy = py - drag.shape_sy;
+                int ddx = px - drs.drag.shape_sx, ddy = py - drs.drag.shape_sy;
                 int ax = std::abs(ddx), ay = std::abs(ddy);
                 int d = (std::abs(ax - ay) <= 1) ? std::max(ax, ay) : std::min(ax, ay);
-                cpx   = drag.shape_sx + (ddx < 0 ? -d : d);
-                cpy   = drag.shape_sy + (ddy < 0 ? -d : d);
+                cpx   = drs.drag.shape_sx + (ddx < 0 ? -d : d);
+                cpy   = drs.drag.shape_sy + (ddy < 0 ? -d : d);
             }
-            sym_seg(drag.shape_sx, drag.shape_sy, cpx, cpy, [&](int x0, int y0, int x1, int y1) {
+            sym_seg(drs.drag.shape_sx, drs.drag.shape_sy, cpx, cpy, [&](int x0, int y0, int x1, int y1) {
                 switch (ct) {
                 case tool::Line:         raster::bresenham(cs.active(), x0, y0, x1, y1, color, tools.brush_size, tools.circle_brush); break;
                 case tool::Rect:         raster::draw_rect(cs.active(), x0, y0, x1, y1, color, false); break;
@@ -610,7 +701,7 @@ void panels::DrawCanvas(CanvasState& cs, ToolsState& tools, PaletteState& palett
             });
             cs.rebuild_composite();
         }
-        drag.shape_dragging = false;
+        drs.drag.shape_dragging = false;
     }
 
     ImGui::End();

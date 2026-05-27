@@ -2,14 +2,11 @@
 
 ## Data model
 
-All runtime state lives in `AppState` (`app_state.h`):
+All runtime state lives in `AppState` (`app_state.h`). Multi-document support wraps the per-document state in a `Document` struct:
 
 ```
-AppState
+Document
   CanvasState    canvas        — frames, composite buffer, zoom/pan, undo/redo stacks, unsaved_changes (bool)
-  std::string    project_path  — path to .pixc file (empty = untitled); set on successful load/save
-  ToolsState     tools         — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
-                                 brush_size, circle_brush, shape_filled, show_grid, symmetry, symmetry_mode (0=Horizontal 1=Vertical 2=Both), onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), mouse_over_canvas (bool), show_preview (bool — toggles the floating Preview window via View menu)
   PaletteState   palette       — primary_color, secondary_color (ImVec4 RGBA 0-1),
                                  swatches (vector<ImVec4>), selected_swatch (int),
                                  palette_name (string), recent_colors (vector<ImVec4>, max 8)
@@ -17,6 +14,17 @@ AppState
                                  NOT clamped — may be negative or exceed canvas dimensions when dragged/scaled past the edge),
                                  floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer; float_x/y may be off-canvas),
                                  clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
+  std::string    project_path  — path to .pixc file (empty = untitled); set on successful load/save
+
+AppState
+  std::vector<Document>  docs                         — open documents (always at least 1)
+  int                    active_doc                   — index into docs[] of the currently-edited document (selected tab)
+  ToolsState             tools                        — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
+                                                         brush_size, circle_brush, shape_filled, show_grid, symmetry, symmetry_mode (0=Horizontal 1=Vertical 2=Both), onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), mouse_over_canvas (bool), show_preview (bool — toggles the floating Preview window via View menu)
+  bool                   close_active_doc_requested  — set by Ctrl+W or File > Close; consumed by canvas_panel to trigger close logic
+  int                    close_doc_idx_requested     — -1 = none; set by doc_tabs_panel when a tab X is clicked
+  Convenience methods:
+    doc() / canvas() / palette() / selection() / project_path() — reference getters returning active_doc data
 
 Layer (in Frame.layers)
   canvas (Canvas), name (string), visible (bool),
@@ -59,8 +67,8 @@ Key methods:
 | File | Role |
 |------|------|
 | `canvas.h` | `Canvas` struct: `width`, `height`, `pixels` (RGBA8 row-major); `set/get/fill/in_bounds`. Both `set` and `get` are bounds-safe — `set` no-ops out-of-bounds, `get` returns `0x00000000` (transparent). This lets off-canvas selection regions be read/written without clipping at call sites. |
-| `app_state.h` | All state structs: `Layer`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `AppState` |
-| `app_state.cpp` | `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
+| `app_state.h` | All state structs: `Layer`, `Frame`, `CanvasState`, `ToolsState`, `PaletteState`, `SelectionState`, `Document`, `AppState`; tool:: constants |
+| `app_state.cpp` | `AppState` constructor — initializes `docs[]` with one blank `Document`. `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations (uses `blend_pixel` from `blend.h`); also defines `lift_selection(CanvasState&, SelectionState&)` and `commit_floating(CanvasState&, SelectionState&)` helpers for selection floating operations |
 | `blend.h` | `blend_pixel(dst, src, mode)` — Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity (RGBA8, R in bits 0–7); shared by `canvas_state.cpp` compositing and `png_io.cpp` sprite-sheet export |
 | `raster.h/cpp` | `namespace raster` pure pixel-drawing algorithms operating on `Canvas&` (no ImGui/GL): `paint_pixel`, `bresenham`, `flood_fill`, `draw_rect`, `draw_ellipse`, `nn_scale`, and the `rasterize_ellipse(x0,y0,x1,y1,filled,plot)` template (header-only, emits points via a `plot` callback; shared by `draw_ellipse` and the canvas shape preview). Linked into `pix-cells-core` so tests can exercise them |

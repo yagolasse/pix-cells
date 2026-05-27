@@ -129,12 +129,32 @@ struct PaletteState {
     PaletteState();
 };
 
-struct AppState {
+struct Document {
     CanvasState    canvas;
-    ToolsState     tools;
     PaletteState   palette;
     SelectionState selection;
     std::string    project_path;  // empty = untitled
+};
+
+struct AppState {
+    std::vector<Document> docs;
+    int                   active_doc = 0;
+    ToolsState            tools;
+    bool                  close_active_doc_requested = false;
+    int                   close_doc_idx_requested    = -1;   // -1 = none; set by doc_tabs_panel
+
+    Document&       doc()              { return docs[active_doc]; }
+    const Document& doc() const        { return docs[active_doc]; }
+    CanvasState&    canvas()           { return doc().canvas; }
+    const CanvasState& canvas() const  { return doc().canvas; }
+    PaletteState&         palette()          { return doc().palette; }
+    const PaletteState&   palette() const    { return doc().palette; }
+    SelectionState&       selection()        { return doc().selection; }
+    const SelectionState& selection() const  { return doc().selection; }
+    std::string&          project_path()     { return doc().project_path; }
+    const std::string&    project_path() const { return doc().project_path; }
+
+    AppState();
 };
 
 void lift_selection(CanvasState& cs, SelectionState& sel);

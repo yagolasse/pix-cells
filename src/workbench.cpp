@@ -21,8 +21,12 @@ static void BuildDefaultLayout(ImGuiID dockspace_id) {
     ImGuiID node_tool_settings;
     ImGui::DockBuilderSplitNode(node_center, ImGuiDir_Up, 0.08f, &node_tool_settings, &node_center);
 
+    ImGuiID node_docs;
+    ImGui::DockBuilderSplitNode(node_center, ImGuiDir_Up, 0.055f, &node_docs, &node_center);
+
     ImGui::DockBuilderDockWindow("Tools",         node_tools);
     ImGui::DockBuilderDockWindow("Tool Settings", node_tool_settings);
+    ImGui::DockBuilderDockWindow("Documents",     node_docs);
     ImGui::DockBuilderDockWindow("Canvas",        node_center);
     ImGui::DockBuilderDockWindow("Color",    node_color);
     ImGui::DockBuilderDockWindow("Layers",   node_layers);

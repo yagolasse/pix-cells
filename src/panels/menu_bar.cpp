@@ -11,9 +11,10 @@
 enum class IOKind : uint8_t { PixcSave, PixcOpen, PngExport, SpriteSheet };
 
 struct PendingIO {
-    bool        active = false;
-    IOKind      kind   = IOKind::PixcSave;
+    bool        active    = false;
+    IOKind      kind      = IOKind::PixcSave;
     std::string path;
+    int         doc_idx   = 0;  // which document this I/O targets
     // sprite sheet options
     png_io::SheetLayout sheet_layout = png_io::SheetLayout::Horizontal;
     int                 sheet_cols   = 4;
@@ -36,24 +37,22 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     static bool open_canvas_settings      = false;
     static bool open_sprite_sheet         = false;
     static bool open_unsaved_quit         = false;
-    static bool open_unsaved_new          = false;
     static bool open_preferences          = false;
     static bool s_pending_quit_after_save = false;
-    static bool s_pending_new_after_save  = false;
 
     bool keep_running = true;
 
     // --- Window title ---
     {
         std::string fname;
-        if (!state.project_path.empty()) {
-            auto pos = state.project_path.find_last_of("/\\");
-            fname = (pos == std::string::npos) ? state.project_path
-                                               : state.project_path.substr(pos + 1);
+        if (!state.project_path().empty()) {
+            auto pos = state.project_path().find_last_of("/\\");
+            fname = (pos == std::string::npos) ? state.project_path()
+                                               : state.project_path().substr(pos + 1);
         } else {
             fname = "Untitled";
         }
-        std::string title = (state.canvas.unsaved_changes ? "*" : "") + fname + " \xe2\x80\x94 pix-cells";
+        std::string title = (state.canvas().unsaved_changes ? "*" : "") + fname + " \xe2\x80\x94 pix-cells";
         SDL_SetWindowTitle(window, title.c_str());
     }
 
@@ -61,14 +60,17 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     if (s_pending.active) {
         switch (s_pending.kind) {
         case IOKind::PixcSave:
-            if (pixc_io::save(state, s_pending.path)) {
-                state.canvas.unsaved_changes = false;
-                state.project_path = s_pending.path;
+            if (s_pending.doc_idx >= 0 && s_pending.doc_idx < (int)state.docs.size()) {
+                int prev = state.active_doc;
+                state.active_doc = s_pending.doc_idx;
+                if (pixc_io::save(state, s_pending.path)) {
+                    state.canvas().unsaved_changes = false;
+                    state.project_path() = s_pending.path;
+                }
+                state.active_doc = prev;
             }
             if (s_pending_quit_after_save) keep_running = false;
-            if (s_pending_new_after_save)  open_new_canvas = true;
             s_pending_quit_after_save = false;
-            s_pending_new_after_save  = false;
             break;
 
         case IOKind::PixcOpen: {
@@ -76,34 +78,50 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
             char magic[4] = {};
             if (mf) { fread(magic, 1, 4, mf); fclose(mf); }
             if (memcmp(magic, "PIXC", 4) == 0) {
+                state.docs.emplace_back();
+                state.active_doc = (int)state.docs.size() - 1;
                 if (pixc_io::load(state, s_pending.path)) {
-                    state.project_path = s_pending.path;
-                    state.canvas.unsaved_changes = false;
+                    state.project_path() = s_pending.path;
+                    state.canvas().unsaved_changes = false;
+                } else {
+                    state.docs.pop_back();
+                    state.active_doc = std::min(state.active_doc, (int)state.docs.size() - 1);
                 }
             } else {
                 Canvas tmp;
                 if (png_io::load(tmp, s_pending.path)) {
-                    state.canvas.new_canvas(tmp.width, tmp.height);
-                    state.canvas.frames[0].layers[0].canvas = std::move(tmp);
-                    state.canvas.rebuild_composite();
-                    state.project_path.clear();
-                    state.canvas.unsaved_changes = false;
+                    state.docs.emplace_back();
+                    state.active_doc = (int)state.docs.size() - 1;
+                    state.canvas().new_canvas(tmp.width, tmp.height);
+                    state.canvas().frames[0].layers[0].canvas = std::move(tmp);
+                    state.canvas().rebuild_composite();
+                    state.project_path() = s_pending.path;
+                    state.canvas().unsaved_changes = false;
                 }
             }
             break;
         }
 
         case IOKind::PngExport: {
-            Canvas tmp(state.canvas.width(), state.canvas.height());
-            tmp.pixels = state.canvas.composite;
+            int prev = state.active_doc;
+            if (s_pending.doc_idx < (int)state.docs.size())
+                state.active_doc = s_pending.doc_idx;
+            Canvas tmp(state.canvas().width(), state.canvas().height());
+            tmp.pixels = state.canvas().composite;
             png_io::save(tmp, s_pending.path);
+            state.active_doc = prev;
             break;
         }
 
-        case IOKind::SpriteSheet:
-            png_io::save_sprite_sheet(state.canvas, s_pending.path,
+        case IOKind::SpriteSheet: {
+            int prev = state.active_doc;
+            if (s_pending.doc_idx < (int)state.docs.size())
+                state.active_doc = s_pending.doc_idx;
+            png_io::save_sprite_sheet(state.canvas(), s_pending.path,
                                       s_pending.sheet_layout, s_pending.sheet_cols);
+            state.active_doc = prev;
             break;
+        }
         }
         s_pending.active = false;
     }
@@ -111,64 +129,69 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     // --- Quick save: to current path if known, else open dialog ---
     static SDL_DialogFileFilter s_pixc_filter[] = { {"PIXC Files", "pixc"} };
 
-    auto do_save = [&](bool quit_after, bool new_after) {
-        if (!state.project_path.empty()) {
-            if (pixc_io::save(state, state.project_path)) {
-                state.canvas.unsaved_changes = false;
+    auto do_save = [&](bool quit_after) {
+        const auto& p = state.project_path();
+        bool is_pixc = p.size() >= 5 &&
+                       (p.compare(p.size() - 5, 5, ".pixc") == 0 ||
+                        p.compare(p.size() - 5, 5, ".PIXC") == 0);
+        if (!p.empty() && is_pixc) {
+            if (pixc_io::save(state, p)) {
+                state.canvas().unsaved_changes = false;
                 if (quit_after) keep_running = false;
-                if (new_after)  open_new_canvas = true;
             }
         } else {
             s_pending.kind = IOKind::PixcSave;
+            s_pending.doc_idx = state.active_doc;
             s_pending_quit_after_save = quit_after;
-            s_pending_new_after_save  = new_after;
             SDL_ShowSaveFileDialog(file_cb, &s_pending, window, s_pixc_filter, 1, nullptr);
         }
     };
 
     // --- Keyboard shortcuts ---
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S))
-        do_save(false, false);
-    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_N)) {
-        if (state.canvas.unsaved_changes) open_unsaved_new = true;
-        else open_new_canvas = true;
-    }
+        do_save(false);
+    // Ctrl+N always opens a new tab (no unsaved-changes warning)
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_N))
+        open_new_canvas = true;
 
     // --- Handle window-close quit request ---
     if (quit_requested) {
         quit_requested = false;
-        if (state.canvas.unsaved_changes) open_unsaved_quit = true;
+        if (state.canvas().unsaved_changes) open_unsaved_quit = true;
         else keep_running = false;
     }
 
     // --- Menu bar ---
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New", "Ctrl+N")) {
-                if (state.canvas.unsaved_changes) open_unsaved_new = true;
-                else open_new_canvas = true;
-            }
+            // New always opens a new tab
+            if (ImGui::MenuItem("New", "Ctrl+N"))
+                open_new_canvas = true;
 
             static SDL_DialogFileFilter open_filters[] = { {"PIXC Files", "pixc"}, {"PNG Images", "png"} };
             static SDL_DialogFileFilter png_filter[]   = { {"PNG Images", "png"} };
 
             if (ImGui::MenuItem("Open", "Ctrl+O")) {
                 s_pending.kind = IOKind::PixcOpen;
+                s_pending.doc_idx = state.active_doc;
                 SDL_ShowOpenFileDialog(file_cb, &s_pending, window,
                                        open_filters, 2, nullptr, false);
             }
             if (ImGui::MenuItem("Save", "Ctrl+S"))
-                do_save(false, false);
+                do_save(false);
             if (ImGui::MenuItem("Save As...")) {
                 s_pending.kind = IOKind::PixcSave;
+                s_pending.doc_idx = state.active_doc;
                 s_pending_quit_after_save = false;
-                s_pending_new_after_save  = false;
                 SDL_ShowSaveFileDialog(file_cb, &s_pending, window, s_pixc_filter, 1, nullptr);
             }
+            if (ImGui::MenuItem("Close"))
+                state.close_active_doc_requested = true;
 
             if (ImGui::BeginMenu("Export")) {
                 if (ImGui::MenuItem("PNG (current frame)...")) {
                     s_pending.kind = IOKind::PngExport;
+                    s_pending.doc_idx = state.active_doc;
                     SDL_ShowSaveFileDialog(file_cb, &s_pending, window,
                                            png_filter, 1, nullptr);
                 }
@@ -180,16 +203,16 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
 
             ImGui::Separator();
             if (ImGui::MenuItem("Quit", "Alt+F4")) {
-                if (state.canvas.unsaved_changes) open_unsaved_quit = true;
+                if (state.canvas().unsaved_changes) open_unsaved_quit = true;
                 else keep_running = false;
             }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
             if (ImGui::MenuItem("Undo", "Ctrl+Z"))
-                state.canvas.undo();
+                state.canvas().undo();
             if (ImGui::MenuItem("Redo", "Ctrl+Y"))
-                state.canvas.redo();
+                state.canvas().redo();
             ImGui::Separator();
             if (ImGui::MenuItem("Canvas Settings..."))
                 open_canvas_settings = true;
@@ -212,32 +235,12 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         ImGui::Text("You have unsaved changes. Save before quitting?");
         ImGui::Spacing();
         if (ImGui::Button("Save")) {
-            do_save(true, false);
+            do_save(true);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("Don't Save")) {
             keep_running = false;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel"))
-            ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
-    }
-
-    // --- Unsaved Changes modal (new canvas) ---
-    if (open_unsaved_new) { ImGui::OpenPopup("Unsaved Changes##new"); open_unsaved_new = false; }
-    if (ImGui::BeginPopupModal("Unsaved Changes##new", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("You have unsaved changes. Save before creating a new canvas?");
-        ImGui::Spacing();
-        if (ImGui::Button("Save")) {
-            do_save(false, true);
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Don't Save")) {
-            open_new_canvas = true;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -253,9 +256,9 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     }
     if (ImGui::BeginPopupModal("Canvas Settings", nullptr,
                                ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::SliderFloat("Cell Size", &state.canvas.checker_size, 2.f, 64.f, "%.0f px");
-        ImGui::ColorEdit3("Light Color", (float*)&state.canvas.checker_color1);
-        ImGui::ColorEdit3("Dark Color",  (float*)&state.canvas.checker_color2);
+        ImGui::SliderFloat("Cell Size", &state.canvas().checker_size, 2.f, 64.f, "%.0f px");
+        ImGui::ColorEdit3("Light Color", (float*)&state.canvas().checker_color1);
+        ImGui::ColorEdit3("Dark Color",  (float*)&state.canvas().checker_color2);
         if (ImGui::Button("Close")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
@@ -280,7 +283,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         ImGui::EndPopup();
     }
 
-    // --- New Canvas popup ---
+    // --- New Canvas popup (always creates a new tab) ---
     if (open_new_canvas) {
         ImGui::OpenPopup("New Canvas");
         open_new_canvas = false;
@@ -293,8 +296,9 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         w = std::clamp(w, 1, 4096);
         h = std::clamp(h, 1, 4096);
         if (ImGui::Button("Create")) {
-            state.canvas.new_canvas(w, h);
-            state.project_path.clear();
+            state.docs.emplace_back();
+            state.active_doc = (int)state.docs.size() - 1;
+            state.canvas().new_canvas(w, h);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -318,6 +322,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         if (ImGui::Button("Export...")) {
             static SDL_DialogFileFilter png_filter_ss[] = { {"PNG Images", "png"} };
             s_pending.kind         = IOKind::SpriteSheet;
+            s_pending.doc_idx      = state.active_doc;
             s_pending.sheet_layout = (png_io::SheetLayout)layout_idx;
             s_pending.sheet_cols   = cols;
             SDL_ShowSaveFileDialog(file_cb, &s_pending, window, png_filter_ss, 1, nullptr);

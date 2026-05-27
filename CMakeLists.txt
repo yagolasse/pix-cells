@@ -101,6 +101,7 @@ add_executable(pix-cells
     src/panels/timeline_panel.cpp
     src/panels/log_panel.cpp
     src/panels/preview_panel.cpp
+    src/panels/doc_tabs_panel.cpp
 )
 target_compile_options(pix-cells PRIVATE
     $<IF:$<CXX_COMPILER_ID:MSVC>,/W4,-Wall -Wextra -Wno-unused-parameter>)
@@ -140,6 +141,7 @@ if(CLANG_TIDY_EXE)
         src/panels/timeline_panel.cpp
         src/panels/log_panel.cpp
         src/panels/preview_panel.cpp
+        src/panels/doc_tabs_panel.cpp
     )
     list(TRANSFORM LINT_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
     add_custom_target(lint

@@ -9,6 +9,7 @@
 #include "app_state.h"
 #include "panels/menu_bar.h"
 #include "panels/canvas_panel.h"
+#include "panels/doc_tabs_panel.h"
 #include "panels/tools_panel.h"
 #include "panels/tool_settings_panel.h"
 #include "panels/palette_panel.h"
@@ -179,14 +180,15 @@ int main(int /*argc*/, char* /*argv*/[]) {
         cursor_manager::set_for_tool(app.tools.active_tool, ImGui::IsMouseDown(ImGuiMouseButton_Left), app.tools.mouse_over_canvas);
         panels::DrawTools(app.tools);
         panels::DrawToolSettings(app.tools);
-        panels::DrawCanvas(app.canvas, app.tools, app.palette, app.selection);
-        panels::DrawLayers(app.canvas);
-        panels::DrawTimeline(app.canvas);
-        panels::DrawPalette(app.palette, window);
+        panels::DrawDocTabs(app);
+        panels::DrawCanvas(app);
+        panels::DrawLayers(app.canvas());
+        panels::DrawTimeline(app.canvas());
+        panels::DrawPalette(app.palette(), window);
         if (show_log)
             panels::DrawLog(&show_log);
         if (app.tools.show_preview)
-            panels::DrawPreview(app.canvas, &app.tools.show_preview);
+            panels::DrawPreview(app.canvas(), &app.tools.show_preview);
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
