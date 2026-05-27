@@ -7,7 +7,7 @@ A pixel art editor built in C++.
 - **Window/Input**: SDL3 (static)
 - **UI**: Dear ImGui — docking branch (v1.92+)
 - **Renderer**: OpenGL 3.3 core
-- **Fonts**: Ubuntu Regular (`fonts/Ubuntu-Regular.ttf`) — default UI font loaded at 15px.
+- **Fonts**: Ubuntu Regular (`fonts/Ubuntu-Regular.ttf`) — UI font loaded at 5 scales: 11px (75%), 15px (100%), 19px (125%), 23px (150%), 30px (200%); scale persisted to `SDL_GetPrefPath/settings.ini`.
 - **Icons**: SVG files in `icons/`, rasterized at runtime via lunasvg (FetchContent, v3.2.1). Accessed via `icon_manager::get("name")` → `ImTextureID`. Naming convention: `name.svg` / `name_filled.svg` / `name_off.svg` / `name_open.svg`.
 
 ## Build

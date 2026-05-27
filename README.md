@@ -54,6 +54,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 - Zoom to cursor (scroll wheel)
 - Symmetry toggle and pixel grid overlay
 - **Onion skin** — ghost the previous frame (red tint) and/or next frame (blue tint) under the active canvas; mode selector in the Tools panel to show both, previous only, or next only
+- **UI scaling** — adjust interface size from 75% to 200% via Edit > Preferences; setting persists across sessions
 - Dockable panels — layout persists across sessions
 
 ### Undo / Redo
@@ -94,6 +95,7 @@ pix-cells/
 │   │                          rect, ellipse, nn-scale) on Canvas&; in pix-cells-core
 │   ├── icon_manager.h/cpp   — Loads/caches SVG icons (lunasvg) as GL textures
 │   ├── cursor_manager.h/cpp — Per-tool SDL cursors from SVGs
+│   ├── ui_scale.h/cpp       — UI scaling (5 levels: 75%, 100%, 125%, 150%, 200%); persists to settings.ini
 │   ├── main.cpp             — SDL3+ImGui init, main loop, keyboard shortcuts
 │   ├── workbench.h/cpp      — Fullscreen dockspace, default layout (DockBuilder)
 │   ├── log.h/cpp            — Log() writes to file + 500-entry ring buffer
