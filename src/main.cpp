@@ -15,6 +15,7 @@
 #include "panels/layers_panel.h"
 #include "panels/timeline_panel.h"
 #include "panels/log_panel.h"
+#include "panels/preview_panel.h"
 #include "input_handler.h"
 #include "log.h"
 #include "ui_scale.h"
@@ -184,6 +185,8 @@ int main(int /*argc*/, char* /*argv*/[]) {
         panels::DrawPalette(app.palette, window);
         if (show_log)
             panels::DrawLog(&show_log);
+        if (app.tools.show_preview)
+            panels::DrawPreview(app.canvas, &app.tools.show_preview);
 
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

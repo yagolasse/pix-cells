@@ -200,6 +200,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         }
         if (ImGui::BeginMenu("View")) {
             ImGui::MenuItem("Log", nullptr, &show_log);
+            ImGui::MenuItem("Preview", nullptr, &state.tools.show_preview);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
