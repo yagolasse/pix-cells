@@ -28,4 +28,6 @@ struct DocRenderState {
     bool   was_painting  = false;
     CanvasDragState drag;
     ImVec2 prev_avail    = {0.f, 0.f};
+    uint64_t onion_prev_rev = 0;  // last uploaded revision for onion_tex[0]
+    uint64_t onion_next_rev = 0;  // last uploaded revision for onion_tex[1]
 };

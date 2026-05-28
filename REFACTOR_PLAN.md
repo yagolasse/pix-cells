@@ -1,7 +1,7 @@
 # pix-cells Refactor & Improvement Plan
 
 Audit date: 2026-05-28. 35 findings across 7 categories.
-Last updated: 2026-05-28 — quick-wins batch complete.
+Last updated: 2026-05-28 — onion skin dirty flag complete.
 
 ---
 
@@ -85,7 +85,7 @@ Last updated: 2026-05-28 — quick-wins batch complete.
 | Severity | File | Finding | Status |
 |---|---|---|---|
 | ~~HIGH~~ | ~~`src/panels/timeline_panel.cpp:128-131`~~ | ~~Per-frame composite for every thumbnail~~ | ✅ |
-| MEDIUM | `src/panels/canvas_panel.cpp:292-305` | Onion skin recomposited every frame even when nothing changed — add dirty flag | 🔲 |
+| ~~MEDIUM~~ | ~~`src/panels/canvas_panel.cpp:292-305`~~ | ~~Onion skin recomposited every frame even when nothing changed — add dirty flag~~ | ✅ |
 | MEDIUM | `src/panels/canvas_overlay.cpp` | Marching ants outline regenerated every frame — pre-generate outline geometry | 🔲 |
 | MEDIUM | `src/blend.h:7-35` | Per-pixel float division in compositing hot path — consider SIMD or LUTs | 🔲 |
 | LOW | `src/input_handler.cpp:101,121` | `clipboard.resize()` called even when size unchanged | 🔲 |
@@ -122,6 +122,6 @@ Last updated: 2026-05-28 — quick-wins batch complete.
 | Severity | Original | Done | Remaining |
 |---|---|---|---|
 | HIGH | 3 | 3 | 0 |
-| MEDIUM | 16 | 12 | 4 |
+| MEDIUM | 16 | 13 | 3 |
 | LOW | 16 | 2 | 14 |
-| **Total** | **35** | **17** | **18** |
+| **Total** | **35** | **18** | **17** |

@@ -130,6 +130,8 @@ void panels::DrawCanvas(AppState& app) {
         }
         drs.tex_w = cs.width();
         drs.tex_h = cs.height();
+        drs.onion_prev_rev = 0;
+        drs.onion_next_rev = 0;
         cs.dirty  = false;
     } else if (cs.dirty) {
         glBindTexture(GL_TEXTURE_2D, drs.texture);
@@ -142,14 +144,24 @@ void panels::DrawCanvas(AppState& app) {
         bool show_prev = tools.onion_skin_mode != 2 && cs.active_frame > 0;
         bool show_next = tools.onion_skin_mode != 1 && cs.active_frame < (int)cs.frames.size() - 1;
         if (show_prev) {
-            cs.composite_frame(cs.active_frame - 1, s_onion_buf);
-            glBindTexture(GL_TEXTURE_2D, drs.onion_tex[0]);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, s_onion_buf.data());
+            int pi = cs.active_frame - 1;
+            uint64_t rev = (pi < (int)cs.frame_revisions.size()) ? cs.frame_revisions[pi] : 0;
+            if (drs.onion_prev_rev != rev) {
+                cs.composite_frame(pi, s_onion_buf);
+                glBindTexture(GL_TEXTURE_2D, drs.onion_tex[0]);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, s_onion_buf.data());
+                drs.onion_prev_rev = rev;
+            }
         }
         if (show_next) {
-            cs.composite_frame(cs.active_frame + 1, s_onion_buf);
-            glBindTexture(GL_TEXTURE_2D, drs.onion_tex[1]);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, s_onion_buf.data());
+            int ni = cs.active_frame + 1;
+            uint64_t rev = (ni < (int)cs.frame_revisions.size()) ? cs.frame_revisions[ni] : 0;
+            if (drs.onion_next_rev != rev) {
+                cs.composite_frame(ni, s_onion_buf);
+                glBindTexture(GL_TEXTURE_2D, drs.onion_tex[1]);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cs.width(), cs.height(), GL_RGBA, GL_UNSIGNED_BYTE, s_onion_buf.data());
+                drs.onion_next_rev = rev;
+            }
         }
     }
 
