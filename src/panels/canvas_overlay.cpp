@@ -1,6 +1,7 @@
 #include "canvas_overlay.h"
 #include "ui_scale.h"
 #include "imgui.h"
+#include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
 #include <cmath>
 
@@ -15,7 +16,6 @@ void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& too
         float cell = cs.checker_size * cs.zoom;
         ImU32 col1 = ImGui::ColorConvertFloat4ToU32(cs.checker_color1);
         ImU32 col2 = ImGui::ColorConvertFloat4ToU32(cs.checker_color2);
-        dl->PushClipRect({origin.x, origin.y}, {origin.x + W, origin.y + H}, true);
         // Rebuild 2x2 checker texture only when colors change
         if (col1 != s_ck1 || col2 != s_ck2) {
             if (s_checker_tex != 0)
@@ -32,6 +32,17 @@ void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& too
             s_ck1 = col1;
             s_ck2 = col2;
         }
+        // ImGui v1.92+ binds sampler objects with GL_CLAMP_TO_EDGE, which overrides the
+        // texture's own GL_REPEAT wrap state and breaks UV tiling. Unbind any sampler object
+        // before this draw call so the texture's GL_NEAREST + GL_REPEAT params take effect.
+        // glBindSampler is GL 3.3 core but not declared by SDL_opengl.h — load it once.
+        dl->AddCallback([](const ImDrawList*, const ImDrawCmd*) {
+            using BindSamplerFn = void(*)(GLuint, GLuint);
+            static auto fn = reinterpret_cast<BindSamplerFn>(
+                SDL_GL_GetProcAddress("glBindSampler"));
+            if (fn) fn(0, 0);
+        }, nullptr);
+        dl->PushClipRect({origin.x, origin.y}, {origin.x + W, origin.y + H}, true);
         // One draw call: UV spans = screen area / one checker period (2 cells)
         float pu = W / (2.f * cell);
         float pv = H / (2.f * cell);
@@ -41,7 +52,7 @@ void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& too
         dl->PopClipRect();
     }
 
-    // ImGui v1.92+ binds a linear sampler that overrides texture parameters — switch to nearest.
+    // Restore ImGui's nearest sampler for subsequent pixel-art texture draws.
     ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
     if (pio.DrawCallback_SetSamplerNearest)
         dl->AddCallback(pio.DrawCallback_SetSamplerNearest, nullptr);

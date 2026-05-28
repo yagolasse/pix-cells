@@ -13,8 +13,8 @@ A pixel art editor built in C++20 with Dear ImGui.
 | `E` | Eraser — erase to transparent |
 | `F` | Fill — flood-fill at cursor |
 | `L` | Line |
-| `R` | Rectangle / Filled Rectangle |
-| `U` | Circle / Filled Circle |
+| `R` | Rectangle / Filled Rectangle (hold `Shift` for square) |
+| `U` | Circle / Filled Circle (hold `Shift` for perfect circle) |
 | `M` | Move — pan the canvas |
 | `S` | Rect Select — drag to select; lift, move, and scale the selection |
 | `W` | Color Select — select all pixels of the same color (contiguous or global mode) |
@@ -35,7 +35,9 @@ A pixel art editor built in C++20 with Dear ImGui.
 ### Animation
 - Multi-frame timeline with per-frame duration
 - Play/pause transport with configurable FPS
-- Drag-and-drop to reorder frames; animation tag ranges auto-adjust
+- Named **animation tags** — define named start/end ranges; playback and frame-strip dimming respect the active tag
+- Drag-and-drop to reorder frames; tag ranges auto-adjust
+- Right-click any frame card to **Duplicate** or **Delete** it
 - Sprite-sheet export (grid layout, configurable columns)
 
 ### Palette
@@ -60,6 +62,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 - **Multi-document tabs** — open and switch between multiple projects in the same window; "+" button creates new blank document, tab X or Ctrl+W closes the active document (prompts to save if unsaved)
 - Dockable panels — layout persists across sessions
 - **Floating Preview panel** — mini-preview window with independent zoom (scroll to adjust 1–32×) and pan controls
+- **Pen / tablet support** — graphics tablets and styluses work via SDL3 native pen input
 
 ### Undo / Redo
 - `Ctrl+Z` / `Ctrl+Y` — full undo/redo stack per session
