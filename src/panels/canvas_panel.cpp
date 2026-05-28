@@ -20,9 +20,8 @@ static void close_doc(AppState& app, int idx) {
     // Free GL textures
     if (idx < (int)s_doc_render.size()) {
         DocRenderState& drs = s_doc_render[idx];
-        if (drs.texture)      glDeleteTextures(1, &drs.texture);
-        if (drs.onion_tex[0]) glDeleteTextures(1, &drs.onion_tex[0]);
-        if (drs.onion_tex[1]) glDeleteTextures(1, &drs.onion_tex[1]);
+        GLuint del_tex[3] = {drs.texture, drs.onion_tex[0], drs.onion_tex[1]};
+        glDeleteTextures(3, del_tex);
         s_doc_render.erase(s_doc_render.begin() + idx);
     }
     app.docs.erase(app.docs.begin() + idx);
@@ -69,14 +68,21 @@ void panels::DrawCanvas(AppState& app) {
         if (ImGui::Button("Save")) {
             if (s_tabclose_doc_idx >= 0 && s_tabclose_doc_idx < (int)app.docs.size()) {
                 auto& d = app.docs[s_tabclose_doc_idx];
-                if (!d.project_path.empty()) {
+                const auto& p = d.project_path;
+                bool is_pixc = p.size() >= 5 &&
+                               (p.compare(p.size() - 5, 5, ".pixc") == 0 ||
+                                p.compare(p.size() - 5, 5, ".PIXC") == 0);
+                if (!p.empty() && is_pixc) {
                     int prev = app.active_doc;
                     app.active_doc = s_tabclose_doc_idx;
-                    if (pixc_io::save(app, d.project_path))
+                    if (pixc_io::save(app, p))
                         app.canvas().unsaved_changes = false;
                     app.active_doc = prev;
+                    close_doc(app, s_tabclose_doc_idx);
+                } else {
+                    // Untitled or non-.pixc — hand off to menu_bar to open save dialog, then close
+                    app.pending_save_as_then_close = s_tabclose_doc_idx;
                 }
-                close_doc(app, s_tabclose_doc_idx);
             }
             s_tabclose_doc_idx = -1;
             ImGui::CloseCurrentPopup();

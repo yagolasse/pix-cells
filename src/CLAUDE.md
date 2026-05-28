@@ -25,6 +25,7 @@ AppState
                                                          brush_size, circle_brush, shape_filled, show_grid, symmetry, symmetry_mode (0=Horizontal 1=Vertical 2=Both), onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), color_select_contiguous (bool), mouse_over_canvas (bool), show_preview (bool — toggles the floating Preview window via View menu)
   bool                   close_active_doc_requested  — set by Ctrl+W or File > Close; consumed by canvas_panel to trigger close logic
   int                    close_doc_idx_requested     — -1 = none; set by doc_tabs_panel when a tab X is clicked
+  int                    pending_save_as_then_close  — -1 = none; set by canvas_panel when the "Unsaved Changes" tab-close modal's Save button is pressed on an untitled/non-.pixc doc; consumed by menu_bar to open an SDL save dialog and close the doc afterward
   Convenience methods:
     doc() / canvas() / palette() / selection() / project_path() — reference getters returning active_doc data
 

@@ -1,7 +1,7 @@
 # pix-cells Refactor & Improvement Plan
 
 Audit date: 2026-05-28. 35 findings across 7 categories.
-Last updated: 2026-05-28 — top-5 batch complete (commit bfd0e61).
+Last updated: 2026-05-28 — quick-wins batch complete.
 
 ---
 
@@ -49,12 +49,12 @@ Last updated: 2026-05-28 — top-5 batch complete (commit bfd0e61).
 
 | Severity | File | Finding | Status |
 |---|---|---|---|
-| MEDIUM | `src/input_handler.cpp:88-140` | Copy and Cut share identical selection-iteration loops — extract `fill_clipboard()` helper | 🔲 |
+| ~~MEDIUM~~ | ~~`src/input_handler.cpp:88-140`~~ | ~~Copy and Cut share identical selection-iteration loops — extract `fill_clipboard()` helper~~ | ✅ |
 | MEDIUM | `src/panels/canvas_tools.cpp` | Symmetry mirroring logic duplicated between `draw_px` preview and `sym_pt`/`sym_seg` commit paths | 🔲 |
 | MEDIUM | `src/panels/canvas_overlay.cpp` | Checkerboard drawn as O(rows×cols) rects per frame — should use a tiled texture instead | 🔲 |
-| LOW | `src/panels/canvas_tools.cpp` | `update_selection_from_float()` pattern duplicated twice | 🔲 |
+| ~~LOW~~ | ~~`src/panels/canvas_tools.cpp`~~ | ~~`update_selection_from_float()` pattern duplicated twice~~ | ✅ |
 | LOW | `src/panels/canvas_tools.cpp` | Color picker tool (tool 10) is a hardcoded branch instead of following the tool pattern | 🔲 |
-| LOW | `src/ui_scale.cpp:22` | Magic `99.f` sentinel should be `std::numeric_limits<float>::max()` | 🔲 |
+| ~~LOW~~ | ~~`src/ui_scale.cpp:22`~~ | ~~Magic `99.f` sentinel should be `std::numeric_limits<float>::max()`~~ | ✅ |
 
 ---
 
@@ -111,7 +111,7 @@ Last updated: 2026-05-28 — top-5 batch complete (commit bfd0e61).
 
 | Severity | File | Finding | Status |
 |---|---|---|---|
-| MEDIUM | `src/panels/canvas_panel.cpp:48-50` | `glDeleteTextures` called separately for each onion texture — batch into one call | 🔲 |
+| ~~MEDIUM~~ | ~~`src/panels/canvas_panel.cpp:48-50`~~ | ~~`glDeleteTextures` called separately for each onion texture — batch into one call~~ | ✅ |
 | MEDIUM | `src/panels/canvas_tools.cpp` | Floating selection state fragile on tool re-selection — partially handled | 🔲 |
 | LOW | `src/input_handler.cpp:20` | Tool shortcuts (B/E/F…) fire even during active layer rename dialogs | 🔲 |
 
@@ -122,6 +122,6 @@ Last updated: 2026-05-28 — top-5 batch complete (commit bfd0e61).
 | Severity | Original | Done | Remaining |
 |---|---|---|---|
 | HIGH | 3 | 3 | 0 |
-| MEDIUM | 16 | 7 | 9 |
-| LOW | 16 | 0 | 16 |
-| **Total** | **35** | **10** | **25** |
+| MEDIUM | 16 | 9 | 7 |
+| LOW | 16 | 2 | 14 |
+| **Total** | **35** | **14** | **21** |

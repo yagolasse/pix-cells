@@ -325,6 +325,8 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
         sel.active = true;
     }
 
+    auto sync_float_pos = [&]() { sel.float_x = sel.x0; sel.float_y = sel.y0; };
+
     // Update handle drag bounds while mouse is held — selection may extend beyond the canvas
     if (drs.drag.handle_dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         assert(drs.drag.active_handle >= 0 && drs.drag.active_handle < 8);
@@ -338,10 +340,7 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
         sel.y0 = std::min(ny0, ny1);
         sel.x1 = std::max(nx0, nx1);
         sel.y1 = std::max(ny0, ny1);
-        if (sel.floating) {
-            sel.float_x = sel.x0;
-            sel.float_y = sel.y0;
-        }
+        if (sel.floating) sync_float_pos();
     }
 
     // Commit handle drag on mouse release — scale floating content if dimensions changed
@@ -357,8 +356,7 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
                 sel.float_w = new_w;
                 sel.float_h = new_h;
             }
-            sel.float_x = sel.x0;
-            sel.float_y = sel.y0;
+            sync_float_pos();
         }
         drs.drag.handle_dragging = false;
         drs.drag.active_handle   = -1;

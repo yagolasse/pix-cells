@@ -6,6 +6,21 @@
 
 namespace input_handler {
 
+static void fill_clipboard(SelectionState& sel, const Canvas& c) {
+    int sw = sel.width(), sh = sel.height();
+    sel.clipboard.resize(static_cast<size_t>(sw) * sh);
+    sel.clipboard_w  = sw;
+    sel.clipboard_h  = sh;
+    sel.clipboard_ox = sel.x0;
+    sel.clipboard_oy = sel.y0;
+    for (int y = 0; y < sh; y++)
+        for (int x = 0; x < sw; x++)
+            sel.clipboard[y * sw + x] =
+                sel.mask_selected(sel.x0 + x, sel.y0 + y)
+                ? c.get(sel.x0 + x, sel.y0 + y)
+                : 0x00000000u;
+}
+
 void handle_keyboard(AppState& app) {
     bool any_popup = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
     if (!any_popup) {
@@ -97,40 +112,18 @@ void handle_keyboard(AppState& app) {
         if (app.selection().active) {
             // Copy
             if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C)) {
-                int sw = app.selection().width(), sh = app.selection().height();
-                app.selection().clipboard.resize(sw * sh);
-                app.selection().clipboard_w  = sw;
-                app.selection().clipboard_h  = sh;
-                app.selection().clipboard_ox = app.selection().x0;
-                app.selection().clipboard_oy = app.selection().y0;
-                const Canvas& c = app.canvas().active();
-                for (int y = 0; y < sh; y++)
-                    for (int x = 0; x < sw; x++)
-                        app.selection().clipboard[y * sw + x] =
-                            app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y)
-                            ? c.get(app.selection().x0 + x, app.selection().y0 + y)
-                            : 0x00000000u;
-                Log("Copy: %dx%d region", sw, sh);
+                fill_clipboard(app.selection(), app.canvas().active());
+                Log("Copy: %dx%d region", app.selection().clipboard_w, app.selection().clipboard_h);
             }
             // Cut
             if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_X)) {
                 if (app.canvas().active_layer_locked()) {
                     Log("Layer locked");
                 } else {
-                    int sw = app.selection().width(), sh = app.selection().height();
-                    app.selection().clipboard.resize(sw * sh);
-                    app.selection().clipboard_w  = sw;
-                    app.selection().clipboard_h  = sh;
-                    app.selection().clipboard_ox = app.selection().x0;
-                    app.selection().clipboard_oy = app.selection().y0;
-                    Canvas& c = app.canvas().active();
-                    for (int y = 0; y < sh; y++)
-                        for (int x = 0; x < sw; x++)
-                            app.selection().clipboard[y * sw + x] =
-                                app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y)
-                                ? c.get(app.selection().x0 + x, app.selection().y0 + y)
-                                : 0x00000000u;
+                    fill_clipboard(app.selection(), app.canvas().active());
+                    int sw = app.selection().clipboard_w, sh = app.selection().clipboard_h;
                     app.canvas().push_snapshot();
+                    Canvas& c = app.canvas().active();
                     for (int y = 0; y < sh; y++)
                         for (int x = 0; x < sw; x++)
                             if (app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y))

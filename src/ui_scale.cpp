@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include <cstdio>
 #include <cmath>
+#include <limits>
 #include <string>
 
 namespace ui_scale {
@@ -20,7 +21,7 @@ void init(ImFont* fonts[5], const ImGuiStyle& base_style) {
 
 void apply(float scale) {
     int best = 1;
-    float best_diff = 99.f;
+    float best_diff = std::numeric_limits<float>::max();
     for (int i = 0; i < 5; ++i) {
         float d = std::abs(scale - kScales[i]);
         if (d < best_diff) { best_diff = d; best = i; }

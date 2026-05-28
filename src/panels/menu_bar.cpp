@@ -11,10 +11,11 @@
 enum class IOKind : uint8_t { PixcSave, PixcOpen, PngExport, SpriteSheet };
 
 struct PendingIO {
-    bool        active    = false;
-    IOKind      kind      = IOKind::PixcSave;
+    bool        active          = false;
+    IOKind      kind            = IOKind::PixcSave;
     std::string path;
-    int         doc_idx   = 0;  // which document this I/O targets
+    int         doc_idx         = 0;    // which document this I/O targets
+    bool        close_doc_after = false; // close doc_idx after a successful save
     // sprite sheet options
     png_io::SheetLayout sheet_layout = png_io::SheetLayout::Horizontal;
     int                 sheet_cols   = 4;
@@ -23,10 +24,12 @@ struct PendingIO {
 static PendingIO s_pending;
 
 static void file_cb(void* ud, const char* const* list, int /*filter*/) {
+    auto* p = static_cast<PendingIO*>(ud);
     if (list && list[0]) {
-        auto* p   = static_cast<PendingIO*>(ud);
         p->path   = list[0];
         p->active = true;
+    } else {
+        p->close_doc_after = false;  // user cancelled — don't close the doc
     }
 }
 
@@ -70,6 +73,11 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
                     state.project_path() = s_pending.path;
                 }
                 state.active_doc = prev;
+            }
+            if (s_pending.close_doc_after) {
+                s_pending.close_doc_after = false;
+                if (s_pending.doc_idx >= 0 && s_pending.doc_idx < (int)state.docs.size())
+                    state.close_doc_idx_requested = s_pending.doc_idx;
             }
             if (s_pending_quit_after_save) keep_running = false;
             s_pending_quit_after_save = false;
@@ -160,6 +168,16 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
             SDL_ShowSaveFileDialog(file_cb, &s_pending, window, s_pixc_filter, 1, nullptr);
         }
     };
+
+    // --- Trigger save-as dialog for tab-close on untitled/unsaved docs ---
+    if (state.pending_save_as_then_close >= 0) {
+        int idx = state.pending_save_as_then_close;
+        state.pending_save_as_then_close = -1;
+        s_pending.kind           = IOKind::PixcSave;
+        s_pending.doc_idx        = idx;
+        s_pending.close_doc_after = true;
+        SDL_ShowSaveFileDialog(file_cb, &s_pending, window, s_pixc_filter, 1, nullptr);
+    }
 
     // --- Keyboard shortcuts ---
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S))
@@ -252,7 +270,12 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     }
 
     // --- Unsaved Changes modal (quit) — one dialog per dirty doc ---
-    if (open_unsaved_quit) { ImGui::OpenPopup("Unsaved Changes##quit"); open_unsaved_quit = false; }
+    if (open_unsaved_quit) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::OpenPopup("Unsaved Changes##quit");
+        open_unsaved_quit = false;
+    }
     if (ImGui::BeginPopupModal("Unsaved Changes##quit", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         int doc_idx = s_quit_unsaved_queue.empty() ? -1 : s_quit_unsaved_queue.front();
         if (doc_idx >= 0 && doc_idx < (int)state.docs.size()) {

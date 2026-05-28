@@ -149,8 +149,9 @@ struct AppState {
     std::vector<Document> docs;
     int                   active_doc = 0;
     ToolsState            tools;
-    bool                  close_active_doc_requested = false;
-    int                   close_doc_idx_requested    = -1;   // -1 = none; set by doc_tabs_panel
+    bool                  close_active_doc_requested      = false;
+    int                   close_doc_idx_requested         = -1;  // -1 = none; set by doc_tabs_panel
+    int                   pending_save_as_then_close      = -1;  // set by canvas_panel when untitled tab needs save dialog before close
 
     Document&       doc()              { return docs[active_doc]; }
     const Document& doc() const        { return docs[active_doc]; }
