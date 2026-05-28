@@ -38,6 +38,7 @@ void panels::DrawTools(ToolsState& state) {
         {"pan_tool",      "##t8",  "Move  (M)"},
         {"select",        "##t9",  "Rect Select  (S)"},
         {"eyedropper",    "##t10", "Color Picker  (I)"},
+        {"magic_wand",    "##t11", "Color Select  (W)"},
     };
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FP, FP));

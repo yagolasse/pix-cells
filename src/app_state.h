@@ -87,12 +87,13 @@ struct ToolsState {
     int  onion_skin_mode = 0; // 0=Both, 1=Previous only, 2=Next only
     bool mouse_over_canvas = false;
     bool show_preview = true;
+    bool color_select_contiguous = true;
 };
 
 namespace tool {
     constexpr int Brush = 0, Eraser = 1, Fill = 2, Line = 3,
                   Rect = 4, FilledRect = 5, Circle = 6, FilledCircle = 7,
-                  Move = 8, RectSelect = 9, ColorPicker = 10;
+                  Move = 8, RectSelect = 9, ColorPicker = 10, ColorSelect = 11;
     constexpr bool is_shape(int t) { return t >= Rect && t <= FilledCircle; }
 }
 
@@ -112,9 +113,16 @@ struct SelectionState {
     int  clipboard_w  = 0, clipboard_h  = 0;
     int  clipboard_ox = 0, clipboard_oy = 0; // paste origin
 
+    std::vector<bool> mask; // empty = full bbox; non-empty = per-pixel, size width()*height()
+
     int  width()  const { return x1 - x0 + 1; }
     int  height() const { return y1 - y0 + 1; }
     bool contains(int x, int y) const { return x >= x0 && x <= x1 && y >= y0 && y <= y1; }
+    bool mask_selected(int x, int y) const {
+        if (!contains(x, y)) return false;
+        if (mask.empty()) return true;
+        return mask[(y - y0) * width() + (x - x0)];
+    }
 };
 
 struct PaletteState {

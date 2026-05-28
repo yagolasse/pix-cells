@@ -150,10 +150,18 @@ void lift_selection(CanvasState& cs, SelectionState& sel) {
     sel.float_orig_y = sel.y0;
     Canvas& c = cs.active();
     for (int y = 0; y < sh; y++)
-        for (int x = 0; x < sw; x++) {
+        for (int x = 0; x < sw; x++)
             sel.float_pixels[y * sw + x] = c.get(sel.x0 + x, sel.y0 + y);
-            c.set(sel.x0 + x, sel.y0 + y, 0x00000000);
-        }
+    if (!sel.mask.empty()) {
+        for (int y = 0; y < sh; y++)
+            for (int x = 0; x < sw; x++)
+                if (!sel.mask[y * sw + x])
+                    sel.float_pixels[y * sw + x] = 0x00000000;
+    }
+    for (int y = 0; y < sh; y++)
+        for (int x = 0; x < sw; x++)
+            if (sel.mask.empty() || sel.mask[y * sw + x])
+                c.set(sel.x0 + x, sel.y0 + y, 0x00000000);
     sel.floating = true;
     cs.rebuild_composite();
     Log("Lift selection: %dx%d", sw, sh);
@@ -170,6 +178,7 @@ void commit_floating(CanvasState& cs, SelectionState& sel) {
     sel.active   = false;
     sel.floating = false;
     sel.float_pixels.clear();
+    sel.mask.clear();
     cs.rebuild_composite();
     Log("Commit float to (%d,%d)", sel.float_x, sel.float_y);
 }

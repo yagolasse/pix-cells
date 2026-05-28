@@ -17,6 +17,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 | `U` | Circle / Filled Circle |
 | `M` | Move — pan the canvas |
 | `S` | Rect Select — drag to select; lift, move, and scale the selection |
+| `W` | Color Select — select all pixels of the same color (contiguous or global mode) |
 | `[` / `]` | Decrease / Increase brush size |
 
 ### Layers
@@ -26,7 +27,8 @@ A pixel art editor built in C++20 with Dear ImGui.
 - Locked layers block all pixel-write operations (brush, fill, paste, delete)
 
 ### Selection
-- Rectangular selection with marching-ants overlay
+- **Rectangular selection** (Rect Select tool) with marching-ants overlay
+- **Color-based selection** (Color Select tool) — select pixels by color with contiguous (connected) or global mode
 - Lift selection to a floating buffer — move and nearest-neighbour scale via 8 resize handles
 - `Ctrl+A` select all · `Ctrl+C/X` copy/cut · `Ctrl+V` paste · `Delete` erase · `Esc` cancel
 

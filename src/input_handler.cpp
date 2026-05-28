@@ -54,6 +54,10 @@ void handle_keyboard(AppState& app) {
             app.tools.active_tool = tool::ColorPicker;
             Log("Tool: Color Picker");
         }
+        if (ImGui::IsKeyPressed(ImGuiKey_W)) {
+            app.tools.active_tool = tool::ColorSelect;
+            Log("Tool: Color Select");
+        }
         if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
             app.tools.brush_size = std::max(1, app.tools.brush_size - 1);
             Log("Brush size: %d", app.tools.brush_size);
@@ -69,6 +73,7 @@ void handle_keyboard(AppState& app) {
             app.selection().x0 = 0; app.selection().y0 = 0;
             app.selection().x1 = app.canvas().width() - 1;
             app.selection().y1 = app.canvas().height() - 1;
+            app.selection().mask.clear();
             Log("Select All");
         }
 
@@ -101,7 +106,10 @@ void handle_keyboard(AppState& app) {
                 const Canvas& c = app.canvas().active();
                 for (int y = 0; y < sh; y++)
                     for (int x = 0; x < sw; x++)
-                        app.selection().clipboard[y * sw + x] = c.get(app.selection().x0 + x, app.selection().y0 + y);
+                        app.selection().clipboard[y * sw + x] =
+                            app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y)
+                            ? c.get(app.selection().x0 + x, app.selection().y0 + y)
+                            : 0x00000000u;
                 Log("Copy: %dx%d region", sw, sh);
             }
             // Cut
@@ -118,11 +126,15 @@ void handle_keyboard(AppState& app) {
                     Canvas& c = app.canvas().active();
                     for (int y = 0; y < sh; y++)
                         for (int x = 0; x < sw; x++)
-                            app.selection().clipboard[y * sw + x] = c.get(app.selection().x0 + x, app.selection().y0 + y);
+                            app.selection().clipboard[y * sw + x] =
+                                app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y)
+                                ? c.get(app.selection().x0 + x, app.selection().y0 + y)
+                                : 0x00000000u;
                     app.canvas().push_snapshot();
                     for (int y = 0; y < sh; y++)
                         for (int x = 0; x < sw; x++)
-                            c.set(app.selection().x0 + x, app.selection().y0 + y, 0x00000000);
+                            if (app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y))
+                                c.set(app.selection().x0 + x, app.selection().y0 + y, 0x00000000);
                     app.canvas().rebuild_composite();
                     Log("Cut: %dx%d region", sw, sh);
                 }
@@ -137,7 +149,8 @@ void handle_keyboard(AppState& app) {
                     Canvas& c = app.canvas().active();
                     for (int y = 0; y < sh; y++)
                         for (int x = 0; x < sw; x++)
-                            c.set(app.selection().x0 + x, app.selection().y0 + y, 0x00000000);
+                            if (app.selection().mask_selected(app.selection().x0 + x, app.selection().y0 + y))
+                                c.set(app.selection().x0 + x, app.selection().y0 + y, 0x00000000);
                     app.canvas().rebuild_composite();
                     Log("Delete selection: %dx%d region", sw, sh);
                 }
@@ -150,6 +163,7 @@ void handle_keyboard(AppState& app) {
                     app.selection().float_pixels.clear();
                 }
                 app.selection().active = false;
+                app.selection().mask.clear();
             }
         }
     }

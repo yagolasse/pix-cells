@@ -22,8 +22,10 @@ void panels::DrawToolSettings(ToolsState& state) {
     bool show_onion_mode    = state.onion_skin;
     bool show_brush_size    = (t == tool::Brush || t == tool::Eraser || t == tool::Line);
     bool show_brush_shape   = (t == tool::Brush || t == tool::Eraser);
+    bool show_color_select  = (t == tool::ColorSelect);
 
-    if (!show_symmetry_mode && !show_onion_mode && !show_brush_size && !show_brush_shape) {
+    if (!show_symmetry_mode && !show_onion_mode && !show_brush_size && !show_brush_shape &&
+        !show_color_select) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("No settings");
         ImGui::End();
@@ -91,6 +93,19 @@ void panels::DrawToolSettings(ToolsState& state) {
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Circle brush");
         ImGui::PopStyleVar();
+        first = false;
+    }
+
+    if (show_color_select) {
+        if (!first) {
+            ImGui::SameLine(0, 8.0f);
+            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+            ImGui::SameLine(0, 8.0f);
+        }
+        ImGui::AlignTextToFramePadding();
+        ImGui::Checkbox("Contiguous", &state.color_select_contiguous);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Select only connected pixels of the same color");
     }
 
     ImGui::End();

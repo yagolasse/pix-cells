@@ -13,14 +13,16 @@ Document
   SelectionState selection     — active (bool), x0/y0/x1/y1 (canvas pixels, top-left/bottom-right inclusive;
                                  NOT clamped — may be negative or exceed canvas dimensions when dragged/scaled past the edge),
                                  floating (bool), float_pixels/float_w/float_h/float_x/float_y/float_orig_x/float_orig_y (lifted pixel buffer; float_x/y may be off-canvas),
-                                 clipboard (vector<uint32_t>), clipboard_w/h/ox/oy
+                                 clipboard (vector<uint32_t>), clipboard_w/h/ox/oy,
+                                 mask (vector<bool>, empty = full bbox; non-empty = per-pixel selection mask, size width()*height()),
+                                 mask_selected(x, y) — helper method returns true if pixel is selected (respects mask)
   std::string    project_path  — path to .pixc file (empty = untitled); set on successful load/save
 
 AppState
   std::vector<Document>  docs                         — open documents (always at least 1)
   int                    active_doc                   — index into docs[] of the currently-edited document (selected tab)
-  ToolsState             tools                        — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker; named `tool::` constants in app_state.h),
-                                                         brush_size, circle_brush, shape_filled, show_grid, symmetry, symmetry_mode (0=Horizontal 1=Vertical 2=Both), onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), mouse_over_canvas (bool), show_preview (bool — toggles the floating Preview window via View menu)
+  ToolsState             tools                        — active_tool (0=Brush 1=Eraser 2=Fill 3=Line 4=Rect 5=FilledRect 6=Circle 7=FilledCircle 8=Move 9=RectSelect 10=ColorPicker 11=ColorSelect; named `tool::` constants in app_state.h),
+                                                         brush_size, circle_brush, shape_filled, show_grid, symmetry, symmetry_mode (0=Horizontal 1=Vertical 2=Both), onion_skin, onion_skin_mode (0=Both 1=Previous 2=Next), color_select_contiguous (bool), mouse_over_canvas (bool), show_preview (bool — toggles the floating Preview window via View menu)
   bool                   close_active_doc_requested  — set by Ctrl+W or File > Close; consumed by canvas_panel to trigger close logic
   int                    close_doc_idx_requested     — -1 = none; set by doc_tabs_panel when a tab X is clicked
   Convenience methods:
@@ -71,7 +73,7 @@ Key methods:
 | `app_state.cpp` | `AppState` constructor — initializes `docs[]` with one blank `Document`. `PaletteState` constructor — initializes 24 pico-8 swatches, sets default primary/secondary/selected |
 | `canvas_state.cpp` | `CanvasState` method implementations (uses `blend_pixel` from `blend.h`); also defines `lift_selection(CanvasState&, SelectionState&)` and `commit_floating(CanvasState&, SelectionState&)` helpers for selection floating operations |
 | `blend.h` | `blend_pixel(dst, src, mode)` — Porter-Duff "over" with Multiply/Screen/Overlay/Add modes and per-layer opacity (RGBA8, R in bits 0–7); shared by `canvas_state.cpp` compositing and `png_io.cpp` sprite-sheet export |
-| `raster.h/cpp` | `namespace raster` pure pixel-drawing algorithms operating on `Canvas&` (no ImGui/GL): `paint_pixel`, `bresenham`, `flood_fill`, `draw_rect`, `draw_ellipse`, `nn_scale`, and the `rasterize_ellipse(x0,y0,x1,y1,filled,plot)` template (header-only, emits points via a `plot` callback; shared by `draw_ellipse` and the canvas shape preview). Linked into `pix-cells-core` so tests can exercise them |
+| `raster.h/cpp` | `namespace raster` pure pixel-drawing algorithms operating on `Canvas&` (no ImGui/GL): `paint_pixel`, `bresenham`, `flood_fill`, `draw_rect`, `draw_ellipse`, `nn_scale`, `color_select` (returns `ColorSelectResult` struct with bbox and per-pixel mask for contiguous/global color selection), and the `rasterize_ellipse(x0,y0,x1,y1,filled,plot)` template (header-only, emits points via a `plot` callback; shared by `draw_ellipse` and the canvas shape preview). Linked into `pix-cells-core` so tests can exercise them |
 | `palette_io.h/cpp` | `namespace palette_io` — `load_hex`/`save_hex` (`.hex`/`.txt`, one `#RRGGBB` per line with `; name` comment header) and `load_gpl`/`save_gpl` (GIMP Palette `.gpl`, `GIMP Palette` magic + `Name:` + `R G B` color lines). All four take/return `PaletteState&` / `const PaletteState&` and return `bool`; log via `Log()`. Linked into `pix-cells-core`. |
 | `icon_manager.h/cpp` | `icon_manager::init(dir)`, `::get(name)` → `ImTextureID`, `::shutdown()` — lazily loads SVGs from `icons/` via lunasvg (32×32, ARGB→RGBA swizzle + un-premultiply), uploads as GL textures, caches by name; missing files return texture 0 |
 | `cursor_manager.h/cpp` | `cursor_manager::init(dir)`, `::set_for_tool(tool_index, mouse_pressed, mouse_over_canvas)`, `::shutdown()` — loads `point_scan.svg`, `eyedropper.svg`, `pan_tool.svg`, `pan_tool_alt.svg` as SDL color cursors; when `mouse_over_canvas` is false, uses the default system cursor; when true, tool 8 (Move) uses pan_tool / pan_tool_alt based on `mouse_pressed`, tool 10 (Color Picker) uses eyedropper, all others use point_scan |

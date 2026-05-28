@@ -127,13 +127,33 @@ static void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const Tools
 
     // Marching ants selection overlay
     if (sel.active) {
-        ImVec2 sp1 = {origin.x + sel.x0 * cs.zoom,          origin.y + sel.y0 * cs.zoom};
-        ImVec2 sp2 = {origin.x + (sel.x1 + 1) * cs.zoom,    origin.y + (sel.y1 + 1) * cs.zoom};
         bool blink  = (int)(ImGui::GetTime() * 8) % 2;
-        dl->AddRect(sp1, sp2,
-            blink ? IM_COL32(255,255,255,255) : IM_COL32(0,0,0,255), 0, 0, 1.5f);
-        dl->AddRect({sp1.x+1,sp1.y+1},{sp2.x-1,sp2.y-1},
-            blink ? IM_COL32(0,0,0,255) : IM_COL32(255,255,255,255), 0, 0, 1.0f);
+        ImU32 col_a = blink ? IM_COL32(255,255,255,255) : IM_COL32(0,0,0,255);
+        ImU32 col_b = blink ? IM_COL32(0,0,0,255) : IM_COL32(255,255,255,255);
+        if (sel.mask.empty()) {
+            ImVec2 sp1 = {origin.x + sel.x0 * cs.zoom,       origin.y + sel.y0 * cs.zoom};
+            ImVec2 sp2 = {origin.x + (sel.x1 + 1) * cs.zoom, origin.y + (sel.y1 + 1) * cs.zoom};
+            dl->AddRect(sp1, sp2, col_a, 0, 0, 1.5f);
+            dl->AddRect({sp1.x+1,sp1.y+1},{sp2.x-1,sp2.y-1}, col_b, 0, 0, 1.0f);
+        } else {
+            int bw = sel.width();
+            float z = cs.zoom;
+            for (int ly = 0; ly < sel.height(); ly++) {
+                for (int lx = 0; lx < sel.width(); lx++) {
+                    if (!sel.mask[ly * bw + lx]) continue;
+                    float sx = origin.x + (sel.x0 + lx) * z;
+                    float sy = origin.y + (sel.y0 + ly) * z;
+                    bool r = (lx + 1 >= sel.width())  || !sel.mask[ly * bw + (lx + 1)];
+                    bool l = (lx - 1 < 0)             || !sel.mask[ly * bw + (lx - 1)];
+                    bool d = (ly + 1 >= sel.height()) || !sel.mask[(ly + 1) * bw + lx];
+                    bool u = (ly - 1 < 0)             || !sel.mask[(ly - 1) * bw + lx];
+                    if (r) dl->AddLine({sx + z, sy},     {sx + z, sy + z}, col_a, 1.5f);
+                    if (l) dl->AddLine({sx,     sy},     {sx,     sy + z}, col_a, 1.5f);
+                    if (d) dl->AddLine({sx,     sy + z}, {sx + z, sy + z}, col_a, 1.5f);
+                    if (u) dl->AddLine({sx,     sy},     {sx + z, sy},     col_a, 1.5f);
+                }
+            }
+        }
     }
 
     // Floating selection pixel overlay — drawn on top of composite. Only the portion that
@@ -494,6 +514,31 @@ void panels::DrawCanvas(AppState& app) {
                 palette.primary_color = ImGui::ColorConvertU32ToFloat4(picked);
                 Log("Color pick at (%d,%d) #%08X", px, py, picked);
             }
+        } else if (tools.active_tool == tool::ColorSelect) {
+            drs.was_painting = false;
+            drs.last_px      = {-1.0f, -1.0f};
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                if (sel.floating) {
+                    commit_floating(cs, sel);
+                    drs.drag.handle_dragging = false;
+                    drs.drag.active_handle   = -1;
+                }
+                if (cs.active().in_bounds(px, py)) {
+                    auto result = raster::color_select(cs.active(), px, py,
+                                                       tools.color_select_contiguous);
+                    if (result.any) {
+                        sel.active = true;
+                        sel.x0 = result.x0; sel.y0 = result.y0;
+                        sel.x1 = result.x1; sel.y1 = result.y1;
+                        sel.mask = std::move(result.mask);
+                        Log("Color select at (%d,%d): bbox (%d,%d)-(%d,%d)",
+                            px, py, sel.x0, sel.y0, sel.x1, sel.y1);
+                    } else {
+                        sel.active = false;
+                        sel.mask.clear();
+                    }
+                }
+            }
         } else {
             bool is_painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
             if (is_painting && !drs.was_painting) {
@@ -585,6 +630,7 @@ void panels::DrawCanvas(AppState& app) {
                         // Click outside floating content — commit and start new selection
                         commit_floating(cs, sel);
                         sel.active              = false;
+                        sel.mask.clear();
                         drs.drag.shape_sx       = px;
                         drs.drag.shape_sy       = py;
                         drs.drag.shape_dragging = true;
@@ -605,6 +651,7 @@ void panels::DrawCanvas(AppState& app) {
                 } else {
                     // Priority 4: start new selection drag
                     sel.active          = false;
+                    sel.mask.clear();
                     drs.drag.shape_sx   = px;
                     drs.drag.shape_sy   = py;
                     drs.drag.shape_dragging = true;

@@ -14,6 +14,13 @@ void draw_ellipse(Canvas& c, int x0, int y0, int x1, int y1, uint32_t color, boo
 void nn_scale(const std::vector<uint32_t>& src, int sw, int sh,
               std::vector<uint32_t>& dst, int dw, int dh);
 
+struct ColorSelectResult {
+    int x0, y0, x1, y1;
+    std::vector<bool> mask; // size = (x1-x0+1)*(y1-y0+1), bbox-relative
+    bool any;
+};
+ColorSelectResult color_select(const Canvas& c, int sx, int sy, bool contiguous);
+
 // Bresenham ellipse-in-rect (Zingl). Fits the bounding box [x0,x1]×[y0,y1] exactly,
 // handling odd AND even diameters, so a 1px drag change grows the shape by 1px. When
 // `filled`, each scanline's left/right edge points are span-filled, so the fill is derived
