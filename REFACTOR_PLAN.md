@@ -27,8 +27,8 @@ Last updated: 2026-05-28 — quick-wins batch complete.
 
 ## Next priority order
 
-1. **Quick wins** (LOW effort, all isolated) — do as a single small batch
-2. **Test coverage** (raster edge cases, selection mask tests)
+1. ~~**Quick wins**~~ ✅
+2. ~~**Test coverage**~~ ✅
 3. **Onion skin dirty flag** (MEDIUM perf)
 4. **Marching ants pre-generation** (MEDIUM perf)
 5. **Centralize PendingIO** (MEDIUM architecture)
@@ -73,10 +73,10 @@ Last updated: 2026-05-28 — quick-wins batch complete.
 
 | Severity | File | Finding | Status |
 |---|---|---|---|
-| MEDIUM | `src/raster.cpp` | `color_select()` and `nn_scale()` edge cases untested (disconnected regions, thin lines, zero-dim) | 🔲 |
+| ~~MEDIUM~~ | ~~`src/raster.cpp`~~ | ~~`color_select()` and `nn_scale()` edge cases untested (disconnected regions, thin lines, zero-dim)~~ | ✅ |
 | ~~MEDIUM~~ | ~~`src/pixc_io.cpp`~~ | ~~No error-path tests for file format~~ | ✅ |
-| MEDIUM | `src/blend.h:27-35` | Blend mode unit tests missing for edge cases (fully transparent src, saturating Add) | 🔲 |
-| MEDIUM | `src/raster.cpp:95-101` | Complex selection masks (disconnected regions, thin lines) untested | 🔲 |
+| ~~MEDIUM~~ | ~~`src/blend.h:27-35`~~ | ~~Blend mode unit tests missing for edge cases (fully transparent src, saturating Add)~~ | ✅ |
+| ~~MEDIUM~~ | ~~`src/raster.cpp:95-101`~~ | ~~Complex selection masks (disconnected regions, thin lines) untested~~ | ✅ |
 
 ---
 
@@ -122,6 +122,6 @@ Last updated: 2026-05-28 — quick-wins batch complete.
 | Severity | Original | Done | Remaining |
 |---|---|---|---|
 | HIGH | 3 | 3 | 0 |
-| MEDIUM | 16 | 9 | 7 |
+| MEDIUM | 16 | 12 | 4 |
 | LOW | 16 | 2 | 14 |
-| **Total** | **35** | **14** | **21** |
+| **Total** | **35** | **17** | **18** |
