@@ -113,8 +113,8 @@ pix-cells/
 │       ├── timeline_panel      — Frame strip, transport controls, playback, tags
 │       ├── menu_bar            — File/Edit/View menus, async file dialogs
 │       └── log_panel           — Log viewer with auto-scroll
-├── tests/                   — Unit tests (blend, composite, frames, history, raster,
-│                              pixc, palette_io), one ctest target per area
+├── tests/                   — Unit tests (pixc, blend, composite, frames, history,
+│                              raster, palette_io, png_io, multidoc), one ctest target per area
 ├── icons/                   — SVG icon set rasterized at runtime via lunasvg
 └── fonts/
     └── Ubuntu-Regular.ttf   — UI font (15px)

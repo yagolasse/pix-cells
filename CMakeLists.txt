@@ -158,7 +158,7 @@ endif()
 
 enable_testing()
 
-foreach(t test_pixc test_blend test_composite test_frames test_history test_raster test_palette_io test_png_io)
+foreach(t test_pixc test_blend test_composite test_frames test_history test_raster test_palette_io test_png_io test_multidoc)
     add_executable(${t} tests/${t}.cpp)
     target_link_libraries(${t} PRIVATE pix-cells-core)
     target_compile_options(${t} PRIVATE
