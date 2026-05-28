@@ -6,8 +6,12 @@ static void BuildDefaultLayout(ImGuiID dockspace_id) {
     ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->WorkSize);
 
-    ImGuiID node_main, node_timeline;
-    ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.195f, &node_timeline, &node_main);
+    // Documents tab strip spans the full width at the very top.
+    ImGuiID node_docs, node_main;
+    ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Up, 0.04f, &node_docs, &node_main);
+
+    ImGuiID node_timeline;
+    ImGui::DockBuilderSplitNode(node_main, ImGuiDir_Down, 0.195f, &node_timeline, &node_main);
 
     ImGuiID node_center, node_tools;
     ImGui::DockBuilderSplitNode(node_main, ImGuiDir_Left, 0.07f, &node_tools, &node_center);
@@ -21,12 +25,9 @@ static void BuildDefaultLayout(ImGuiID dockspace_id) {
     ImGuiID node_tool_settings;
     ImGui::DockBuilderSplitNode(node_center, ImGuiDir_Up, 0.08f, &node_tool_settings, &node_center);
 
-    ImGuiID node_docs;
-    ImGui::DockBuilderSplitNode(node_center, ImGuiDir_Up, 0.055f, &node_docs, &node_center);
-
+    ImGui::DockBuilderDockWindow("Documents",     node_docs);
     ImGui::DockBuilderDockWindow("Tools",         node_tools);
     ImGui::DockBuilderDockWindow("Tool Settings", node_tool_settings);
-    ImGui::DockBuilderDockWindow("Documents",     node_docs);
     ImGui::DockBuilderDockWindow("Canvas",        node_center);
     ImGui::DockBuilderDockWindow("Color",    node_color);
     ImGui::DockBuilderDockWindow("Layers",   node_layers);
