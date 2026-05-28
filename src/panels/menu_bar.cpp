@@ -33,12 +33,14 @@ static void file_cb(void* ud, const char* const* list, int /*filter*/) {
 // --- Menu bar ---
 
 bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bool& quit_requested) {
-    static bool open_new_canvas           = false;
-    static bool open_canvas_settings      = false;
-    static bool open_sprite_sheet         = false;
-    static bool open_unsaved_quit         = false;
-    static bool open_preferences          = false;
-    static bool s_pending_quit_after_save = false;
+    static bool             open_new_canvas           = false;
+    static bool             open_canvas_settings      = false;
+    static bool             open_sprite_sheet         = false;
+    static bool             open_unsaved_quit         = false;
+    static bool             open_preferences          = false;
+    static bool             s_pending_quit_after_save = false;
+    static std::vector<int> s_quit_unsaved_queue;
+    static bool             s_quit_queue_continue     = false;
 
     bool keep_running = true;
 
@@ -71,6 +73,18 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
             }
             if (s_pending_quit_after_save) keep_running = false;
             s_pending_quit_after_save = false;
+            if (s_quit_queue_continue) {
+                s_quit_queue_continue = false;
+                int closed_doc = s_pending.doc_idx;
+                if (closed_doc >= 0 && closed_doc < (int)state.docs.size())
+                    state.close_doc_idx_requested = closed_doc;
+                if (!s_quit_unsaved_queue.empty())
+                    s_quit_unsaved_queue.erase(s_quit_unsaved_queue.begin());
+                for (auto& idx : s_quit_unsaved_queue)
+                    if (idx > closed_doc) --idx;
+                if (s_quit_unsaved_queue.empty()) keep_running = false;
+                else open_unsaved_quit = true;
+            }
             break;
 
         case IOKind::PixcOpen: {
@@ -154,11 +168,21 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_N))
         open_new_canvas = true;
 
+    // --- Collect all dirty docs and start the per-doc quit confirmation queue ---
+    auto trigger_quit = [&]() {
+        s_quit_unsaved_queue.clear();
+        for (int i = 0; i < (int)state.docs.size(); i++) {
+            if (state.docs[i].canvas.unsaved_changes)
+                s_quit_unsaved_queue.push_back(i);
+        }
+        if (s_quit_unsaved_queue.empty()) keep_running = false;
+        else open_unsaved_quit = true;
+    };
+
     // --- Handle window-close quit request ---
     if (quit_requested) {
         quit_requested = false;
-        if (state.canvas().unsaved_changes) open_unsaved_quit = true;
-        else keep_running = false;
+        trigger_quit();
     }
 
     // --- Menu bar ---
@@ -202,10 +226,8 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
             }
 
             ImGui::Separator();
-            if (ImGui::MenuItem("Quit", "Alt+F4")) {
-                if (state.canvas().unsaved_changes) open_unsaved_quit = true;
-                else keep_running = false;
-            }
+            if (ImGui::MenuItem("Quit", "Alt+F4"))
+                trigger_quit();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
@@ -229,23 +251,68 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         ImGui::EndMainMenuBar();
     }
 
-    // --- Unsaved Changes modal (quit) ---
+    // --- Unsaved Changes modal (quit) — one dialog per dirty doc ---
     if (open_unsaved_quit) { ImGui::OpenPopup("Unsaved Changes##quit"); open_unsaved_quit = false; }
     if (ImGui::BeginPopupModal("Unsaved Changes##quit", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("You have unsaved changes. Save before quitting?");
+        int doc_idx = s_quit_unsaved_queue.empty() ? -1 : s_quit_unsaved_queue.front();
+        if (doc_idx >= 0 && doc_idx < (int)state.docs.size()) {
+            const auto& dp = state.docs[doc_idx].project_path;
+            std::string fname;
+            if (!dp.empty()) {
+                auto pos = dp.find_last_of("/\\");
+                fname = (pos == std::string::npos) ? dp : dp.substr(pos + 1);
+            } else {
+                fname = "Untitled";
+            }
+            ImGui::Text("Save \"%s\" before quitting?", fname.c_str());
+        }
         ImGui::Spacing();
+
+        // Close the confirmed tab and advance to the next dirty doc.
+        auto advance_queue = [&](int closed_idx) {
+            if (closed_idx >= 0 && closed_idx < (int)state.docs.size()) {
+                state.docs[closed_idx].canvas.unsaved_changes = false;
+                state.close_doc_idx_requested = closed_idx;
+            }
+            s_quit_unsaved_queue.erase(s_quit_unsaved_queue.begin());
+            for (auto& idx : s_quit_unsaved_queue)
+                if (idx > closed_idx) --idx;
+            if (s_quit_unsaved_queue.empty()) keep_running = false;
+            else open_unsaved_quit = true;
+        };
+
         if (ImGui::Button("Save")) {
-            do_save(true);
+            if (doc_idx >= 0 && doc_idx < (int)state.docs.size()) {
+                const auto& p = state.docs[doc_idx].project_path;
+                bool is_pixc  = p.size() >= 5 &&
+                                (p.compare(p.size() - 5, 5, ".pixc") == 0 ||
+                                 p.compare(p.size() - 5, 5, ".PIXC") == 0);
+                if (!p.empty() && is_pixc) {
+                    int prev = state.active_doc;
+                    state.active_doc = doc_idx;
+                    pixc_io::save(state, p);
+                    state.active_doc = prev;
+                    advance_queue(doc_idx);
+                } else {
+                    s_pending.kind            = IOKind::PixcSave;
+                    s_pending.doc_idx         = doc_idx;
+                    s_pending_quit_after_save = false;
+                    s_quit_queue_continue     = true;
+                    SDL_ShowSaveFileDialog(file_cb, &s_pending, window, s_pixc_filter, 1, nullptr);
+                }
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
         if (ImGui::Button("Don't Save")) {
-            keep_running = false;
+            advance_queue(doc_idx);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel"))
+        if (ImGui::Button("Cancel")) {
+            s_quit_unsaved_queue.clear();
             ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 
