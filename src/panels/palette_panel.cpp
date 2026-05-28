@@ -1,4 +1,5 @@
 #include "palette_panel.h"
+#include "file_io_context.h"
 #include "palette_io.h"
 #include "log.h"
 #include "imgui.h"
@@ -11,14 +12,6 @@
 #include <cstring>
 
 // ── Palette file I/O (async SDL dialog) ──────────────────────────────────────
-
-enum class PalIOKind : uint8_t { Import, ExportGPL, ExportHEX };
-
-struct PalPendingIO {
-    bool        active = false;
-    PalIOKind   kind   = PalIOKind::Import;
-    std::string path;
-};
 
 static PalPendingIO s_pal_pending;
 

@@ -18,6 +18,26 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
     int&            py      = ctx.py;
     ImGuiIO&        io      = ImGui::GetIO();
 
+    // Symmetry helpers — call fn for the primary position plus all mirrored variants.
+    auto sym_pt = [&](int x, int y, auto fn) {
+        fn(x, y);
+        if (tools.symmetry) {
+            int SW = cs.width(), SH = cs.height();
+            if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) fn(SW-1-x, y);
+            if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) fn(x, SH-1-y);
+            if (tools.symmetry_mode == 2) fn(SW-1-x, SH-1-y);
+        }
+    };
+    auto sym_seg = [&](int x0, int y0, int x1, int y1, auto fn) {
+        fn(x0, y0, x1, y1);
+        if (tools.symmetry) {
+            int SW = cs.width(), SH = cs.height();
+            if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) fn(SW-1-x0, y0, SW-1-x1, y1);
+            if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) fn(x0, SH-1-y0, x1, SH-1-y1);
+            if (tools.symmetry_mode == 2) fn(SW-1-x0, SH-1-y0, SW-1-x1, SH-1-y1);
+        }
+    };
+
     // Shape preview overlay — pixel-exact, mirrors the committed drawing algorithms
     if (drs.drag.shape_dragging && !sel.floating) {
         ImU32 prev_col = (ImGui::ColorConvertFloat4ToU32(palette.primary_color) & 0x00FFFFFFu) | 0xCC000000u;
@@ -30,13 +50,7 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
             dl->AddRectFilled({sx, sy}, {sx + z, sy + z}, prev_col);
         };
         auto draw_px = [&](int cx, int cy) {
-            int W2 = cs.width(), H2 = cs.height();
-            draw_px_base(cx, cy);
-            if (tools.symmetry) {
-                if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) draw_px_base(W2-1-cx, cy);
-                if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) draw_px_base(cx, H2-1-cy);
-                if (tools.symmetry_mode == 2) draw_px_base(W2-1-cx, H2-1-cy);
-            }
+            sym_pt(cx, cy, draw_px_base);
         };
 
         auto stamp = [&](int cx, int cy) {
@@ -99,26 +113,6 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
         cs.pan.x += io.MouseDelta.x;
         cs.pan.y += io.MouseDelta.y;
     }
-
-    // Symmetry helpers — call fn for the primary position plus all mirrored variants.
-    auto sym_pt = [&](int x, int y, auto fn) {
-        fn(x, y);
-        if (tools.symmetry) {
-            int SW = cs.width(), SH = cs.height();
-            if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) fn(SW-1-x, y);
-            if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) fn(x, SH-1-y);
-            if (tools.symmetry_mode == 2) fn(SW-1-x, SH-1-y);
-        }
-    };
-    auto sym_seg = [&](int x0, int y0, int x1, int y1, auto fn) {
-        fn(x0, y0, x1, y1);
-        if (tools.symmetry) {
-            int SW = cs.width(), SH = cs.height();
-            if (tools.symmetry_mode == 0 || tools.symmetry_mode == 2) fn(SW-1-x0, y0, SW-1-x1, y1);
-            if (tools.symmetry_mode == 1 || tools.symmetry_mode == 2) fn(x0, SH-1-y0, x1, SH-1-y1);
-            if (tools.symmetry_mode == 2) fn(SW-1-x0, SH-1-y0, SW-1-x1, SH-1-y1);
-        }
-    };
 
     if (ImGui::IsItemHovered()) {
         if (io.MouseWheel != 0.0f) {
@@ -188,11 +182,13 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
                         sel.x0 = result.x0; sel.y0 = result.y0;
                         sel.x1 = result.x1; sel.y1 = result.y1;
                         sel.mask = std::move(result.mask);
+                        sel.sel_revision++;
                         Log("Color select at (%d,%d): bbox (%d,%d)-(%d,%d)",
                             px, py, sel.x0, sel.y0, sel.x1, sel.y1);
                     } else {
                         sel.active = false;
                         sel.mask.clear();
+                        sel.sel_revision++;
                     }
                 }
             }
@@ -284,6 +280,7 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
                         commit_floating(cs, sel);
                         sel.active              = false;
                         sel.mask.clear();
+                        sel.sel_revision++;
                         drs.drag.shape_sx       = px;
                         drs.drag.shape_sy       = py;
                         drs.drag.shape_dragging = true;

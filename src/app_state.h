@@ -115,6 +115,7 @@ struct SelectionState {
     int  clipboard_ox = 0, clipboard_oy = 0; // paste origin
 
     std::vector<bool> mask; // empty = full bbox; non-empty = per-pixel, size width()*height()
+    uint64_t sel_revision = 1; // bumped when mask content or bounds change; 0 = cache uninitialized
 
     int  width()  const { return x1 - x0 + 1; }
     int  height() const { return y1 - y0 + 1; }

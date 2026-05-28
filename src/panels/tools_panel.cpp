@@ -13,7 +13,8 @@ static bool active_icon_btn(const char* id, ImTextureID tex, float sz, bool is_a
     return clicked;
 }
 
-void panels::DrawTools(ToolsState& state) {
+void panels::DrawTools(AppState& app) {
+    ToolsState& state = app.tools;
     const float ICON = ui_scale::px(22.0f);
     const float FP   = ui_scale::px(4.0f);
     const float BTN  = ICON + FP * 2; // total button footprint
@@ -45,8 +46,15 @@ void panels::DrawTools(ToolsState& state) {
 
     for (int i = 0; i < (int)std::size(tool_defs); i++) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
-        if (active_icon_btn(tool_defs[i].id, icon_manager::get(tool_defs[i].icon), ICON, state.active_tool == i))
+        if (active_icon_btn(tool_defs[i].id, icon_manager::get(tool_defs[i].icon), ICON, state.active_tool == i)) {
+            SelectionState& sel = app.selection();
+            if (sel.floating && i != tool::RectSelect) {
+                commit_floating(app.canvas(), sel);
+                sel.active = false;
+                sel.mask.clear();
+            }
             state.active_tool = i;
+        }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", tool_defs[i].tip);
     }

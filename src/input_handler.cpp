@@ -33,43 +33,61 @@ void handle_keyboard(AppState& app) {
         app.close_active_doc_requested = true;
 
     if (!ImGui::GetIO().WantTextInput) {
+        auto commit_if_floating = [&]() {
+            SelectionState& sel = app.selection();
+            if (sel.floating) {
+                commit_floating(app.canvas(), sel);
+                sel.active = false;
+                sel.mask.clear();
+            }
+        };
         if (ImGui::IsKeyPressed(ImGuiKey_B)) {
+            commit_if_floating();
             app.tools.active_tool = tool::Brush;
             Log("Tool: Brush");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_E)) {
+            commit_if_floating();
             app.tools.active_tool = tool::Eraser;
             Log("Tool: Eraser");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_F)) {
+            commit_if_floating();
             app.tools.active_tool = tool::Fill;
             Log("Tool: Fill");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_L)) {
+            commit_if_floating();
             app.tools.active_tool = tool::Line;
             Log("Tool: Line");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_R)) {
+            commit_if_floating();
             app.tools.active_tool = (app.tools.active_tool == tool::Rect) ? tool::FilledRect : tool::Rect;
             Log("Tool: %s", app.tools.active_tool == tool::Rect ? "Rect" : "Filled Rect");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_U)) {
+            commit_if_floating();
             app.tools.active_tool = (app.tools.active_tool == tool::Circle) ? tool::FilledCircle : tool::Circle;
             Log("Tool: %s", app.tools.active_tool == tool::Circle ? "Circle" : "Filled Circle");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_M)) {
+            commit_if_floating();
             app.tools.active_tool = tool::Move;
             Log("Tool: Move");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_S)) {
+            // S switches to RectSelect — no commit needed (floating persists within RectSelect)
             app.tools.active_tool = tool::RectSelect;
             Log("Tool: Rect Select");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_I)) {
+            commit_if_floating();
             app.tools.active_tool = tool::ColorPicker;
             Log("Tool: Color Picker");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_W)) {
+            commit_if_floating();
             app.tools.active_tool = tool::ColorSelect;
             Log("Tool: Color Select");
         }

@@ -178,7 +178,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
             running = false;
 
         cursor_manager::set_for_tool(app.tools.active_tool, ImGui::IsMouseDown(ImGuiMouseButton_Left), app.tools.mouse_over_canvas);
-        panels::DrawTools(app.tools);
+        panels::DrawTools(app);
         panels::DrawToolSettings(app.tools);
         panels::DrawDocTabs(app);
         panels::DrawCanvas(app);

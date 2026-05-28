@@ -213,7 +213,7 @@ void panels::DrawCanvas(AppState& app) {
     if (pio.DrawCallback_SetSamplerLinear)
         dl->AddCallback(pio.DrawCallback_SetSamplerLinear, nullptr);
 
-    draw_canvas_decorations(dl, cs, tools, sel, origin, W, H, drs.drag, hpos);
+    draw_canvas_decorations(dl, cs, tools, sel, origin, W, H, drs, hpos);
 
     // Tool input
     ImVec2 cur_origin  = {std::round(base.x + cs.pan.x), std::round(base.y + cs.pan.y)};

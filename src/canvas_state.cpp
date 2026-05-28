@@ -187,6 +187,7 @@ void commit_floating(CanvasState& cs, SelectionState& sel) {
     sel.floating = false;
     sel.float_pixels.clear();
     sel.mask.clear();
+    sel.sel_revision++;
     cs.rebuild_composite();
     Log("Commit float to (%d,%d)", sel.float_x, sel.float_y);
 }

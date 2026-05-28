@@ -1,25 +1,12 @@
 #include "menu_bar.h"
+#include "file_io_context.h"
 #include "imgui.h"
-#include "png_io.h"
 #include "pixc_io.h"
 #include "ui_scale.h"
 #include <algorithm>
 #include <cstring>
 
 // --- SDL3 async file dialog helpers ---
-
-enum class IOKind : uint8_t { PixcSave, PixcOpen, PngExport, SpriteSheet };
-
-struct PendingIO {
-    bool        active          = false;
-    IOKind      kind            = IOKind::PixcSave;
-    std::string path;
-    int         doc_idx         = 0;    // which document this I/O targets
-    bool        close_doc_after = false; // close doc_idx after a successful save
-    // sprite sheet options
-    png_io::SheetLayout sheet_layout = png_io::SheetLayout::Horizontal;
-    int                 sheet_cols   = 4;
-};
 
 static PendingIO s_pending;
 

@@ -4,6 +4,10 @@
 #include <SDL3/SDL_opengl.h>
 #include <cmath>
 
+// Cached 2x2 checker texture shared across all documents (application-lifetime, tiny resource)
+static GLuint s_checker_tex = 0;
+static ImU32  s_ck1 = 0, s_ck2 = 0;
+
 void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& tools,
                           const GLuint* onion_tex, ImVec2 origin, float W, float H) {
     // Checkerboard background — visible through transparent pixels
@@ -12,15 +16,28 @@ void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& too
         ImU32 col1 = ImGui::ColorConvertFloat4ToU32(cs.checker_color1);
         ImU32 col2 = ImGui::ColorConvertFloat4ToU32(cs.checker_color2);
         dl->PushClipRect({origin.x, origin.y}, {origin.x + W, origin.y + H}, true);
-        int row_count = static_cast<int>(H / cell) + 1;
-        int col_count = static_cast<int>(W / cell) + 1;
-        for (int row = 0; row < row_count; row++)
-            for (int col = 0; col < col_count; col++) {
-                float cx = origin.x + static_cast<float>(col) * cell;
-                float cy = origin.y + static_cast<float>(row) * cell;
-                ImU32 c  = (row + col) % 2 ? col2 : col1;
-                dl->AddRectFilled({cx, cy}, {cx + cell, cy + cell}, c);
-            }
+        // Rebuild 2x2 checker texture only when colors change
+        if (col1 != s_ck1 || col2 != s_ck2) {
+            if (s_checker_tex != 0)
+                glDeleteTextures(1, &s_checker_tex);
+            glGenTextures(1, &s_checker_tex);
+            glBindTexture(GL_TEXTURE_2D, s_checker_tex);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            // 2x2 RGBA8 checker: [col1, col2 / col2, col1]; ImU32 = R bits 0-7 = GL_RGBA/GL_UNSIGNED_BYTE
+            uint32_t pixels[4] = {col1, col2, col2, col1};
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            s_ck1 = col1;
+            s_ck2 = col2;
+        }
+        // One draw call: UV spans = screen area / one checker period (2 cells)
+        float pu = W / (2.f * cell);
+        float pv = H / (2.f * cell);
+        dl->AddImage((ImTextureID)(intptr_t)s_checker_tex,
+                     {origin.x, origin.y}, {origin.x + W, origin.y + H},
+                     {0.f, 0.f}, {pu, pv});
         dl->PopClipRect();
     }
 
@@ -43,7 +60,7 @@ void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& too
 void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const ToolsState& tools,
                               const SelectionState& sel,
                               ImVec2 origin, float W, float H,
-                              const CanvasDragState& drag, ImVec2* hpos) {
+                              DocRenderState& drs, ImVec2* hpos) {
     // Pixel grid overlay (zoom >= 4x, only when enabled)
     if (tools.show_grid && cs.zoom >= 4.0f) {
         ImU32 gcol = IM_COL32(80, 80, 80, 100);
@@ -81,22 +98,32 @@ void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const ToolsState& 
             dl->AddRect(sp1, sp2, col_a, 0, 0, 1.5f);
             dl->AddRect({sp1.x+1,sp1.y+1},{sp2.x-1,sp2.y-1}, col_b, 0, 0, 1.0f);
         } else {
-            int bw = sel.width();
             float z = cs.zoom;
-            for (int ly = 0; ly < sel.height(); ly++) {
-                for (int lx = 0; lx < sel.width(); lx++) {
-                    if (!sel.mask[ly * bw + lx]) continue;
-                    float sx = origin.x + (sel.x0 + lx) * z;
-                    float sy = origin.y + (sel.y0 + ly) * z;
-                    bool r = (lx + 1 >= sel.width())  || !sel.mask[ly * bw + (lx + 1)];
-                    bool l = (lx - 1 < 0)             || !sel.mask[ly * bw + (lx - 1)];
-                    bool d = (ly + 1 >= sel.height()) || !sel.mask[(ly + 1) * bw + lx];
-                    bool u = (ly - 1 < 0)             || !sel.mask[(ly - 1) * bw + lx];
-                    if (r) dl->AddLine({sx + z, sy},     {sx + z, sy + z}, col_a, 1.5f);
-                    if (l) dl->AddLine({sx,     sy},     {sx,     sy + z}, col_a, 1.5f);
-                    if (d) dl->AddLine({sx,     sy + z}, {sx + z, sy + z}, col_a, 1.5f);
-                    if (u) dl->AddLine({sx,     sy},     {sx + z, sy},     col_a, 1.5f);
+            if (drs.ant_sel_rev != sel.sel_revision) {
+                drs.ant_edges.clear();
+                int bw = sel.width();
+                for (int ly = 0; ly < sel.height(); ly++) {
+                    for (int lx = 0; lx < sel.width(); lx++) {
+                        if (!sel.mask[ly * bw + lx]) continue;
+                        int ax = sel.x0 + lx, ay = sel.y0 + ly;
+                        bool r = (lx+1 >= bw)           || !sel.mask[ly*bw+(lx+1)];
+                        bool l = (lx-1 < 0)             || !sel.mask[ly*bw+(lx-1)];
+                        bool d = (ly+1 >= sel.height()) || !sel.mask[(ly+1)*bw+lx];
+                        bool u = (ly-1 < 0)             || !sel.mask[(ly-1)*bw+lx];
+                        if (r) drs.ant_edges.push_back({ax+1, ay,   ax+1, ay+1});
+                        if (l) drs.ant_edges.push_back({ax,   ay,   ax,   ay+1});
+                        if (d) drs.ant_edges.push_back({ax,   ay+1, ax+1, ay+1});
+                        if (u) drs.ant_edges.push_back({ax,   ay,   ax+1, ay  });
+                    }
                 }
+                drs.ant_sel_rev = sel.sel_revision;
+            }
+            for (const auto& seg : drs.ant_edges) {
+                float sx0 = origin.x + static_cast<float>(seg.x0) * z;
+                float sy0 = origin.y + static_cast<float>(seg.y0) * z;
+                float sx1 = origin.x + static_cast<float>(seg.x1) * z;
+                float sy1 = origin.y + static_cast<float>(seg.y1) * z;
+                dl->AddLine({sx0, sy0}, {sx1, sy1}, col_a, 1.5f);
             }
         }
     }
@@ -128,7 +155,7 @@ void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const ToolsState& 
         hpos[0]={sx0,sy0}; hpos[1]={scx,sy0}; hpos[2]={sx1,sy0}; hpos[3]={sx1,scy};
         hpos[4]={sx1,sy1}; hpos[5]={scx,sy1}; hpos[6]={sx0,sy1}; hpos[7]={sx0,scy};
         for (int i = 0; i < 8; i++) {
-            bool is_active = drag.handle_dragging && drag.active_handle == i;
+            bool is_active = drs.drag.handle_dragging && drs.drag.active_handle == i;
             ImU32 hcol = is_active ? IM_COL32(255,200,50,255) : IM_COL32(255,255,255,220);
             float hs = ui_scale::px(3.5f);
             dl->AddRectFilled({hpos[i].x-hs,hpos[i].y-hs},{hpos[i].x+hs,hpos[i].y+hs}, hcol);

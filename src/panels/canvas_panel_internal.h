@@ -19,6 +19,8 @@ struct CanvasDragState {
     int  handle_start_x0 = 0, handle_start_y0 = 0, handle_start_x1 = 0, handle_start_y1 = 0;
 };
 
+struct SelSeg { int x0, y0, x1, y1; }; // canvas-pixel coord edge segment for marching ants
+
 // Per-document GL and input state managed by canvas_panel.cpp.
 struct DocRenderState {
     GLuint texture      = 0;
@@ -30,4 +32,6 @@ struct DocRenderState {
     ImVec2 prev_avail    = {0.f, 0.f};
     uint64_t onion_prev_rev = 0;  // last uploaded revision for onion_tex[0]
     uint64_t onion_next_rev = 0;  // last uploaded revision for onion_tex[1]
+    std::vector<SelSeg> ant_edges;  // pre-generated marching ants edge segments
+    uint64_t ant_sel_rev = 0;       // sel.sel_revision when ant_edges was last built
 };

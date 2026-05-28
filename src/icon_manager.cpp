@@ -13,6 +13,7 @@ namespace {
 
     GLuint upload_bitmap(lunasvg::Bitmap& bm) {
         int w = bm.width(), h = bm.height();
+        if (w <= 0 || h <= 0) return 0;
         const uint8_t* src = bm.data();
         std::vector<uint32_t> pixels(w * h);
 

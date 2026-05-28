@@ -11,4 +11,4 @@ void draw_canvas_overlays(ImDrawList* dl, CanvasState& cs, const ToolsState& too
 void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const ToolsState& tools,
                               const SelectionState& sel,
                               ImVec2 origin, float W, float H,
-                              const CanvasDragState& drag, ImVec2* hpos);
+                              DocRenderState& drs, ImVec2* hpos);

@@ -85,6 +85,7 @@ Key methods:
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
 | `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image; `png_io::save_sprite_sheet(CanvasState&, path, SheetLayout, cols)` — composites each frame and blits into a single PNG |
 | `pixc_io.h/cpp` | `pixc_io::save(AppState&, path)`, `pixc_io::load(AppState&, path)` — custom binary format (`PIXC` magic, version, frames + layers + pixels); `write_str(f, s)` and `read_str(f, s)` handle string serialization (1-byte length prefix, max 255 chars). All `fread` calls in load are checked; missing or short reads return `false`. Canvas dimensions are validated before allocation: `w` and `h` must be in `[1, 4096]` and `frame_count > 0`. |
+| `panels/file_io_context.h` | Shared SDL3 async file dialog structs: `IOKind` enum + `PendingIO` struct (canvas/project I/O, used by `menu_bar.cpp`) and `PalIOKind` enum + `PalPendingIO` struct (palette I/O, used by `palette_panel.cpp`). Both follow the `active` flag + `kind` enum + `path` string pattern. |
 
 ## PIXC file format
 
