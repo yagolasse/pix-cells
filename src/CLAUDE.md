@@ -53,7 +53,7 @@ Key methods:
 | `active_layer_locked()` | Returns `bool` — true if the active layer has `locked=true`; use to guard all pixel-write operations |
 | `active_layers()` | Returns `vector<Layer>&` for the active frame's layer stack |
 | `composite_frame(idx, out)` | Composites `frames[idx]`'s visible layers into `out` (resized to `width*height`); does not touch `composite` or `dirty` — used by the timeline thumbnail renderer |
-| `rebuild_composite()` | Calls `composite_frame(active_frame, composite)`; sets `dirty=true` |
+| `rebuild_composite()` | Calls `composite_frame(active_frame, composite)`; sets `dirty=true`; also keeps `frame_revisions` in sync with the frame count and assigns a globally unique ID to `frame_revisions[active_frame]` for thumbnail cache invalidation |
 | `duplicate_frame(idx)` | `push_snapshot()`, inserts copy of `frames[idx]` after it, adjusts tag ranges, sets `active_frame`, `rebuild_composite()` |
 | `delete_frame(idx)` | No-ops if only one frame; else `push_snapshot()`, erases, adjusts/clamps tag ranges and `active_frame`, `rebuild_composite()` |
 | `push_snapshot()` | Pushes a `HistoryState` (full `frames` vector + `active_frame` + `active_layer`) onto `undo_stack`, clears `redo_stack` |
@@ -83,7 +83,7 @@ Key methods:
 | `workbench.h/cpp` | Fullscreen dockspace (`BeginWorkbench`) — calls `BuildDefaultLayout` automatically on first launch (when no ini node exists) before registering the DockSpace; docks 7 panels: Documents (full-width strip at top, split first so it spans the entire window), Tools, Tool Settings, Canvas, Color, Layers, Timeline; Log floats freely when toggled |
 | `log.h/cpp` | `Log(fmt,...)` — writes to `pix-cells.log` + 500-entry in-memory ring buffer |
 | `png_io.h/cpp` | `png_io::save(Canvas&, path)`, `png_io::load(Canvas&, path)` via stb_image; `png_io::save_sprite_sheet(CanvasState&, path, SheetLayout, cols)` — composites each frame and blits into a single PNG |
-| `pixc_io.h/cpp` | `pixc_io::save(AppState&, path)`, `pixc_io::load(AppState&, path)` — custom binary format (`PIXC` magic, version, frames + layers + pixels); `write_str(f, s)` and `read_str(f, s)` handle string serialization (1-byte length prefix, max 255 chars) |
+| `pixc_io.h/cpp` | `pixc_io::save(AppState&, path)`, `pixc_io::load(AppState&, path)` — custom binary format (`PIXC` magic, version, frames + layers + pixels); `write_str(f, s)` and `read_str(f, s)` handle string serialization (1-byte length prefix, max 255 chars). All `fread` calls in load are checked; missing or short reads return `false`. Canvas dimensions are validated before allocation: `w` and `h` must be in `[1, 4096]` and `frame_count > 0`. |
 
 ## PIXC file format
 

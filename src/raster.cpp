@@ -60,7 +60,7 @@ ColorSelectResult color_select(const Canvas& c, int sx, int sy, bool contiguous)
     if (!c.in_bounds(sx, sy)) return {0, 0, 0, 0, {}, false};
     uint32_t target = c.get(sx, sy);
     int w = c.width, h = c.height;
-    std::vector<bool> hit(w * h, false);
+    std::vector<bool> hit(static_cast<size_t>(w) * h, false);
     int x0 = sx, y0 = sy, x1 = sx, y1 = sy;
 
     if (contiguous) {
@@ -93,7 +93,7 @@ ColorSelectResult color_select(const Canvas& c, int sx, int sy, bool contiguous)
     }
 
     int bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-    std::vector<bool> mask(bw * bh, false);
+    std::vector<bool> mask(static_cast<size_t>(bw) * bh, false);
     for (int y = y0; y <= y1; y++)
         for (int x = x0; x <= x1; x++)
             if (hit[y * w + x])
@@ -127,6 +127,7 @@ void draw_ellipse(Canvas& c, int x0, int y0, int x1, int y1, uint32_t color, boo
 
 void nn_scale(const std::vector<uint32_t>& src, int sw, int sh,
               std::vector<uint32_t>& dst, int dw, int dh) {
+    if (dw <= 0 || dh <= 0) { dst.clear(); return; }
     dst.resize(static_cast<size_t>(dw) * dh);
     for (int y = 0; y < dh; y++)
         for (int x = 0; x < dw; x++)

@@ -94,6 +94,8 @@ add_executable(pix-cells
     src/workbench.cpp
     src/panels/menu_bar.cpp
     src/panels/canvas_panel.cpp
+    src/panels/canvas_overlay.cpp
+    src/panels/canvas_tools.cpp
     src/panels/tools_panel.cpp
     src/panels/tool_settings_panel.cpp
     src/panels/palette_panel.cpp

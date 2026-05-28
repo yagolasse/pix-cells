@@ -3,6 +3,8 @@
 #include "log.h"
 #include "raster.h"
 
+static uint64_t s_frame_rev_gen = 0; // monotonically increasing; assigned to frame_revisions entries
+
 CanvasState::CanvasState() {
     Frame f;
     Layer l;
@@ -43,8 +45,14 @@ void CanvasState::composite_frame(int frame_idx, std::vector<uint32_t>& out) con
 }
 
 void CanvasState::rebuild_composite() {
+    // Sync frame_revisions with current frame count; give new frames unique IDs
+    while (frame_revisions.size() < frames.size())
+        frame_revisions.push_back(++s_frame_rev_gen);
+    frame_revisions.resize(frames.size()); // truncate if frames were deleted
     composite_frame(active_frame, composite);
     dirty = true;
+    if (active_frame < (int)frame_revisions.size())
+        frame_revisions[active_frame] = ++s_frame_rev_gen;
 }
 
 void CanvasState::duplicate_frame(int idx) {

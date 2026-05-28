@@ -242,13 +242,134 @@ static bool test_v1_compat() {
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// Test 7 — truncated file (header present, palette and frames missing)
+// ---------------------------------------------------------------------------
+static bool test_truncated_file() {
+    const std::string path = tmp_path("test_pixc_truncated.pixc");
+    {
+        std::ofstream out(path, std::ios::binary);
+        const char magic[4] = {'P','I','X','C'};
+        uint16_t version = 2, w = 4, h = 4, frame_count = 1;
+        float fps = 12.0f;
+        out.write(magic, 4);
+        out.write(reinterpret_cast<const char*>(&version), 2);
+        out.write(reinterpret_cast<const char*>(&w), 2);
+        out.write(reinterpret_cast<const char*>(&h), 2);
+        out.write(reinterpret_cast<const char*>(&frame_count), 2);
+        out.write(reinterpret_cast<const char*>(&fps), 4);
+        // Deliberately omit palette and frames
+    }
+    AppState state;
+    bool result = pixc_io::load(state, path);
+    std::filesystem::remove(path);
+    if (result) { printf("  load should have returned false for truncated file\n"); return false; }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Test 8 — zero dimension rejected before any allocation
+// ---------------------------------------------------------------------------
+static bool test_zero_dimensions() {
+    const std::string path = tmp_path("test_pixc_zerodim.pixc");
+    {
+        std::ofstream out(path, std::ios::binary);
+        const char magic[4] = {'P','I','X','C'};
+        uint16_t version = 2, w = 0, h = 4, frame_count = 1;
+        float fps = 12.0f;
+        out.write(magic, 4);
+        out.write(reinterpret_cast<const char*>(&version), 2);
+        out.write(reinterpret_cast<const char*>(&w), 2);
+        out.write(reinterpret_cast<const char*>(&h), 2);
+        out.write(reinterpret_cast<const char*>(&frame_count), 2);
+        out.write(reinterpret_cast<const char*>(&fps), 4);
+    }
+    AppState state;
+    bool result = pixc_io::load(state, path);
+    std::filesystem::remove(path);
+    if (result) { printf("  load should have returned false for zero-dimension file\n"); return false; }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Test 9 — oversized dimension rejected (w > kMaxDim)
+// ---------------------------------------------------------------------------
+static bool test_oversized_dimensions() {
+    const std::string path = tmp_path("test_pixc_oversized.pixc");
+    {
+        std::ofstream out(path, std::ios::binary);
+        const char magic[4] = {'P','I','X','C'};
+        uint16_t version = 2, w = 5000, h = 5000, frame_count = 1;
+        float fps = 12.0f;
+        out.write(magic, 4);
+        out.write(reinterpret_cast<const char*>(&version), 2);
+        out.write(reinterpret_cast<const char*>(&w), 2);
+        out.write(reinterpret_cast<const char*>(&h), 2);
+        out.write(reinterpret_cast<const char*>(&frame_count), 2);
+        out.write(reinterpret_cast<const char*>(&fps), 4);
+    }
+    AppState state;
+    bool result = pixc_io::load(state, path);
+    std::filesystem::remove(path);
+    if (result) { printf("  load should have returned false for oversized dimensions\n"); return false; }
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Test 10 — partial pixel block (file truncated mid-layer)
+// ---------------------------------------------------------------------------
+static bool test_partial_pixels() {
+    const std::string path = tmp_path("test_pixc_partialpx.pixc");
+    {
+        std::ofstream out(path, std::ios::binary);
+        const char magic[4] = {'P','I','X','C'};
+        uint16_t version = 2, w = 4, h = 4, frame_count = 1;
+        float fps = 12.0f;
+        out.write(magic, 4);
+        out.write(reinterpret_cast<const char*>(&version), 2);
+        out.write(reinterpret_cast<const char*>(&w), 2);
+        out.write(reinterpret_cast<const char*>(&h), 2);
+        out.write(reinterpret_cast<const char*>(&frame_count), 2);
+        out.write(reinterpret_cast<const char*>(&fps), 4);
+        // Palette: 0 colors, empty name
+        uint16_t color_count = 0;
+        uint8_t  name_len    = 0;
+        out.write(reinterpret_cast<const char*>(&color_count), 2);
+        out.write(reinterpret_cast<const char*>(&name_len), 1);
+        // Frame 0: 100ms, 1 layer
+        uint16_t dur = 100, layer_count = 1;
+        out.write(reinterpret_cast<const char*>(&dur), 2);
+        out.write(reinterpret_cast<const char*>(&layer_count), 2);
+        // Layer attributes
+        uint8_t vis = 1, lock = 0, blend = 0;
+        float   op  = 1.0f;
+        out.write(reinterpret_cast<const char*>(&name_len), 1); // empty layer name
+        out.write(reinterpret_cast<const char*>(&vis), 1);
+        out.write(reinterpret_cast<const char*>(&lock), 1);
+        out.write(reinterpret_cast<const char*>(&op), 4);
+        out.write(reinterpret_cast<const char*>(&blend), 1);
+        // Write only 8 of the required 4*4*4=64 pixel bytes
+        const uint32_t partial[2] = {0xFF0000FFu, 0xFF00FF00u};
+        out.write(reinterpret_cast<const char*>(partial), 8);
+    }
+    AppState state;
+    bool result = pixc_io::load(state, path);
+    std::filesystem::remove(path);
+    if (result) { printf("  load should have returned false for partial pixel block\n"); return false; }
+    return true;
+}
+
 int main() {
     TestRunner t;
-    t.run("minimal_roundtrip", test_minimal_roundtrip);
-    t.run("multiframe",        test_multiframe);
-    t.run("bad_magic",         test_bad_magic);
-    t.run("tags_roundtrip",    test_tags_roundtrip);
-    t.run("tag_clamping",      test_tag_clamping);
-    t.run("v1_compat",         test_v1_compat);
+    t.run("minimal_roundtrip",      test_minimal_roundtrip);
+    t.run("multiframe",             test_multiframe);
+    t.run("bad_magic",              test_bad_magic);
+    t.run("tags_roundtrip",         test_tags_roundtrip);
+    t.run("tag_clamping",           test_tag_clamping);
+    t.run("v1_compat",              test_v1_compat);
+    t.run("truncated_file",         test_truncated_file);
+    t.run("zero_dimensions",        test_zero_dimensions);
+    t.run("oversized_dimensions",   test_oversized_dimensions);
+    t.run("partial_pixels",         test_partial_pixels);
     return t.result();
 }

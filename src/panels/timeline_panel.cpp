@@ -13,9 +13,12 @@
 static bool   s_playing       = false;
 static double s_next_frame_at = 0.0;
 
-// Per-frame preview textures (RGBA8, sized to canvas), rebuilt every frame.
-static std::vector<GLuint> s_thumbs;
-static int                 s_thumb_w = 0, s_thumb_h = 0;
+// Per-frame preview textures (RGBA8, sized to canvas). Only recomposited when a
+// frame's revision counter changes (tracked via CanvasState::frame_revisions).
+static std::vector<GLuint>        s_thumbs;
+static std::vector<uint64_t>      s_seen_revisions;
+static int                        s_thumb_w = 0, s_thumb_h = 0;
+static const CanvasState*         s_last_cs = nullptr; // detects document switches
 
 // Returns true if this frame card was clicked
 static bool draw_frame_card(int idx, bool is_active, bool in_range,
@@ -95,15 +98,23 @@ static void draw_add_card() {
     ImGui::InvisibleButton("##add_card", { card_w, card_h });
 }
 
-// Refresh the per-frame preview textures, allocating/freeing as the frame
-// count or canvas size changes. Re-uploads every frame — cheap at pixel-art sizes.
+// Refresh per-frame preview textures. Only recomposites frames whose revision
+// counter changed since the last upload.
 static void update_thumbnails(CanvasState& cs) {
     int cw = cs.width(), ch = cs.height();
     if (cw <= 0 || ch <= 0) return;
+
+    // Document switch: force all thumbnails to rebuild
+    if (&cs != s_last_cs) {
+        s_seen_revisions.clear();
+        s_last_cs = &cs;
+    }
+
     if (s_thumb_w != cw || s_thumb_h != ch) {
         if (!s_thumbs.empty())
             glDeleteTextures((GLsizei)s_thumbs.size(), s_thumbs.data());
         s_thumbs.clear();
+        s_seen_revisions.clear(); // force full rebuild after resize
         s_thumb_w = cw;
         s_thumb_h = ch;
     }
@@ -112,6 +123,7 @@ static void update_thumbnails(CanvasState& cs) {
     if ((int)s_thumbs.size() < nframes) {
         size_t old = s_thumbs.size();
         s_thumbs.resize(nframes, 0);
+        s_seen_revisions.resize(nframes, 0); // 0 never matches a frame_revisions entry
         glGenTextures((GLsizei)(nframes - old), s_thumbs.data() + old);
         for (size_t i = old; i < s_thumbs.size(); i++) {
             glBindTexture(GL_TEXTURE_2D, s_thumbs[i]);
@@ -122,13 +134,18 @@ static void update_thumbnails(CanvasState& cs) {
     } else if ((int)s_thumbs.size() > nframes) {
         glDeleteTextures((GLsizei)(s_thumbs.size() - nframes), s_thumbs.data() + nframes);
         s_thumbs.resize(nframes);
+        s_seen_revisions.resize(nframes);
     }
 
     static std::vector<uint32_t> buf;
     for (int i = 0; i < nframes; i++) {
+        uint64_t cur = (i < (int)cs.frame_revisions.size()) ? cs.frame_revisions[i] : 0;
+        if (i < (int)s_seen_revisions.size() && s_seen_revisions[i] == cur) continue;
         cs.composite_frame(i, buf);
         glBindTexture(GL_TEXTURE_2D, s_thumbs[i]);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cw, ch, GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+        if (i < (int)s_seen_revisions.size())
+            s_seen_revisions[i] = cur;
     }
 }
 

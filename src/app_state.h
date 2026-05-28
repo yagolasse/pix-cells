@@ -38,7 +38,8 @@ struct CanvasState {
     int                            active_frame = 0;
     int                            active_layer = 0;
     float                          fps          = 12.0f;
-    std::vector<uint32_t>          composite;   // blended result for GPU upload
+    std::vector<uint32_t>          composite;        // blended result for GPU upload
+    std::vector<uint64_t>          frame_revisions;  // per-frame change counter for thumbnail caching
     float                          zoom         = 8.0f;
     ImVec2                         pan          = { 0.0f, 0.0f };
     bool                           dirty        = true;

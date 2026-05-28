@@ -117,16 +117,25 @@ bool pixc_io::load(AppState& state, const std::string& path) {
         return false;
     }
 
+    // Checked fread: returns false if fewer than n items were read.
+    auto frd = [f](void* ptr, size_t sz, size_t n) -> bool {
+        return fread(ptr, sz, n, f) == n;
+    };
+
     // HEADER
     char magic[4] = {};
-    if (fread(magic, 1, 4, f) != 4 || memcmp(magic, "PIXC", 4) != 0) {
+    if (!frd(magic, 1, 4) || memcmp(magic, "PIXC", 4) != 0) {
         Log("pixc_io::load: bad magic in \"%s\"", path.c_str());
         fclose(f);
         return false;
     }
 
     uint16_t version = 0;
-    fread(&version, sizeof(uint16_t), 1, f);
+    if (!frd(&version, sizeof(uint16_t), 1)) {
+        Log("pixc_io::load: truncated header in \"%s\"", path.c_str());
+        fclose(f);
+        return false;
+    }
     if (version < 1 || version > 2) {
         Log("pixc_io::load: unsupported version %d in \"%s\"", (int)version, path.c_str());
         fclose(f);
@@ -135,22 +144,42 @@ bool pixc_io::load(AppState& state, const std::string& path) {
 
     uint16_t w = 0, h = 0, frame_count = 0;
     float    fps = 12.0f;
-    fread(&w,           sizeof(uint16_t), 1, f);
-    fread(&h,           sizeof(uint16_t), 1, f);
-    fread(&frame_count, sizeof(uint16_t), 1, f);
-    fread(&fps,         sizeof(float),    1, f);
+    if (!frd(&w, sizeof(uint16_t), 1) || !frd(&h, sizeof(uint16_t), 1) ||
+        !frd(&frame_count, sizeof(uint16_t), 1) || !frd(&fps, sizeof(float), 1)) {
+        Log("pixc_io::load: truncated header in \"%s\"", path.c_str());
+        fclose(f);
+        return false;
+    }
+
+    constexpr uint16_t kMaxDim = 4096;
+    if (w == 0 || h == 0 || w > kMaxDim || h > kMaxDim || frame_count == 0) {
+        Log("pixc_io::load: invalid dimensions or frame count (%dx%d, %d frames) in \"%s\"",
+            (int)w, (int)h, (int)frame_count, path.c_str());
+        fclose(f);
+        return false;
+    }
 
     // PALETTE
     uint16_t color_count = 0;
-    fread(&color_count, sizeof(uint16_t), 1, f);
+    if (!frd(&color_count, sizeof(uint16_t), 1)) {
+        Log("pixc_io::load: truncated palette in \"%s\"", path.c_str());
+        fclose(f);
+        return false;
+    }
     state.palette().swatches.resize(color_count);
     for (auto& c : state.palette().swatches) {
-        fread(&c.x, sizeof(float), 1, f);
-        fread(&c.y, sizeof(float), 1, f);
-        fread(&c.z, sizeof(float), 1, f);
-        fread(&c.w, sizeof(float), 1, f);
+        if (!frd(&c.x, sizeof(float), 1) || !frd(&c.y, sizeof(float), 1) ||
+            !frd(&c.z, sizeof(float), 1) || !frd(&c.w, sizeof(float), 1)) {
+            Log("pixc_io::load: truncated palette colors in \"%s\"", path.c_str());
+            fclose(f);
+            return false;
+        }
     }
-    read_str(f, state.palette().palette_name);
+    if (!read_str(f, state.palette().palette_name)) {
+        Log("pixc_io::load: truncated palette name in \"%s\"", path.c_str());
+        fclose(f);
+        return false;
+    }
 
     // Reset canvas
     state.canvas().new_canvas((int)w, (int)h);
@@ -162,8 +191,11 @@ bool pixc_io::load(AppState& state, const std::string& path) {
     for (int fi = 0; fi < (int)frame_count; fi++) {
         uint16_t dur         = 100;
         uint16_t layer_count = 0;
-        fread(&dur,         sizeof(uint16_t), 1, f);
-        fread(&layer_count, sizeof(uint16_t), 1, f);
+        if (!frd(&dur, sizeof(uint16_t), 1) || !frd(&layer_count, sizeof(uint16_t), 1)) {
+            Log("pixc_io::load: truncated frame header at frame %d in \"%s\"", fi, path.c_str());
+            fclose(f);
+            return false;
+        }
 
         Frame frame;
         frame.duration_ms = dur;
@@ -173,19 +205,29 @@ bool pixc_io::load(AppState& state, const std::string& path) {
             Layer layer;
             layer.canvas = Canvas((int)w, (int)h);
 
-            read_str(f, layer.name);
+            if (!read_str(f, layer.name)) {
+                Log("pixc_io::load: truncated layer name at frame %d layer %d in \"%s\"", fi, li, path.c_str());
+                fclose(f);
+                return false;
+            }
 
             uint8_t vis = 1, lock = 0, blend = 0;
             float   op  = 1.0f;
-            fread(&vis,   1,             1, f);
-            fread(&lock,  1,             1, f);
-            fread(&op,    sizeof(float), 1, f);
-            fread(&blend, 1,             1, f);
+            if (!frd(&vis, 1, 1) || !frd(&lock, 1, 1) ||
+                !frd(&op, sizeof(float), 1) || !frd(&blend, 1, 1)) {
+                Log("pixc_io::load: truncated layer attributes at frame %d layer %d in \"%s\"", fi, li, path.c_str());
+                fclose(f);
+                return false;
+            }
             layer.visible    = (vis  != 0);
             layer.locked     = (lock != 0);
             layer.opacity    = op;
             layer.blend_mode = blend;
-            fread(layer.canvas.pixels.data(), sizeof(uint32_t), (size_t)(w * h), f);
+            if (!frd(layer.canvas.pixels.data(), sizeof(uint32_t), (size_t)w * h)) {
+                Log("pixc_io::load: truncated pixel data at frame %d layer %d in \"%s\"", fi, li, path.c_str());
+                fclose(f);
+                return false;
+            }
             frame.layers.push_back(std::move(layer));
         }
 
@@ -197,21 +239,32 @@ bool pixc_io::load(AppState& state, const std::string& path) {
     state.canvas().active_tag = -1;
     if (version >= 2) {
         uint16_t tag_count = 0;
-        fread(&tag_count, sizeof(uint16_t), 1, f);
+        if (!frd(&tag_count, sizeof(uint16_t), 1)) {
+            Log("pixc_io::load: truncated tags block in \"%s\"", path.c_str());
+            fclose(f);
+            return false;
+        }
         state.canvas().tags.reserve(tag_count);
         int last = (int)frame_count - 1;
         for (int ti = 0; ti < (int)tag_count; ti++) {
             AnimTag t;
-            read_str(f, t.name);
             uint16_t ts = 0, te = 0;
-            fread(&ts, sizeof(uint16_t), 1, f);
-            fread(&te, sizeof(uint16_t), 1, f);
+            if (!read_str(f, t.name) ||
+                !frd(&ts, sizeof(uint16_t), 1) || !frd(&te, sizeof(uint16_t), 1)) {
+                Log("pixc_io::load: truncated tag %d in \"%s\"", ti, path.c_str());
+                fclose(f);
+                return false;
+            }
             t.start = std::clamp((int)ts, 0, last);
             t.end   = std::clamp((int)te, t.start, last);
             state.canvas().tags.push_back(std::move(t));
         }
         int16_t active_tag = -1;
-        fread(&active_tag, sizeof(int16_t), 1, f);
+        if (!frd(&active_tag, sizeof(int16_t), 1)) {
+            Log("pixc_io::load: truncated active_tag in \"%s\"", path.c_str());
+            fclose(f);
+            return false;
+        }
         int at = (int)active_tag;
         state.canvas().active_tag = (at >= 0 && at < (int)state.canvas().tags.size()) ? at : -1;
     }
