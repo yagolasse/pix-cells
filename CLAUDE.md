@@ -27,6 +27,15 @@ cmake --build build --target lint
 - **Always build and run tests after every code change** — both must pass before reporting done.
 - **Always update the docs (CLAUDE.md files) after code changes**
 
+## Refactoring Status
+
+All 35 audit findings are complete (see `REFACTOR_PLAN.md` for details). Notable recent changes:
+- **Blend optimization**: Moved per-pixel float division to a compile-time LUT (`k_u8f`) in `blend.h`, reducing hot-path overhead. Blending math corrected for proper Porter-Duff behavior.
+- **Selection extraction**: Moved `lift_selection()` and `commit_floating()` to new `selection.cpp` file, out of `canvas_state.cpp`.
+- **Logging coverage**: Added ~40 `Log()` calls throughout the UI for debugging and user feedback (layer edits, tool settings, file I/O, palette operations, etc.).
+- **Input safety**: Tool shortcuts now blocked during active layer rename dialogs via `layers_panel_is_renaming()`.
+- **Paste as selection**: Pasting now creates an active selection, allowing users to move/scale before committing.
+
 ## Palette File Formats to Implement
 
 Priority order for import/export support:

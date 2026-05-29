@@ -153,18 +153,11 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
                 }
             }
         } else if ((tools.active_tool >= tool::Line && tools.active_tool <= tool::FilledCircle) ||
-                   tools.active_tool == tool::Move || tools.active_tool == tool::RectSelect) {
+                   tools.active_tool == tool::Move || tools.active_tool == tool::RectSelect ||
+                   tools.active_tool == tool::ColorPicker) {
             // Drag-start handled by the unified window-rect block below
             drs.was_painting = false;
             drs.last_px      = {-1.0f, -1.0f};
-        } else if (tools.active_tool == tool::ColorPicker) {
-            drs.was_painting = false;
-            drs.last_px      = {-1.0f, -1.0f};
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
-                uint32_t picked = cs.active().get(px, py);
-                palette.primary_color = ImGui::ColorConvertU32ToFloat4(picked);
-                Log("Color pick at (%d,%d) #%08X", px, py, picked);
-            }
         } else if (tools.active_tool == tool::ColorSelect) {
             drs.was_painting = false;
             drs.last_px      = {-1.0f, -1.0f};
@@ -308,6 +301,11 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
                 }
             }
         }
+        if (tools.active_tool == tool::ColorPicker && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && cs.active().in_bounds(px, py)) {
+            uint32_t picked = cs.composite[(py * cs.width()) + px];
+            palette.primary_color = ImGui::ColorConvertU32ToFloat4(picked);
+            Log("Color pick at (%d,%d) #%08X", px, py, picked);
+        }
         } // if (mouse_in_win && !any_popup)
     }
 
@@ -371,8 +369,8 @@ void handle_canvas_tool_input(CanvasToolInputCtx& ctx) {
                 int ay = std::min(drs.drag.shape_sy, py);
                 int bx = std::max(drs.drag.shape_sx, px);
                 int by = std::max(drs.drag.shape_sy, py);
-                sel.active = (ax != bx || ay != by);
-                if (sel.active) { sel.x0 = ax; sel.y0 = ay; sel.x1 = bx; sel.y1 = by; }
+                sel.active = true;
+                sel.x0 = ax; sel.y0 = ay; sel.x1 = bx; sel.y1 = by;
             }
         } else {
             uint32_t color = ImGui::ColorConvertFloat4ToU32(palette.primary_color);

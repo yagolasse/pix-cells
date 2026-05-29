@@ -1,4 +1,5 @@
 #include "cursor_manager.h"
+#include "log.h"
 #include <SDL3/SDL.h>
 #include <lunasvg.h>
 #include <string>
@@ -37,6 +38,8 @@ namespace {
         memcpy(surf->pixels, bm.data(), CURSOR_SIZE * CURSOR_SIZE * 4);
         SDL_Cursor* cursor = SDL_CreateColorCursor(surf, hotx, hoty);
         SDL_DestroySurface(surf);
+        if (!cursor)
+            Log("cursor_manager: SDL_CreateColorCursor failed for %s: %s", name, SDL_GetError());
         return cursor;
     }
 }

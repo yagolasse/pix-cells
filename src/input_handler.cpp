@@ -2,20 +2,23 @@
 #include "app_state.h"
 #include "log.h"
 #include "imgui.h"
+#include "panels/layers_panel.h"
 #include <algorithm>
 
 namespace input_handler {
 
 static void fill_clipboard(SelectionState& sel, const Canvas& c) {
     int sw = sel.width(), sh = sel.height();
-    sel.clipboard.resize(static_cast<size_t>(sw) * sh);
+    size_t needed = static_cast<size_t>(sw) * sh;
+    if (sel.clipboard.size() != needed)
+        sel.clipboard.resize(needed);
     sel.clipboard_w  = sw;
     sel.clipboard_h  = sh;
     sel.clipboard_ox = sel.x0;
     sel.clipboard_oy = sel.y0;
     for (int y = 0; y < sh; y++)
         for (int x = 0; x < sw; x++)
-            sel.clipboard[y * sw + x] =
+            sel.clipboard[(y * sw) + x] =
                 sel.mask_selected(sel.x0 + x, sel.y0 + y)
                 ? c.get(sel.x0 + x, sel.y0 + y)
                 : 0x00000000u;
@@ -23,7 +26,7 @@ static void fill_clipboard(SelectionState& sel, const Canvas& c) {
 
 void handle_keyboard(AppState& app) {
     bool any_popup = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
-    if (!any_popup) {
+    if (!any_popup && !layers_panel_is_renaming()) {
 
     if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z))
         app.canvas().undo();
@@ -116,14 +119,21 @@ void handle_keyboard(AppState& app) {
             if (app.canvas().active_layer_locked()) {
                 Log("Layer locked");
             } else {
+                SelectionState& sel = app.selection();
+                int ox = sel.active ? sel.x0 : sel.clipboard_ox;
+                int oy = sel.active ? sel.y0 : sel.clipboard_oy;
                 app.canvas().push_snapshot();
                 Canvas& c = app.canvas().active();
-                for (int y = 0; y < app.selection().clipboard_h; y++)
-                    for (int x = 0; x < app.selection().clipboard_w; x++)
-                        c.set(app.selection().clipboard_ox + x, app.selection().clipboard_oy + y,
-                              app.selection().clipboard[y * app.selection().clipboard_w + x]);
+                for (int y = 0; y < sel.clipboard_h; y++)
+                    for (int x = 0; x < sel.clipboard_w; x++)
+                        c.set(ox + x, oy + y, sel.clipboard[(y * sel.clipboard_w) + x]);
                 app.canvas().rebuild_composite();
-                Log("Paste: %dx%d", app.selection().clipboard_w, app.selection().clipboard_h);
+                sel.active = true;
+                sel.x0 = ox; sel.y0 = oy;
+                sel.x1 = ox + sel.clipboard_w - 1;
+                sel.y1 = oy + sel.clipboard_h - 1;
+                sel.mask.clear();
+                Log("Paste: %dx%d at (%d,%d)", sel.clipboard_w, sel.clipboard_h, ox, oy);
             }
         }
 
@@ -178,7 +188,7 @@ void handle_keyboard(AppState& app) {
             }
         }
     }
-    } // !any_popup
+    } // !any_popup && !renaming
 }
 
 } // namespace input_handler

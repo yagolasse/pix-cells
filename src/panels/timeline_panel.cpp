@@ -230,8 +230,10 @@ void panels::DrawTimeline(CanvasState& cs) {
     // Editable FPS + frame count
     int fps_i = (int)cs.fps;
     ImGui::SetNextItemWidth(ui_scale::px(70.0f));
-    if (ImGui::DragInt("FPS", &fps_i, 0.2f, 1, 60))
+    if (ImGui::DragInt("FPS", &fps_i, 0.2f, 1, 60)) {
         cs.fps = (float)std::clamp(fps_i, 1, 60);
+        Log("FPS: %d", fps_i);
+    }
     ImGui::SameLine(0, 8);
     ImGui::Text("Frames: %d", (int)cs.frames.size());
 
@@ -243,12 +245,16 @@ void panels::DrawTimeline(CanvasState& cs) {
         : "All frames";
     ImGui::SetNextItemWidth(ui_scale::px(120.0f));
     if (ImGui::BeginCombo("##tag", tag_preview)) {
-        if (ImGui::Selectable("All frames", cs.active_tag < 0))
+        if (ImGui::Selectable("All frames", cs.active_tag < 0)) {
             cs.active_tag = -1;
+            Log("Tag: all frames");
+        }
         for (int t = 0; t < (int)cs.tags.size(); t++) {
             ImGui::PushID(t);
-            if (ImGui::Selectable(cs.tags[t].name.c_str(), cs.active_tag == t))
+            if (ImGui::Selectable(cs.tags[t].name.c_str(), cs.active_tag == t)) {
                 cs.active_tag = t;
+                Log("Tag: \"%s\"", cs.tags[t].name.c_str());
+            }
             ImGui::PopID();
         }
         ImGui::EndCombo();
@@ -286,6 +292,7 @@ void panels::DrawTimeline(CanvasState& cs) {
             ImGui::PopID();
         }
         if (del >= 0) {
+            Log("Tag deleted: \"%s\"", cs.tags[del].name.c_str());
             cs.tags.erase(cs.tags.begin() + del);
             if (cs.active_tag == del)      cs.active_tag = -1;
             else if (cs.active_tag > del)  cs.active_tag--;
@@ -296,6 +303,7 @@ void panels::DrawTimeline(CanvasState& cs) {
             nt.start = 0;
             nt.end   = last;
             cs.tags.push_back(nt);
+            Log("Tag added");
         }
         ImGui::EndPopup();
     }

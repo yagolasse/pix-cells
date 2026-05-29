@@ -7,6 +7,10 @@
 #include <cstring>
 #include <string>
 
+static bool s_renaming_active = false;
+
+bool layers_panel_is_renaming() { return s_renaming_active; }
+
 static void push_ghost_style() {
     ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.08f));
@@ -49,7 +53,9 @@ void panels::DrawLayers(CanvasState& cs) {
     if (ImGui::ImageButton("##ladd", icon_manager::get("add"), {btn_sz, btn_sz})) {
         cs.push_snapshot();
         Layer l;
-        l.name   = "Layer " + std::to_string(layers.size() + 1);
+        l.name.reserve(12);
+        l.name  = "Layer ";
+        l.name += std::to_string(layers.size() + 1);
         l.canvas = Canvas(cs.width(), cs.height());
         layers.insert(layers.begin() + cs.active_layer + 1, std::move(l));
         cs.active_layer++;
@@ -96,6 +102,8 @@ void panels::DrawLayers(CanvasState& cs) {
 
     if (renaming_layer >= (int)layers.size())
         renaming_layer = -1;
+
+    s_renaming_active = (renaming_layer != -1);
 
     const float op_w = ImGui::CalcTextSize("100%").x + 4.0f;
     int dnd_src = -1, dnd_dst = -1;
@@ -220,6 +228,7 @@ void panels::DrawLayers(CanvasState& cs) {
         if (ImGui::SliderInt("##opacity", &op_pct, 0, 100, "Opacity: %d%%")) {
             layer.opacity = pct_opacity(op_pct);
             cs.rebuild_composite();
+            Log("Layer \"%s\" opacity: %d%%", layer.name.c_str(), op_pct);
         }
 
         ImGui::Spacing();
@@ -231,6 +240,7 @@ void panels::DrawLayers(CanvasState& cs) {
         if (ImGui::Combo("##blend", &blend_idx, blend_modes, IM_ARRAYSIZE(blend_modes))) {
             layer.blend_mode = (uint8_t)blend_idx;
             cs.rebuild_composite();
+            Log("Layer \"%s\" blend: %s", layer.name.c_str(), blend_modes[blend_idx]);
         }
     }
 

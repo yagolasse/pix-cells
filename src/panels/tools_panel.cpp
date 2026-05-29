@@ -1,4 +1,5 @@
 #include "tools_panel.h"
+#include "log.h"
 #include "imgui.h"
 #include "icon_manager.h"
 #include "ui_scale.h"
@@ -54,6 +55,7 @@ void panels::DrawTools(AppState& app) {
                 sel.mask.clear();
             }
             state.active_tool = i;
+            Log("Tool: %s", tool_defs[i].tip);
         }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", tool_defs[i].tip);
@@ -81,8 +83,10 @@ void panels::DrawTools(AppState& app) {
     for (auto& v : view_defs) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pad);
         bool active = *v.val;
-        if (active_icon_btn(v.tip, icon_manager::get(active ? v.icon_on : v.icon_off), ICON, active))
+        if (active_icon_btn(v.tip, icon_manager::get(active ? v.icon_on : v.icon_off), ICON, active)) {
             *v.val = !*v.val;
+            Log("%s: %s", v.tip, *v.val ? "on" : "off");
+        }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", v.tip);
     }

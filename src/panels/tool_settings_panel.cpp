@@ -1,4 +1,5 @@
 #include "tool_settings_panel.h"
+#include "log.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "icon_manager.h"
@@ -40,7 +41,8 @@ void panels::DrawToolSettings(ToolsState& state) {
         ImGui::SameLine();
         const char* sym_modes[] = {"Horizontal", "Vertical", "Both"};
         ImGui::SetNextItemWidth(ui_scale::px(90.0f));
-        ImGui::Combo("##sym_mode", &state.symmetry_mode, sym_modes, 3);
+        if (ImGui::Combo("##sym_mode", &state.symmetry_mode, sym_modes, 3))
+            Log("Symmetry: %s", sym_modes[state.symmetry_mode]);
         first = false;
     }
 
@@ -55,7 +57,8 @@ void panels::DrawToolSettings(ToolsState& state) {
         ImGui::SameLine();
         const char* modes[] = {"Both", "Previous", "Next"};
         ImGui::SetNextItemWidth(ui_scale::px(80.0f));
-        ImGui::Combo("##onion_mode", &state.onion_skin_mode, modes, 3);
+        if (ImGui::Combo("##onion_mode", &state.onion_skin_mode, modes, 3))
+            Log("Onion: %s", modes[state.onion_skin_mode]);
         first = false;
     }
 
@@ -83,13 +86,17 @@ void panels::DrawToolSettings(ToolsState& state) {
         const float FP = ui_scale::px(4.0f);
         const float SZ = ui_scale::px(22.0f * 0.75f);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FP, FP));
-        if (active_icon_btn("##bsh0", icon_manager::get("square_filled"), SZ, !state.circle_brush))
+        if (active_icon_btn("##bsh0", icon_manager::get("square_filled"), SZ, !state.circle_brush)) {
             state.circle_brush = false;
+            Log("Brush: square");
+        }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Square brush");
         ImGui::SameLine();
-        if (active_icon_btn("##bsh1", icon_manager::get("circle_filled"), SZ, state.circle_brush))
+        if (active_icon_btn("##bsh1", icon_manager::get("circle_filled"), SZ, state.circle_brush)) {
             state.circle_brush = true;
+            Log("Brush: circle");
+        }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Circle brush");
         ImGui::PopStyleVar();

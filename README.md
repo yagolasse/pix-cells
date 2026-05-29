@@ -18,6 +18,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 | `M` | Move — pan the canvas |
 | `S` | Rect Select — drag to select; lift, move, and scale the selection |
 | `W` | Color Select — select all pixels of the same color (contiguous or global mode) |
+| `P` | Color Picker — sample a color from the composited canvas (respects layer blending and visibility) |
 | `[` / `]` | Decrease / Increase brush size |
 
 ### Layers
@@ -30,7 +31,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 - **Rectangular selection** (Rect Select tool) with marching-ants overlay
 - **Color-based selection** (Color Select tool) — select pixels by color with contiguous (connected) or global mode
 - Lift selection to a floating buffer — move and nearest-neighbour scale via 8 resize handles
-- `Ctrl+A` select all · `Ctrl+C/X` copy/cut · `Ctrl+V` paste · `Delete` erase · `Esc` cancel
+- `Ctrl+A` select all · `Ctrl+C/X` copy/cut · `Ctrl+V` paste (creates floating selection ready to move/scale) · `Delete` erase · `Esc` cancel
 
 ### Animation
 - Multi-frame timeline with per-frame duration
@@ -42,6 +43,7 @@ A pixel art editor built in C++20 with Dear ImGui.
 
 ### Palette
 - HSV / RGB / HEX color picker
+- Current/previous color swatches with checkerboard background for transparency visibility
 - 8-column swatch grid with add, remove, and sort
 - Recent colors row (last 8 used)
 - Ships with a built-in PICO-8 palette

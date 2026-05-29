@@ -1,5 +1,6 @@
 #include "menu_bar.h"
 #include "file_io_context.h"
+#include "log.h"
 #include "imgui.h"
 #include "pixc_io.h"
 #include "ui_scale.h"
@@ -117,7 +118,10 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
                 state.active_doc = s_pending.doc_idx;
             Canvas tmp(state.canvas().width(), state.canvas().height());
             tmp.pixels = state.canvas().composite;
-            png_io::save(tmp, s_pending.path);
+            if (png_io::save(tmp, s_pending.path))
+                Log("PNG export: \"%s\"", s_pending.path.c_str());
+            else
+                Log("PNG export failed: \"%s\"", s_pending.path.c_str());
             state.active_doc = prev;
             break;
         }
@@ -354,6 +358,7 @@ bool panels::DrawMenuBar(AppState& state, SDL_Window* window, bool& show_log, bo
         if (ImGui::Combo("##uiscale", &sel, scale_labels, 5)) {
             ui_scale::apply(scale_values[sel]);
             ui_scale::save();
+            Log("UI scale: %s", scale_labels[sel]);
         }
         ImGui::Spacing();
         if (ImGui::Button("Close")) ImGui::CloseCurrentPopup();

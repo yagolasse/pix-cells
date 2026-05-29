@@ -104,8 +104,8 @@ void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const ToolsState& 
         ImU32 col_a = blink ? IM_COL32(255,255,255,255) : IM_COL32(0,0,0,255);
         ImU32 col_b = blink ? IM_COL32(0,0,0,255) : IM_COL32(255,255,255,255);
         if (sel.mask.empty()) {
-            ImVec2 sp1 = {origin.x + sel.x0 * cs.zoom,       origin.y + sel.y0 * cs.zoom};
-            ImVec2 sp2 = {origin.x + (sel.x1 + 1) * cs.zoom, origin.y + (sel.y1 + 1) * cs.zoom};
+            ImVec2 sp1 = {origin.x + static_cast<float>(sel.x0) * cs.zoom,       origin.y + static_cast<float>(sel.y0) * cs.zoom};
+            ImVec2 sp2 = {origin.x + static_cast<float>(sel.x1 + 1) * cs.zoom, origin.y + static_cast<float>(sel.y1 + 1) * cs.zoom};
             dl->AddRect(sp1, sp2, col_a, 0, 0, 1.5f);
             dl->AddRect({sp1.x+1,sp1.y+1},{sp2.x-1,sp2.y-1}, col_b, 0, 0, 1.0f);
         } else {
@@ -158,10 +158,10 @@ void draw_canvas_decorations(ImDrawList* dl, CanvasState& cs, const ToolsState& 
     // Selection resize handles — 8 handles around the bounding rect
     // Layout: TL=0 TM=1 TR=2 RM=3 BR=4 BM=5 BL=6 LM=7
     if (sel.active && tools.active_tool == tool::RectSelect) {
-        float sx0 = origin.x + sel.x0 * cs.zoom;
-        float sy0 = origin.y + sel.y0 * cs.zoom;
-        float sx1 = origin.x + (sel.x1 + 1) * cs.zoom;
-        float sy1 = origin.y + (sel.y1 + 1) * cs.zoom;
+        float sx0 = origin.x + static_cast<float>(sel.x0) * cs.zoom;
+        float sy0 = origin.y + static_cast<float>(sel.y0) * cs.zoom;
+        float sx1 = origin.x + static_cast<float>(sel.x1 + 1) * cs.zoom;
+        float sy1 = origin.y + static_cast<float>(sel.y1 + 1) * cs.zoom;
         float scx = (sx0 + sx1) * 0.5f, scy = (sy0 + sy1) * 0.5f;
         hpos[0]={sx0,sy0}; hpos[1]={scx,sy0}; hpos[2]={sx1,sy0}; hpos[3]={sx1,scy};
         hpos[4]={sx1,sy1}; hpos[5]={scx,sy1}; hpos[6]={sx0,sy1}; hpos[7]={sx0,scy};

@@ -1,5 +1,6 @@
 #include "app_state.h"
 
+// RGB-only input; palette colors are always fully opaque.
 static ImVec4 hex_to_imvec4(uint32_t rgb) {
     return {static_cast<float>((rgb >> 16) & 0xFF) / 255.0f,
             static_cast<float>((rgb >> 8) & 0xFF) / 255.0f,

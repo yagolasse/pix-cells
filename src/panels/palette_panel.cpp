@@ -6,10 +6,27 @@
 #include "icon_manager.h"
 #include "ui_scale.h"
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+
+// ── Checkerboard texture for transparent color swatches ─────────────────────
+
+static GLuint s_swatch_ck = 0;
+
+static void ensure_swatch_checker() {
+    if (s_swatch_ck) return;
+    glGenTextures(1, &s_swatch_ck);
+    glBindTexture(GL_TEXTURE_2D, s_swatch_ck);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    uint32_t px[4] = {0xFFCCCCCC, 0xFF888888, 0xFF888888, 0xFFCCCCCC};
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, px);
+}
 
 // ── Palette file I/O (async SDL dialog) ──────────────────────────────────────
 
@@ -107,6 +124,23 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
         const float h      = ui_scale::px(34.0f);
         const float sw_w   = avail - swap_w - ImGui::GetStyle().ItemSpacing.x;
         ImVec2 p           = ImGui::GetCursorScreenPos();
+
+        // Checkerboard behind each half so transparent colors show through
+        ensure_swatch_checker();
+        dl->AddCallback([](const ImDrawList*, const ImDrawCmd*) {
+            using Fn = void(*)(GLuint, GLuint);
+            static auto fn = reinterpret_cast<Fn>(SDL_GL_GetProcAddress("glBindSampler"));
+            if (fn) fn(0, 0);
+        }, nullptr);
+        {
+            float cell = ui_scale::px(4.0f);
+            float pw   = sw_w * 0.5f;
+            auto  ck   = (ImTextureID)(intptr_t)s_swatch_ck;
+            dl->AddImageRounded(ck, p, {p.x + pw, p.y + h},
+                {0,0}, {pw/(2*cell), h/(2*cell)}, IM_COL32_WHITE, 3.0f, ImDrawFlags_RoundCornersLeft);
+            dl->AddImageRounded(ck, {p.x + pw, p.y}, {p.x + sw_w, p.y + h},
+                {0,0}, {pw/(2*cell), h/(2*cell)}, IM_COL32_WHITE, 3.0f, ImDrawFlags_RoundCornersRight);
+        }
 
         dl->AddRectFilled(p, {p.x + sw_w * 0.5f, p.y + h}, ImGui::ColorConvertFloat4ToU32(state.primary_color), 3.0f,
                           ImDrawFlags_RoundCornersLeft);
@@ -283,6 +317,7 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
                 snprintf(rename_buf, sizeof(rename_buf), "%s", state.palette_name.c_str());
             ImGui::SetNextItemWidth(ui_scale::px(120.0f));
             if (ImGui::InputText("Name##ren", rename_buf, sizeof(rename_buf), ImGuiInputTextFlags_EnterReturnsTrue)) {
+                Log("Palette renamed: \"%s\"", rename_buf);
                 state.palette_name = rename_buf;
                 ImGui::CloseCurrentPopup();
             }
@@ -339,6 +374,7 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
                 state.primary_color   = sc;
                 state.primary_color.w = 1.0f;
                 state.selected_swatch = i;
+                Log("Palette: #%02X%02X%02X", (int)(sc.x*255), (int)(sc.y*255), (int)(sc.z*255));
 
                 state.recent_colors.erase(
                     std::remove_if(state.recent_colors.begin(), state.recent_colors.end(),
@@ -371,11 +407,14 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
             ImVec4 c = pc;
             c.w      = 1.0f;
             state.swatches.push_back(c);
+            Log("Palette: added #%02X%02X%02X", (int)(pc.x*255), (int)(pc.y*255), (int)(pc.z*255));
         }
     }
     ImGui::SameLine();
     if (ImGui::SmallButton("Remove")) {
         if (state.selected_swatch >= 0 && state.selected_swatch < (int)state.swatches.size()) {
+            const ImVec4& rc = state.swatches[state.selected_swatch];
+            Log("Palette: removed #%02X%02X%02X", (int)(rc.x*255), (int)(rc.y*255), (int)(rc.z*255));
             state.swatches.erase(state.swatches.begin() + state.selected_swatch);
             if (state.swatches.empty())
                 state.selected_swatch = -1;
@@ -388,6 +427,7 @@ void panels::DrawPalette(PaletteState& state, SDL_Window* window) {
         const float sort_w = ImGui::CalcTextSize("Sort").x + ImGui::GetStyle().FramePadding.x * 2.0f;
         ImGui::SameLine(ImGui::GetContentRegionMax().x - sort_w);
         if (ImGui::SmallButton("Sort")) {
+            Log("Palette: sorted by hue");
             std::sort(state.swatches.begin(), state.swatches.end(), [](const ImVec4& a, const ImVec4& b) {
                 float ah, as_, av, bh, bs_, bv;
                 ImGui::ColorConvertRGBtoHSV(a.x, a.y, a.z, ah, as_, av);

@@ -71,6 +71,7 @@ FetchContent_MakeAvailable(lunasvg)
 add_library(pix-cells-core STATIC
     src/app_state.cpp
     src/canvas_state.cpp
+    src/selection.cpp
     src/log.cpp
     src/png_io.cpp
     src/pixc_io.cpp
