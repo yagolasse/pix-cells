@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://bwd2wqgkypnwv"]
+
+[ext_resource type="Script" uid="uid://ce72nx00r4qnd" path="res://background_layer.gd" id="1_h2yge"]
+[ext_resource type="Script" uid="uid://cumg5mkj2252o" path="res://editor.gd" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://ljjlqtk2o24t" path="res://camera.gd" id="2_0xm2m"]
+
+[node name="Global" type="Node" unique_id=157953755]
+
+[node name="Control" type="Control" parent="." unique_id=456177329]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Canvas" type="Node2D" parent="." unique_id=119074926]
+
+[node name="BackgroundLayer" type="Sprite2D" parent="Canvas" unique_id=1333406913]
+texture_filter = 1
+script = ExtResource("1_h2yge")
+checkboard_colors = Array[Color]([Color(0.8, 0.8, 0.8, 1), Color(0.53333336, 0.53333336, 0.53333336, 1)])
+checkboard_color_1 = Color(0.8, 0.8, 0.8, 1)
+checkboard_color_2 = Color(0.53333336, 0.53333336, 0.53333336, 1)
+
+[node name="EditorLayer" type="Sprite2D" parent="Canvas" unique_id=1217103661]
+texture_filter = 1
+texture_repeat = 1
+script = ExtResource("1_ig7tw")
+
+[node name="Camera" type="Camera2D" parent="Canvas/EditorLayer" unique_id=129905802]
+script = ExtResource("2_0xm2m")
