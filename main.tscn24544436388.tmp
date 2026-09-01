@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://bwd2wqgkypnwv"]
 
 [ext_resource type="Texture2D" uid="uid://c7ryyagcwvm82" path="res://icons/brush.svg" id="1_1bvp3"]
-[ext_resource type="Script" uid="uid://bet2pp0f2dh3j" path="res://app.gd" id="2_5vw27"]
 [ext_resource type="Theme" uid="uid://fpr7mpb5i2bn" path="res://app_theme.tres" id="3_lquwl"]
 [ext_resource type="Texture2D" uid="uid://c3wf7cnxsxsol" path="res://icons/eraser.svg" id="4_1bvp3"]
 [ext_resource type="ButtonGroup" uid="uid://d3c07br53vuaf" path="res://tool_button_group.tres" id="4_7mycd"]
@@ -20,42 +19,24 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme = ExtResource("3_lquwl")
-script = ExtResource("2_5vw27")
 
-[node name="VSplitContainer" type="VBoxContainer" parent="Control" unique_id=1735295974]
+[node name="VSplitContainer" type="VSplitContainer" parent="Control" unique_id=1853241707]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+split_offsets = PackedInt32Array(64, 636)
+split_offset = 64
 
-[node name="MenuBarContainer" type="PanelContainer" parent="Control/VSplitContainer" unique_id=1029872487]
+[node name="PanelContainer" type="PanelContainer" parent="Control/VSplitContainer" unique_id=27305314]
 layout_mode = 2
 
-[node name="MenuBar" type="MenuBar" parent="Control/VSplitContainer/MenuBarContainer" unique_id=64400901]
-custom_minimum_size = Vector2(0, 32)
-layout_mode = 2
-size_flags_vertical = 0
-
-[node name="OpenFileButton" type="MenuButton" parent="Control/VSplitContainer/MenuBarContainer/MenuBar" unique_id=1307290664]
-unique_name_in_owner = true
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-text = "File
-"
-item_count = 1
-popup/item_0/text = "Open"
-popup/item_0/id = 0
-
-[node name="ToolsSettingsPanel" type="PanelContainer" parent="Control/VSplitContainer" unique_id=27305314]
+[node name="MarginContainer" type="MarginContainer" parent="Control/VSplitContainer/PanelContainer" unique_id=915036515]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Control/VSplitContainer/ToolsSettingsPanel" unique_id=915036515]
-layout_mode = 2
-
-[node name="SizeSlider" type="SpinBox" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer" unique_id=492154648]
+[node name="SizeSlider" type="SpinBox" parent="Control/VSplitContainer/PanelContainer/MarginContainer" unique_id=492154648]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(104, 0)
 layout_mode = 2
@@ -68,9 +49,10 @@ prefix = "Size"
 suffix = "px"
 custom_arrow_step = 1.0
 
-[node name="HSplitContainer" type="HBoxContainer" parent="Control/VSplitContainer" unique_id=1168878778]
+[node name="HSplitContainer" type="HSplitContainer" parent="Control/VSplitContainer" unique_id=71997214]
 layout_mode = 2
-size_flags_vertical = 3
+split_offsets = PackedInt32Array(40, 834)
+split_offset = 40
 
 [node name="ToolsPanel" type="PanelContainer" parent="Control/VSplitContainer/HSplitContainer" unique_id=1800462268]
 layout_mode = 2
@@ -107,23 +89,25 @@ icon = ExtResource("4_1bvp3")
 [node name="Panel" type="Panel" parent="Control/VSplitContainer/HSplitContainer" unique_id=390703385]
 clip_contents = true
 layout_mode = 2
-size_flags_horizontal = 3
 
-[node name="ImageEditor" type="Control" parent="Control/VSplitContainer/HSplitContainer/Panel" unique_id=1314869830 node_paths=PackedStringArray("color_picker")]
-unique_name_in_owner = true
+[node name="Panel" type="Control" parent="Control/VSplitContainer/HSplitContainer/Panel" unique_id=1314869830 node_paths=PackedStringArray("color_picker")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset_ratio = Vector2(0.5, 0.5)
 script = ExtResource("7_272bh")
 color_picker = NodePath("../../ManipulationPanel/PanelContainer/ColorPicker")
 
-[node name="TextureRect" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=1013024214]
+[node name="TextureRect" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel/Panel" unique_id=1013024214]
 texture_filter = 1
 texture_repeat = 1
 layout_mode = 1
@@ -144,8 +128,6 @@ layout_mode = 2
 
 [node name="ColorPicker" type="ColorPicker" parent="Control/VSplitContainer/HSplitContainer/ManipulationPanel/PanelContainer" unique_id=903315063]
 layout_mode = 2
-edit_alpha = false
-edit_intensity = false
 
 [node name="AnimationPanel" type="PanelContainer" parent="Control/VSplitContainer" unique_id=2042655827]
 layout_mode = 2
@@ -153,18 +135,14 @@ size_flags_vertical = 8
 
 [node name="Debug" type="Control" parent="Control" unique_id=662278047 node_paths=PackedStringArray("container")]
 layout_mode = 1
-anchors_preset = 0
+anchors_preset = 9
+anchor_bottom = 1.0
+grow_vertical = 2
 script = ExtResource("6_7mycd")
 container = NodePath("VBoxContainer")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control/Debug" unique_id=2143301379]
 layout_mode = 1
-
-[node name="FileDialog" type="FileDialog" parent="Control" unique_id=992110812]
-unique_name_in_owner = true
-title = "Open a File"
-initial_position = 2
-dialog_hide_on_ok = true
-file_mode = 0
-access = 2
-use_native_dialog = true
+anchors_preset = 9
+anchor_bottom = 1.0
+grow_vertical = 2
