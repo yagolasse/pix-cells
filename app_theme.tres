@@ -1,7 +1,16 @@
 [gd_resource type="Theme" format=3 uid="uid://fpr7mpb5i2bn"]
 
+[ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://default_panel_background.tres" id="1_ybbnh"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5vw27"]
+
 [resource]
+BoxContainer/constants/separation = 0
+DrawingCanvasPanel/styles/panel = SubResource("StyleBoxFlat_5vw27")
+HSeparator/constants/separation = 1
 MarginContainer/constants/margin_bottom = 4
 MarginContainer/constants/margin_left = 4
 MarginContainer/constants/margin_right = 4
 MarginContainer/constants/margin_top = 4
+Panel/styles/panel = ExtResource("1_ybbnh")
+VSeparator/constants/separation = 1

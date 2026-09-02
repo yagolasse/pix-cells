@@ -7,7 +7,6 @@
 [ext_resource type="ButtonGroup" uid="uid://d3c07br53vuaf" path="res://tool_button_group.tres" id="4_7mycd"]
 [ext_resource type="Texture2D" uid="uid://dqunnmuaw4xyy" path="res://icons/line.svg" id="4_272bh"]
 [ext_resource type="Script" uid="uid://r1idmla4tegn" path="res://scripts/debug.gd" id="6_7mycd"]
-[ext_resource type="Texture2D" uid="uid://ciav4a4pxwdam" path="res://icons/fill.svg" id="6_efxa6"]
 [ext_resource type="Script" uid="uid://bm5bpo1ax051d" path="res://image_editor.gd" id="7_272bh"]
 [ext_resource type="Script" uid="uid://lbq5fy31vm8n" path="res://drawing_canvas_panel.gd" id="7_kek77"]
 [ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://default_panel_background.tres" id="9_4c57u"]
@@ -122,13 +121,6 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("4_272bh")
 
-[node name="PaintBucketButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1103708916]
-unique_name_in_owner = true
-layout_mode = 2
-toggle_mode = true
-button_group = ExtResource("4_7mycd")
-icon = ExtResource("6_efxa6")
-
 [node name="EraserButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=2091031398]
 unique_name_in_owner = true
 layout_mode = 2
@@ -174,8 +166,6 @@ size_flags_vertical = 4
 
 [node name="PreviewCanvas" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=539924669]
 unique_name_in_owner = true
-texture_filter = 1
-texture_repeat = 1
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

@@ -3,23 +3,30 @@ extends Control
 
 enum Mode {
 	BRUSH,
+	LINE,
+	PAINT_BUCKET,
 	ERASER,
-	LINE
 }
 
-@export var color_picker: ColorPicker
+@onready var color_picker: ColorPicker = %ColorPicker
 
-@onready var canvas: TextureRect = $TextureRect
+@onready var canvas: TextureRect = %DrawingCanvas
+@onready var preview_canvas: TextureRect = %PreviewCanvas
 
 @onready var brush_button: Button = %BrushButton
-@onready var eraser_button: Button = %EraserButton
 @onready var line_button: Button = %LineButton
+@onready var paint_bucket_button: Button = %PaintBucketButton
+@onready var eraser_button: Button = %EraserButton
 
 @onready var size_slider: SpinBox = %SizeSlider
 
 var image: Image
 var editor_texture: ImageTexture
-@onready var sprite_size: Vector2i = Vector2i(8, 8):
+
+var preview_image: Image
+var preview_editor_texture: ImageTexture
+
+@onready var sprite_size: Vector2i = Vector2i(1024, 1024):
 	set(value):
 		sprite_size = value
 		size = sprite_size
@@ -41,10 +48,14 @@ var secondary_color: Color
 
 var primary_selected: bool = true
 
+var pressing_point: Vector2
+var running_paint_bucket: bool = false
+
 var mode: Mode = Mode.BRUSH:
 	set(value):
 		mode = value
-		size_slider.value = tool_brush_size[mode]
+		if tool_brush_size.has(mode):
+			size_slider.value = tool_brush_size[mode]
 
 var tool_brush_size: Dictionary[Mode, int] = {
 	Mode.BRUSH: 1, 
@@ -53,24 +64,8 @@ var tool_brush_size: Dictionary[Mode, int] = {
 }
 
 func _draw() -> void:
-	var canvas_rect := canvas.get_rect()
-	var rect := Rect2(canvas_rect.position.x, canvas_rect.position.y, canvas.size.x, canvas.size.y)
+	var rect := canvas.get_rect()
 	draw_rect(rect, Color.WHITE, false)
-	
-	# Drawing brush preview
-	
-	var grid_mouse_position := Vector2i(get_parent().get_local_mouse_position())
-	
-	if get_parent().get_global_rect().has_point(get_global_mouse_position()):
-		draw_rect(_calculate_paint_rect(Vector2i(get_local_mouse_position())), Color(active_color, 0.5))
-		#match mode:
-			#Mode.BRUSH:
-				#draw_rect(_calculate_paint_rect(Vector2i(get_local_mouse_position())), Color(active_color, 0.5))
-			#Mode.ERASER:
-				#var cursor_color := get_parent().get_viewport().get_texture().get_image().get_pixelv(grid_mouse_position)
-				#var luminance := cursor_color.get_luminance()
-				#var border_color := Color.WHITE if luminance < 0.5 else Color.BLACK
-				#draw_rect(_calculate_paint_rect(Vector2i(get_local_mouse_position())), border_color, false)
 
 func _ready() -> void:
 	Input.use_accumulated_input = false
@@ -78,8 +73,9 @@ func _ready() -> void:
 	brush_button.button_pressed = true
 	
 	brush_button.pressed.connect(_on_brush_button_pressed)
-	eraser_button.pressed.connect(_on_eraser_button_pressed)
 	line_button.pressed.connect(_on_line_button_pressed)
+	paint_bucket_button.pressed.connect(_on_paint_bucket_button_pressed)
+	eraser_button.pressed.connect(_on_eraser_button_pressed)
 	
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
 	
@@ -87,17 +83,21 @@ func _ready() -> void:
 	primary_color = color_picker.color
 	active_color = primary_color
 	
-	@warning_ignore("integer_division")
-	#position += Vector2(sprite_size / 2)
-	image = Image.create_empty(int(sprite_size.x), int(sprite_size.y), false, Image.FORMAT_RGBA8)
+	image = Image.create_empty(sprite_size.x, sprite_size.y, false, Image.FORMAT_RGBA8)
+	preview_image = Image.create_empty(sprite_size.x, sprite_size.y, false, Image.FORMAT_RGBA8)
+	
+	image.fill(Color.TRANSPARENT)
 	
 	editor_texture = ImageTexture.create_from_image(image)
+	preview_editor_texture = ImageTexture.create_from_image(preview_image)
 	
 	canvas.texture = editor_texture
+	preview_canvas.texture = preview_editor_texture
 
 func _process(_delta: float) -> void:
+	Debug.instance.add_debug_property("Canvas Rect", canvas.get_rect())
 	Debug.instance.add_debug_property("Mouse position", mouse_position)
-	Debug.instance.add_debug_property("Grid Mouse position", Vector2i(get_local_mouse_position()))
+	Debug.instance.add_debug_property("Grid Mouse position", get_local_mouse_position())
 	Debug.instance.add_debug_property("Is mouse pressed", is_mouse_pressed)
 	Debug.instance.add_debug_property("Was mouse pressed", was_mouse_pressed)
 	Debug.instance.add_debug_property("Outside Canvas", stroke_started_outside_canvas)
@@ -107,17 +107,24 @@ func _process(_delta: float) -> void:
 	else:
 		active_color = primary_color if primary_selected else secondary_color
 	
+	preview_image.fill(Color.TRANSPARENT)
+	
 	if not _update_mouse_state(): return
 	
 	match mode:
 		Mode.BRUSH, Mode.ERASER:
 			_handle_brush_mode()
+		Mode.LINE:
+			_handle_line_mode()
+		Mode.PAINT_BUCKET:
+			_handle_paint_bucket_mode()
 	
 	if Input.is_action_just_pressed("clear"):
 		for x in range(size.x):
-			image.fill_rect(Rect2i(0, 0, int(sprite_size.x), int(sprite_size.y)), Color.TRANSPARENT)
+			image.fill_rect(Rect2i(0, 0, sprite_size.x, sprite_size.y), Color.TRANSPARENT)
 	
 	editor_texture.update(image)
+	preview_editor_texture.update(preview_image)
 	
 	queue_redraw()
 
@@ -132,6 +139,21 @@ func _gui_input(event: InputEvent) -> void:
 
 func _on_color_picker_color_changed(color: Color) -> void:
 	primary_color = color
+
+func _on_brush_button_pressed() -> void:
+	mode = Mode.BRUSH
+
+func _on_line_button_pressed() -> void:
+	mode = Mode.LINE
+
+func _on_paint_bucket_button_pressed() -> void:
+	mode = Mode.PAINT_BUCKET
+
+func _on_eraser_button_pressed() -> void:
+	mode = Mode.ERASER
+
+func _on_size_slider_value_changed(value: float) -> void:
+	tool_brush_size[mode] = int(value)
 
 func _update_mouse_state() -> bool:
 	was_mouse_pressed = is_mouse_pressed
@@ -155,9 +177,10 @@ func _update_mouse_state() -> bool:
 
 func _handle_brush_mode() -> void:
 	var points_to_paint: Array[Vector2i] = []
+	var grid_mouse_position := Vector2i(mouse_position)
 	
 	if is_mouse_pressed:
-		points_to_paint.push_back(Vector2i(mouse_position))
+		points_to_paint.push_back(grid_mouse_position)
 		
 		if was_mouse_pressed and (previous_mouse_position - mouse_position).length() > 1:
 			points_to_paint.append_array(Geometry2D.bresenham_line(previous_mouse_position, mouse_position))
@@ -165,6 +188,73 @@ func _handle_brush_mode() -> void:
 	for point in points_to_paint:
 		var rect := _calculate_paint_rect(point)
 		image.fill_rect(rect, active_color)
+	
+	var paint_rect := _calculate_paint_rect(grid_mouse_position)
+	preview_image.fill_rect(paint_rect, Color(active_color, 0.5))
+
+func _handle_line_mode() -> void:
+	if is_mouse_pressed and not was_mouse_pressed:
+		pressing_point = mouse_position
+	
+	if was_mouse_pressed and not is_mouse_pressed:
+		var points_to_paint := Geometry2D.bresenham_line(pressing_point, mouse_position)
+		
+		for point in points_to_paint:
+			var rect := _calculate_paint_rect(point)
+			image.fill_rect(rect, active_color)
+	
+	if is_mouse_pressed:
+		var preview_line := Geometry2D.bresenham_line(pressing_point, mouse_position)
+		for point in preview_line:
+			var rect := _calculate_paint_rect(point)
+			preview_image.fill_rect(rect, Color(active_color, 0.5))
+
+## Line span flood fill algorithm.
+## Taken from https://en.wikipedia.org/wiki/Flood_fill#Span_filling.
+func _handle_paint_bucket_mode() -> void:
+	if running_paint_bucket: return
+	
+	var canvas_rect := Rect2i(Vector2i.ZERO, sprite_size)
+	if not canvas_rect.has_point(mouse_position): return
+	
+	var point_color := image.get_pixelv(mouse_position)
+	
+	if is_mouse_pressed and not was_mouse_pressed:
+		if point_color == active_color:
+			return
+			
+		var initial_time := Time.get_ticks_msec()
+	
+		var point_queue: Array[PointRange] = [
+			PointRange.from(int(mouse_position.x), int(mouse_position.x), int(mouse_position.y), 1),
+			PointRange.from(int(mouse_position.x), int(mouse_position.x), int(mouse_position.y) - 1, -1)
+		]
+	
+		while not point_queue.is_empty():
+			var p := point_queue.pop_back() as PointRange
+			var x := p.x1
+			var x1 := p.x1
+			
+			if canvas_rect.has_point(Vector2i(x, p.y)) and image.get_pixel(x, p.y) == point_color:
+				while canvas_rect.has_point(Vector2i(x - 1, p.y)) and image.get_pixel(x - 1, p.y) == point_color:
+					image.set_pixel(x - 1, p.y, active_color)
+					x -= 1
+				if x < x1:
+					point_queue.push_back(PointRange.from(x, x1 - 1, p.y - p.dy, -p.dy))
+			while x1 <= p.x2:
+				while canvas_rect.has_point(Vector2i(x1, p.y)) and image.get_pixel(x1, p.y) == point_color:
+					image.set_pixel(x1, p.y, active_color)
+					x1 += 1
+				if x1 > x:
+					point_queue.push_back(PointRange.from(x, x1 - 1, p.y + p.dy, p.dy))
+				if x1 - 1 > p.x2:
+					point_queue.push_back(PointRange.from(p.x2 + 1, x1 - 1, p.y - p.dy, -p.dy))
+				x1 += 1
+				while x1 <= p.x2 and (not canvas_rect.has_point(Vector2i(x1, p.y)) or not image.get_pixel(x1, p.y) == point_color):
+					x1 += 1
+				x = x1
+			
+		print("Flood fill time %d ms" % [Time.get_ticks_msec() - initial_time])
 
 func _calculate_paint_rect(point: Vector2i) -> Rect2i:
 	var current_size := tool_brush_size[mode]
@@ -172,20 +262,29 @@ func _calculate_paint_rect(point: Vector2i) -> Rect2i:
 	@warning_ignore("integer_division")
 	return Rect2i(point - rect_size / 2, rect_size)
 
-func _on_brush_button_pressed() -> void:
-	mode = Mode.BRUSH
-
-func _on_eraser_button_pressed() -> void:
-	mode = Mode.ERASER
-
-func _on_line_button_pressed() -> void:
-	mode = Mode.LINE
-
-func _on_size_slider_value_changed(value: float) -> void:
-	tool_brush_size[mode] = int(value)
-
 func set_new_image(new_image: Image) -> void:
 	image = new_image
 	sprite_size = image.get_size()
 	editor_texture = ImageTexture.create_from_image(image)
 	canvas.texture = editor_texture
+	
+	await get_tree().process_frame
+	
+	offset_left = 0
+	offset_top = 0
+	offset_right = 0
+	offset_bottom = 0
+
+class PointRange extends RefCounted:
+	var x1: int
+	var x2: int
+	var y: int
+	var dy: int
+	
+	static func from(_x1: int, _x2: int, _y: int, _dy: int) -> PointRange:
+		var p := PointRange.new()
+		p.x1 = _x1
+		p.x2 = _x2
+		p.y = _y
+		p.dy = _dy
+		return p
