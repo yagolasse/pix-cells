@@ -5,6 +5,7 @@ enum Mode {
 	BRUSH,
 	LINE,
 	PAINT_BUCKET,
+	SHAPE_SQUARE,
 	ERASER,
 }
 
@@ -16,6 +17,7 @@ enum Mode {
 @onready var brush_button: Button = %BrushButton
 @onready var line_button: Button = %LineButton
 @onready var paint_bucket_button: Button = %PaintBucketButton
+@onready var shape_square_button: Button = %ShapeSquareButton
 @onready var eraser_button: Button = %EraserButton
 
 @onready var size_slider: SpinBox = %SizeSlider
@@ -26,7 +28,7 @@ var editor_texture: ImageTexture
 var preview_image: Image
 var preview_editor_texture: ImageTexture
 
-@onready var sprite_size: Vector2i = Vector2i(1024, 1024):
+@onready var sprite_size: Vector2i = Vector2i(64, 64):
 	set(value):
 		sprite_size = value
 		size = sprite_size
@@ -60,7 +62,6 @@ var mode: Mode = Mode.BRUSH:
 var tool_brush_size: Dictionary[Mode, int] = {
 	Mode.BRUSH: 1, 
 	Mode.ERASER: 1,
-	Mode.LINE: 1
 }
 
 func _draw() -> void:
@@ -75,6 +76,7 @@ func _ready() -> void:
 	brush_button.pressed.connect(_on_brush_button_pressed)
 	line_button.pressed.connect(_on_line_button_pressed)
 	paint_bucket_button.pressed.connect(_on_paint_bucket_button_pressed)
+	shape_square_button.pressed.connect(_on_shape_square_button_pressed)
 	eraser_button.pressed.connect(_on_eraser_button_pressed)
 	
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
@@ -95,12 +97,14 @@ func _ready() -> void:
 	preview_canvas.texture = preview_editor_texture
 
 func _process(_delta: float) -> void:
-	Debug.instance.add_debug_property("Canvas Rect", canvas.get_rect())
-	Debug.instance.add_debug_property("Mouse position", mouse_position)
-	Debug.instance.add_debug_property("Grid Mouse position", get_local_mouse_position())
-	Debug.instance.add_debug_property("Is mouse pressed", is_mouse_pressed)
-	Debug.instance.add_debug_property("Was mouse pressed", was_mouse_pressed)
-	Debug.instance.add_debug_property("Outside Canvas", stroke_started_outside_canvas)
+	#Debug.instance.add_debug_property("Canvas Rect", canvas.get_rect())
+	#Debug.instance.add_debug_property("Mouse position", mouse_position)
+	#Debug.instance.add_debug_property("Grid Mouse position", get_local_mouse_position())
+	#Debug.instance.add_debug_property("Is mouse pressed", is_mouse_pressed)
+	#Debug.instance.add_debug_property("Was mouse pressed", was_mouse_pressed)
+	#Debug.instance.add_debug_property("Outside Canvas", stroke_started_outside_canvas)
+	#var distance := mouse_position - pressing_point if pressing_point > mouse_position else pressing_point - mouse_position
+	#Debug.instance.add_debug_property("Distance", distance)
 	
 	if mode == Mode.ERASER:
 		active_color = Color.TRANSPARENT
@@ -118,6 +122,8 @@ func _process(_delta: float) -> void:
 			_handle_line_mode()
 		Mode.PAINT_BUCKET:
 			_handle_paint_bucket_mode()
+		Mode.SHAPE_SQUARE:
+			_handle_shape_square_mode()
 	
 	if Input.is_action_just_pressed("clear"):
 		for x in range(size.x):
@@ -148,6 +154,9 @@ func _on_line_button_pressed() -> void:
 
 func _on_paint_bucket_button_pressed() -> void:
 	mode = Mode.PAINT_BUCKET
+
+func _on_shape_square_button_pressed() -> void:
+	mode = Mode.SHAPE_SQUARE
 
 func _on_eraser_button_pressed() -> void:
 	mode = Mode.ERASER
@@ -256,8 +265,45 @@ func _handle_paint_bucket_mode() -> void:
 			
 		print("Flood fill time %d ms" % [Time.get_ticks_msec() - initial_time])
 
+
+func _handle_shape_square_mode() -> void:
+	if is_mouse_pressed and not was_mouse_pressed:
+		pressing_point = mouse_position
+	
+	var draw_lines: Array[Vector2i] = []
+	
+	var corners: Array[Vector2i] = [
+		Vector2i(int(pressing_point.x), int(pressing_point.y)),
+		Vector2i(int(mouse_position.x), int(pressing_point.y)),
+		Vector2i(int(mouse_position.x), int(mouse_position.y)),
+		Vector2i(int(pressing_point.x), int(mouse_position.y))
+	]
+	
+	if Input.is_action_pressed("symmetric_shape"):
+		@warning_ignore("narrowing_conversion")
+		var distance := mouse_position - pressing_point if pressing_point > mouse_position else pressing_point - mouse_position
+		var offset := distance.x if absf(distance.x) < absf(distance.y) else distance.y
+		
+		if pressing_point < mouse_position: offset *= -1
+		
+		corners[0] = Vector2i(int(pressing_point.x), int(pressing_point.y))
+		corners[1] = Vector2i(int(pressing_point.x + offset), int(pressing_point.y))
+		corners[2] = Vector2i(int(pressing_point.x + offset), int(pressing_point.y + offset))
+		corners[3] = Vector2i(int(pressing_point.x), int(pressing_point.y + offset))
+
+	for i in corners.size():
+		var j := i - 1 if i > 0 else corners.size() - 1
+		draw_lines.append_array(Geometry2D.bresenham_line(corners[j], corners[i]))
+	
+	for point in draw_lines:
+		var rect := _calculate_paint_rect(point)
+		if is_mouse_pressed:
+			preview_image.fill_rect(rect, Color(active_color, 0.5))
+		elif was_mouse_pressed: # Just released
+			image.fill_rect(rect, active_color)
+
 func _calculate_paint_rect(point: Vector2i) -> Rect2i:
-	var current_size := tool_brush_size[mode]
+	var current_size := tool_brush_size[mode] if tool_brush_size.has(mode) else 1
 	var rect_size := Vector2i(current_size, current_size)
 	@warning_ignore("integer_division")
 	return Rect2i(point - rect_size / 2, rect_size)

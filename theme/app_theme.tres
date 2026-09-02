@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3 uid="uid://fpr7mpb5i2bn"]
 
-[ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://default_panel_background.tres" id="1_ybbnh"]
+[ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://theme/default_panel_background.tres" id="1_ybbnh"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5vw27"]
 

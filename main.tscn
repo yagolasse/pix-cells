@@ -1,16 +1,17 @@
 [gd_scene format=3 uid="uid://bwd2wqgkypnwv"]
 
 [ext_resource type="Texture2D" uid="uid://c7ryyagcwvm82" path="res://icons/brush.svg" id="1_1bvp3"]
-[ext_resource type="Script" uid="uid://bet2pp0f2dh3j" path="res://app.gd" id="2_5vw27"]
-[ext_resource type="Theme" uid="uid://fpr7mpb5i2bn" path="res://app_theme.tres" id="3_lquwl"]
+[ext_resource type="Script" uid="uid://bet2pp0f2dh3j" path="res://scripts/app.gd" id="2_5vw27"]
+[ext_resource type="Theme" uid="uid://fpr7mpb5i2bn" path="res://theme/app_theme.tres" id="3_lquwl"]
 [ext_resource type="Texture2D" uid="uid://c3wf7cnxsxsol" path="res://icons/eraser.svg" id="4_1bvp3"]
-[ext_resource type="ButtonGroup" uid="uid://d3c07br53vuaf" path="res://tool_button_group.tres" id="4_7mycd"]
+[ext_resource type="ButtonGroup" uid="uid://d3c07br53vuaf" path="res://theme/tool_button_group.tres" id="4_7mycd"]
 [ext_resource type="Texture2D" uid="uid://dqunnmuaw4xyy" path="res://icons/line.svg" id="4_272bh"]
 [ext_resource type="Script" uid="uid://r1idmla4tegn" path="res://scripts/debug.gd" id="6_7mycd"]
 [ext_resource type="Texture2D" uid="uid://ciav4a4pxwdam" path="res://icons/fill.svg" id="6_efxa6"]
-[ext_resource type="Script" uid="uid://bm5bpo1ax051d" path="res://image_editor.gd" id="7_272bh"]
-[ext_resource type="Script" uid="uid://lbq5fy31vm8n" path="res://drawing_canvas_panel.gd" id="7_kek77"]
-[ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://default_panel_background.tres" id="9_4c57u"]
+[ext_resource type="Script" uid="uid://bm5bpo1ax051d" path="res://scripts/image_editor.gd" id="7_272bh"]
+[ext_resource type="Texture2D" uid="uid://byb2mnux36n73" path="res://icons/square.svg" id="7_dg77c"]
+[ext_resource type="Script" uid="uid://lbq5fy31vm8n" path="res://scripts/drawing_canvas_panel.gd" id="7_kek77"]
+[ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://theme/default_panel_background.tres" id="9_4c57u"]
 
 [node name="CanvasLayer" type="CanvasLayer" unique_id=20523015]
 
@@ -128,6 +129,13 @@ layout_mode = 2
 toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("6_efxa6")
+
+[node name="ShapeSquareButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1104935130]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_group = ExtResource("4_7mycd")
+icon = ExtResource("7_dg77c")
 
 [node name="EraserButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=2091031398]
 unique_name_in_owner = true
