@@ -6,6 +6,7 @@ enum Mode {
 	LINE,
 	PAINT_BUCKET,
 	SHAPE_SQUARE,
+	SHAPE_CIRCLE,
 	ERASER,
 }
 
@@ -18,6 +19,7 @@ enum Mode {
 @onready var line_button: Button = %LineButton
 @onready var paint_bucket_button: Button = %PaintBucketButton
 @onready var shape_square_button: Button = %ShapeSquareButton
+@onready var shape_circle_button: Button = %ShapeCircleButton
 @onready var eraser_button: Button = %EraserButton
 
 @onready var size_slider: SpinBox = %SizeSlider
@@ -51,6 +53,7 @@ var secondary_color: Color
 var primary_selected: bool = true
 
 var pressing_point: Vector2
+var debug_pressing_point: Vector2
 var running_paint_bucket: bool = false
 
 var mode: Mode = Mode.BRUSH:
@@ -60,7 +63,7 @@ var mode: Mode = Mode.BRUSH:
 			size_slider.value = tool_brush_size[mode]
 
 var tool_brush_size: Dictionary[Mode, int] = {
-	Mode.BRUSH: 1, 
+	Mode.BRUSH: 1,
 	Mode.ERASER: 1,
 }
 
@@ -77,6 +80,7 @@ func _ready() -> void:
 	line_button.pressed.connect(_on_line_button_pressed)
 	paint_bucket_button.pressed.connect(_on_paint_bucket_button_pressed)
 	shape_square_button.pressed.connect(_on_shape_square_button_pressed)
+	shape_circle_button.pressed.connect(_on_shape_circle_button_pressed)
 	eraser_button.pressed.connect(_on_eraser_button_pressed)
 	
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
@@ -105,7 +109,6 @@ func _process(_delta: float) -> void:
 	#Debug.instance.add_debug_property("Outside Canvas", stroke_started_outside_canvas)
 	#var distance := mouse_position - pressing_point if pressing_point > mouse_position else pressing_point - mouse_position
 	#Debug.instance.add_debug_property("Distance", distance)
-	
 	if mode == Mode.ERASER:
 		active_color = Color.TRANSPARENT
 	else:
@@ -124,6 +127,8 @@ func _process(_delta: float) -> void:
 			_handle_paint_bucket_mode()
 		Mode.SHAPE_SQUARE:
 			_handle_shape_square_mode()
+		Mode.SHAPE_CIRCLE:
+			_handle_shape_circle_mode()
 	
 	if Input.is_action_just_pressed("clear"):
 		for x in range(size.x):
@@ -131,7 +136,7 @@ func _process(_delta: float) -> void:
 	
 	editor_texture.update(image)
 	preview_editor_texture.update(preview_image)
-	
+
 	queue_redraw()
 
 func _gui_input(event: InputEvent) -> void:
@@ -157,6 +162,9 @@ func _on_paint_bucket_button_pressed() -> void:
 
 func _on_shape_square_button_pressed() -> void:
 	mode = Mode.SHAPE_SQUARE
+
+func _on_shape_circle_button_pressed() -> void:
+	mode = Mode.SHAPE_CIRCLE
 
 func _on_eraser_button_pressed() -> void:
 	mode = Mode.ERASER
@@ -185,8 +193,9 @@ func _update_mouse_state() -> bool:
 	return true
 
 func _handle_brush_mode() -> void:
-	var points_to_paint: Array[Vector2i] = []
+	var points_to_paint: Array[Vector2i]
 	var grid_mouse_position := Vector2i(mouse_position)
+	var brush_size := tool_brush_size[mode] if tool_brush_size.has(mode) else 1
 	
 	if is_mouse_pressed:
 		points_to_paint.push_back(grid_mouse_position)
@@ -195,11 +204,9 @@ func _handle_brush_mode() -> void:
 			points_to_paint.append_array(Geometry2D.bresenham_line(previous_mouse_position, mouse_position))
 	
 	for point in points_to_paint:
-		var rect := _calculate_paint_rect(point)
-		image.fill_rect(rect, active_color)
-	
-	var paint_rect := _calculate_paint_rect(grid_mouse_position)
-	preview_image.fill_rect(paint_rect, Color(active_color, 0.5))
+		Painter.paint_pixel(image, point.x, point.y, brush_size, active_color)
+
+	Painter.paint_pixel(preview_image, grid_mouse_position.x, grid_mouse_position.y, brush_size, Color(active_color, 0.5))
 
 func _handle_line_mode() -> void:
 	if is_mouse_pressed and not was_mouse_pressed:
@@ -214,6 +221,7 @@ func _handle_line_mode() -> void:
 	
 	if is_mouse_pressed:
 		var preview_line := Geometry2D.bresenham_line(pressing_point, mouse_position)
+	
 		for point in preview_line:
 			var rect := _calculate_paint_rect(point)
 			preview_image.fill_rect(rect, Color(active_color, 0.5))
@@ -265,32 +273,34 @@ func _handle_paint_bucket_mode() -> void:
 			
 		print("Flood fill time %d ms" % [Time.get_ticks_msec() - initial_time])
 
-
 func _handle_shape_square_mode() -> void:
 	if is_mouse_pressed and not was_mouse_pressed:
 		pressing_point = mouse_position
 	
 	var draw_lines: Array[Vector2i] = []
 	
-	var corners: Array[Vector2i] = [
-		Vector2i(int(pressing_point.x), int(pressing_point.y)),
-		Vector2i(int(mouse_position.x), int(pressing_point.y)),
-		Vector2i(int(mouse_position.x), int(mouse_position.y)),
-		Vector2i(int(pressing_point.x), int(mouse_position.y))
-	]
+	var corners: Array[Vector2i]
 	
 	if Input.is_action_pressed("symmetric_shape"):
-		@warning_ignore("narrowing_conversion")
 		var distance := mouse_position - pressing_point if pressing_point > mouse_position else pressing_point - mouse_position
 		var offset := distance.x if absf(distance.x) < absf(distance.y) else distance.y
 		
 		if pressing_point < mouse_position: offset *= -1
-		
-		corners[0] = Vector2i(int(pressing_point.x), int(pressing_point.y))
-		corners[1] = Vector2i(int(pressing_point.x + offset), int(pressing_point.y))
-		corners[2] = Vector2i(int(pressing_point.x + offset), int(pressing_point.y + offset))
-		corners[3] = Vector2i(int(pressing_point.x), int(pressing_point.y + offset))
-
+ 
+		corners.append_array([
+			Vector2i(int(pressing_point.x), int(pressing_point.y)),
+			Vector2i(int(pressing_point.x + offset), int(pressing_point.y)),
+			Vector2i(int(pressing_point.x + offset), int(pressing_point.y + offset)),
+			Vector2i(int(pressing_point.x), int(pressing_point.y + offset)),
+		])
+	else:
+		corners.append_array([
+			Vector2i(int(pressing_point.x), int(pressing_point.y)),
+			Vector2i(int(mouse_position.x), int(pressing_point.y)),
+			Vector2i(int(mouse_position.x), int(mouse_position.y)),
+			Vector2i(int(pressing_point.x), int(mouse_position.y))
+		])
+	
 	for i in corners.size():
 		var j := i - 1 if i > 0 else corners.size() - 1
 		draw_lines.append_array(Geometry2D.bresenham_line(corners[j], corners[i]))
@@ -301,6 +311,118 @@ func _handle_shape_square_mode() -> void:
 			preview_image.fill_rect(rect, Color(active_color, 0.5))
 		elif was_mouse_pressed: # Just released
 			image.fill_rect(rect, active_color)
+
+func _handle_shape_circle_mode() -> void:
+	if is_mouse_pressed and not was_mouse_pressed:
+		pressing_point = mouse_position
+	
+	if not is_mouse_pressed: return
+
+	var points: Array[Vector2i] = []
+
+	var radius := (pressing_point - mouse_position).length() / 2.0
+	var center := (pressing_point) if pressing_point < mouse_position else mouse_position
+
+	var top = ceil(center.y - radius)
+	var bottom = floor(center.y + radius)
+	var left = ceil(center.x - radius)
+	var right = floor(center.x + radius)
+
+	var rect := Rect2i(center.x, center.y, absi(mouse_position.x - pressing_point.x), absi(mouse_position.y - pressing_point.y))
+		# Calculate sub-pixel radii
+	var a: float = rect.size.x / 2.0
+	var b: float = rect.size.y / 2.0
+	
+	# Calculate sub-pixel centers
+	var cx: float = rect.position.x + a
+	var cy: float = rect.position.y + b
+
+	var img_w: int = image.get_width()
+	var img_h: int = image.get_height()
+
+	# Helper to safely draw mirrored coordinates
+	var plot = func(x_offset: int, y_offset: int):
+		# Mirror across the true bounding rect boundaries
+		var x1: int = rect.position.x + x_offset
+		var x2: int = rect.position.x + rect.size.x - 1 - x_offset
+		var y1: int = rect.position.y + y_offset
+		var y2: int = rect.position.y + rect.size.y - 1 - y_offset
+
+		var local_points = [
+			Vector2i(x1, y1), Vector2i(x2, y1),
+			Vector2i(x1, y2), Vector2i(x2, y2)
+		]
+		for p in local_points:
+			if p.x >= 0 and p.x < img_w and p.y >= 0 and p.y < img_h:
+				preview_image.set_pixelv(p, Color(active_color, 0.5))
+
+	# Region 1: Step along X
+	var x: int = 0
+	var y: int = int(b)
+	
+	var a2: float = a * a
+	var b2: float = b * b
+	
+	# Initial decision parameter for region 1
+	# Evaluates the ellipse function at the mid-point of the next pixels
+	var p: float = b2 - (a2 * b) + (0.25 * a2)
+	var dx: float = 2.0 * b2 * x
+	var dy: float = 2.0 * a2 * y
+
+	while dx < dy:
+		plot.call(x, int(b) - y)
+		x += 1
+		dx += 2.0 * b2
+		if p < 0:
+			p += b2 + dx
+		else:
+			y -= 1
+			dy -= 2.0 * a2
+			p += b2 + dx - dy
+
+	# Region 2: Step along Y
+	p = b2 * ((x + 0.5) * (x + 0.5)) + a2 * ((y - 1) * (y - 1)) - a2 * b2
+	while y >= 0:
+		plot.call(x, int(b) - y)
+		y -= 1
+		dy -= 2.0 * a2
+		if p > 0:
+			p += a2 - dy
+		else:
+			x += 1
+			dx += 2.0 * b2
+			p += a2 - dy + dx
+
+	# # Loop through the bounding box grid
+	# for y in range(rect.position.y, rect.position.y + rect.size.y):
+	# 	for x in range(rect.position.x, rect.position.x + rect.size.x):
+	# 		# Check boundaries to avoid crashing out of bounds
+	# 		if x < 0 or x >= image.get_width() or y < 0 or y >= image.get_height():
+	# 			continue
+				
+	# 		# Standard Ellipse Equation: (x-cx)^2/rx^2 + (y-cy)^2/ry^2 <= 1
+	# 		# We use normalized offsets from the center
+	# 		var dx: float = (x + 0.5 - cx) / rx
+	# 		var dy: float = (y + 0.5 - cy) / ry
+	# 		var value: float = (dx * dx) + (dy * dy)
+			
+	# 		# For a solid/filled ellipse, check if it's inside the boundary (<= 1.0)
+	# 		# To create an outline, check if it is within a small threshold (e.g., between 0.9 and 1.0)
+	# 		if is_mouse_pressed and value <= 1.0 and value >= 0.8:
+	# 			preview_image.set_pixel(x, y, Color(active_color, 0.5))
+
+	# for x in range(left, right):
+	# 	for y in range(top, bottom):
+	# 		if _point_inside_circle(center, Vector2i(x, y), radius):
+	# 			points.push_back(Vector2i(x, y))
+
+	# if is_mouse_pressed:
+	# 	for point in points:
+	# 		preview_image.set_pixelv(point, Color(active_color, 0.5))
+
+func _point_inside_circle(center: Vector2i, tile: Vector2i, radius: float) -> bool:
+	var distance := center - tile
+	return distance.length_squared() < radius * radius
 
 func _calculate_paint_rect(point: Vector2i) -> Rect2i:
 	var current_size := tool_brush_size[mode] if tool_brush_size.has(mode) else 1
