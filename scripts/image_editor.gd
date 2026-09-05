@@ -7,8 +7,16 @@ enum Mode {
 	PAINT_BUCKET,
 	SHAPE_SQUARE,
 	SHAPE_CIRCLE,
+	MOVE,
 	ERASER,
 	EYEDROPPER,
+	SELECTION_SQUARE,
+}
+
+enum DisplayMode {
+	PREVIEW,
+	ACTUAL,
+	NONE
 }
 
 @export var cursor_icons: Dictionary[Mode, Texture2D]
@@ -25,8 +33,10 @@ enum Mode {
 @onready var shape_filled_square_button: Button = %ShapeFilledSquareButton
 @onready var shape_circle_button: Button = %ShapeCircleButton
 @onready var shape_filled_circle_button: Button = %ShapeFilledCircleButton
+@onready var move_button: Button = %MoveButton
 @onready var eraser_button: Button = %EraserButton
 @onready var eyedropper_button: Button = %EyedropperButton
+@onready var selection_square_button: Button = %SelectionSquareButton
 
 @onready var size_slider: SpinBox = %SizeSlider
 
@@ -36,16 +46,7 @@ var editor_texture: ImageTexture
 var preview_image: Image
 var preview_editor_texture: ImageTexture
 
-@onready var sprite_size: Vector2i = Vector2i(64, 64):
-	set(value):
-		sprite_size = value
-		size = sprite_size
-		var parent_size := (get_parent() as Control).size - Vector2(32, 32)
-		var initial_scale := parent_size.x / size.x if size.x > size.y else parent_size.y / size.y
-		scale = Vector2.ONE * initial_scale
-
-var is_mouse_pressed: bool
-var was_mouse_pressed: bool
+var sprite_size: Vector2i = Vector2i(64, 64)
 
 var mouse_position: Vector2
 var previous_mouse_position: Vector2
@@ -63,6 +64,7 @@ var primary_selected: bool = true
 var pressing_point: Vector2
 var debug_pressing_point: Vector2
 var running_paint_bucket: bool = false
+var drag_started: bool = false
 
 var filled_shape: bool = false
 
@@ -75,7 +77,6 @@ var mode: Mode = Mode.BRUSH:
 var tool_brush_size: Dictionary[Mode, int] = {
 	Mode.BRUSH: 1,
 	Mode.ERASER: 1,
-	Mode.LINE: 1
 }
 
 var brush_size: int:
@@ -97,8 +98,10 @@ func _ready() -> void:
 	shape_filled_square_button.pressed.connect(_on_shape_filled_square_button_pressed)
 	shape_circle_button.pressed.connect(_on_shape_circle_button_pressed)
 	shape_filled_circle_button.pressed.connect(_on_shape_filled_circle_button_pressed)
+	move_button.pressed.connect(_on_move_button_pressed)
 	eraser_button.pressed.connect(_on_eraser_button_pressed)
 	eyedropper_button.pressed.connect(_on_eyedropper_button_pressed)
+	selection_square_button.pressed.connect(_on_selection_square_button_pressed)
 	
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
 	
@@ -137,16 +140,16 @@ func _process(_delta: float) -> void:
 	match mode:
 		Mode.BRUSH, Mode.ERASER:
 			_handle_brush_mode()
-		Mode.LINE:
-			_handle_line_mode()
+		Mode.LINE, Mode.SHAPE_SQUARE, Mode.SHAPE_CIRCLE:
+			_handle_shape_mode()
 		Mode.PAINT_BUCKET:
 			_handle_paint_bucket_mode()
-		Mode.SHAPE_SQUARE:
-			_handle_shape_square_mode()
-		Mode.SHAPE_CIRCLE:
-			_handle_shape_circle_mode()
+		Mode.MOVE:
+			_handle_move_mode()
 		Mode.EYEDROPPER:
 			_handle_eyedropper_mode()
+		Mode.SELECTION_SQUARE:
+			_handle_square_selection_mode()
 	
 	if Input.is_action_just_pressed("clear"):
 		for x in range(size.x):
@@ -154,7 +157,7 @@ func _process(_delta: float) -> void:
 	
 	editor_texture.update(image)
 	preview_editor_texture.update(preview_image)
-
+	
 	queue_redraw()
 
 func _gui_input(event: InputEvent) -> void:
@@ -175,7 +178,7 @@ func _on_mouse_entered() -> void:
 	match mode:
 		Mode.ERASER, Mode.EYEDROPPER:
 			hotspot = Vector2(4, 20)
-		
+	
 	Input.set_custom_mouse_cursor(cursor_icons.get(mode), Input.CURSOR_ARROW, hotspot)
 
 func _on_mouse_exited() -> void:
@@ -206,26 +209,33 @@ func _on_shape_filled_circle_button_pressed() -> void:
 	mode = Mode.SHAPE_CIRCLE
 	filled_shape = true
 
+func _on_move_button_pressed() -> void:
+	mode = Mode.MOVE
+
 func _on_eraser_button_pressed() -> void:
 	mode = Mode.ERASER
 
 func _on_eyedropper_button_pressed() -> void:
 	mode = Mode.EYEDROPPER
 
+func _on_selection_square_button_pressed() -> void:
+	mode = Mode.SELECTION_SQUARE
+
 func _on_size_slider_value_changed(value: float) -> void:
 	tool_brush_size[mode] = int(value)
 
 func _update_mouse_state() -> bool:
-	was_mouse_pressed = is_mouse_pressed
-	is_mouse_pressed = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var mouse_released := Input.is_action_just_released("drag_start") or Input.is_action_just_released("paint_primary_color")
 	
 	# Mouse released, reset outside canvas flag
-	if was_mouse_pressed and not is_mouse_pressed and stroke_started_outside_canvas:
+	if mouse_released and stroke_started_outside_canvas:
 		stroke_started_outside_canvas = false
 		return false
 	
+	var mouse_just_pressed := Input.is_action_just_pressed("drag_start") or Input.is_action_just_pressed("paint_primary_color")
+	
 	# Mouse outside canvas
-	if not was_mouse_pressed and is_mouse_pressed and not get_parent().get_global_rect().has_point(get_global_mouse_position()):
+	if mouse_just_pressed and not get_parent().get_global_rect().has_point(get_global_mouse_position()):
 		stroke_started_outside_canvas = true
 	
 	if stroke_started_outside_canvas: return false
@@ -239,32 +249,16 @@ func _handle_brush_mode() -> void:
 	var points_to_paint: Array[Vector2i]
 	var grid_mouse_position := Vector2i(mouse_position)
 	
-	if is_mouse_pressed:
+	if Input.is_action_pressed("paint_primary_color"):
 		points_to_paint.push_back(grid_mouse_position)
 		
-		if was_mouse_pressed and (previous_mouse_position - mouse_position).length() > 1:
+		if (previous_mouse_position - mouse_position).length() > 1:
 			points_to_paint.append_array(Geometry2D.bresenham_line(previous_mouse_position, mouse_position))
 	
 	for point in points_to_paint:
 		Painter.paint_pixel(image, point, brush_size, active_color)
 
 	Painter.paint_pixel(preview_image, grid_mouse_position, brush_size, preview_color)
-
-func _handle_line_mode() -> void:
-	if is_mouse_pressed and not was_mouse_pressed:
-		pressing_point = mouse_position
-	
-	if was_mouse_pressed and not is_mouse_pressed:
-		var points_to_paint := Geometry2D.bresenham_line(pressing_point, mouse_position)
-		
-		for point in points_to_paint:
-			Painter.paint_pixel(image, point, brush_size, active_color)
-	
-	if is_mouse_pressed:
-		var preview_line := Geometry2D.bresenham_line(pressing_point, mouse_position)
-	
-		for point in preview_line:
-			Painter.paint_pixel(preview_image, point, brush_size, preview_color)
 
 func _handle_paint_bucket_mode() -> void:
 	if running_paint_bucket: return
@@ -274,7 +268,7 @@ func _handle_paint_bucket_mode() -> void:
 	
 	var point_color := image.get_pixelv(mouse_position)
 	
-	if is_mouse_pressed and not was_mouse_pressed:
+	if Input.is_action_just_pressed("paint_primary_color"):
 		if point_color == active_color:
 			return
 			
@@ -284,41 +278,61 @@ func _handle_paint_bucket_mode() -> void:
 			
 		print("Flood fill time %d ms" % [Time.get_ticks_msec() - initial_time])
 
-func _handle_shape_square_mode() -> void:
-	if is_mouse_pressed and not was_mouse_pressed:
+func _handle_shape_mode() -> void:
+	if Input.is_action_just_pressed("drag_start"):
 		pressing_point = mouse_position
+		drag_started = true
 	
-	var force_ratio := Input.is_action_pressed("symmetric_shape")
+	if Input.is_action_just_pressed("drag_cancel"):
+		drag_started = false
 	
-	if is_mouse_pressed:
-		Painter.paint_rect(preview_image, pressing_point, mouse_position, preview_color, filled_shape, force_ratio)
-	elif was_mouse_pressed: 
-		Painter.paint_rect(image, pressing_point, mouse_position, active_color, filled_shape, force_ratio)
+	if drag_started:
+		var image_to_paint: Image
+		var color_to_paint: Color
+		
+		if Input.is_action_pressed("drag_start"):
+			image_to_paint = preview_image
+			color_to_paint = preview_color
+		elif Input.is_action_just_released("drag_start"):
+			image_to_paint = image
+			color_to_paint = active_color
+			drag_started = false
+		
+		var force_ratio := Input.is_action_pressed("symmetric_shape")
+		
+		match mode:
+			Mode.SHAPE_SQUARE:
+				Painter.paint_rect(image_to_paint, pressing_point, mouse_position, color_to_paint, filled_shape, force_ratio)
+			Mode.SHAPE_CIRCLE:
+				Painter.paint_ellipse(image_to_paint, mouse_position, pressing_point, color_to_paint, filled_shape, force_ratio)
+			Mode.LINE:
+				for point in Geometry2D.bresenham_line(pressing_point, mouse_position):
+					Painter.paint_pixel(image_to_paint, point, brush_size, color_to_paint)
 
-func _handle_shape_circle_mode() -> void:
-	if is_mouse_pressed and not was_mouse_pressed:
-		pressing_point = mouse_position
-	
-	var force_ratio := Input.is_action_pressed("symmetric_shape")
-	
-	if is_mouse_pressed:
-		Painter.paint_ellipse(preview_image, mouse_position, pressing_point, preview_color, filled_shape, force_ratio)
-	elif was_mouse_pressed:
-		Painter.paint_ellipse(image, mouse_position, pressing_point, active_color, filled_shape, force_ratio)
+func _handle_move_mode() -> void:
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		pass
 
 func _handle_eyedropper_mode() -> void:
-	if is_mouse_pressed and not was_mouse_pressed and Painter.image_has_point(image, int(mouse_position.x), int(mouse_position.y)):
+	if Input.is_action_just_pressed("paint_primary_color") and Painter.image_has_point(image, int(mouse_position.x), int(mouse_position.y)):
 		var cursor_color := image.get_pixel(int(mouse_position.x), int(mouse_position.y))
 		
 		if not is_zero_approx(cursor_color.a):
 			primary_color = cursor_color
 			color_picker.color = primary_color
 
+func _handle_square_selection_mode() -> void:
+	pass
+
 func set_new_image(new_image: Image) -> void:
 	image = new_image
 	sprite_size = image.get_size()
 	editor_texture = ImageTexture.create_from_image(image)
 	canvas.texture = editor_texture
+	preview_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	preview_image.fill(Color.TRANSPARENT)
+	preview_editor_texture = ImageTexture.create_from_image(preview_image)
+	preview_canvas.texture = preview_editor_texture
 	
 	await get_tree().process_frame
 	

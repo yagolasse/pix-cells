@@ -15,7 +15,9 @@
 [ext_resource type="Texture2D" uid="uid://dywpkntagm0xf" path="res://icons/circle.svg" id="8_ycdy4"]
 [ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://theme/default_panel_background.tres" id="9_4c57u"]
 [ext_resource type="Texture2D" uid="uid://bm3o75x5s7x5u" path="res://icons/circle_filled.svg" id="10_w48qg"]
+[ext_resource type="Texture2D" uid="uid://c8xr50uj2tkba" path="res://icons/pan_tool.svg" id="11_getpj"]
 [ext_resource type="Texture2D" uid="uid://mhrpk6k2lp3d" path="res://icons/eyedropper.svg" id="12_2cqfq"]
+[ext_resource type="Texture2D" uid="uid://b0vuq12efissj" path="res://icons/select.svg" id="14_ryguw"]
 [ext_resource type="Texture2D" uid="uid://djpom8b7c05tb" path="res://icons/point_scan.svg" id="15_yaehf"]
 [ext_resource type="Texture2D" uid="uid://dx4uooq44v852" path="res://icons/close_small.svg" id="18_cegan"]
 [ext_resource type="Script" uid="uid://df04r7ooxjoe1" path="res://scripts/mini_preview.gd" id="19_82xsv"]
@@ -182,6 +184,15 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("10_w48qg")
 
+[node name="MoveButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1125842130]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+toggle_mode = true
+button_group = ExtResource("4_7mycd")
+icon = ExtResource("11_getpj")
+
 [node name="EraserButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=2091031398]
 unique_name_in_owner = true
 layout_mode = 2
@@ -199,6 +210,15 @@ size_flags_vertical = 4
 toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("12_2cqfq")
+
+[node name="SelectionSquareButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1198670253]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+toggle_mode = true
+button_group = ExtResource("4_7mycd")
+icon = ExtResource("14_ryguw")
 
 [node name="VSeparator" type="VSeparator" parent="Control/VSplitContainer/HSplitContainer" unique_id=1019834100]
 layout_mode = 2
@@ -228,8 +248,9 @@ cursor_icons = Dictionary[int, Texture2D]({
 2: ExtResource("6_efxa6"),
 3: ExtResource("15_yaehf"),
 4: ExtResource("15_yaehf"),
-5: ExtResource("4_1bvp3"),
-6: ExtResource("12_2cqfq")
+5: ExtResource("11_getpj"),
+6: ExtResource("12_2cqfq"),
+8: ExtResource("15_yaehf")
 })
 
 [node name="DrawingCanvas" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=1013024214]
