@@ -1,0 +1,19 @@
+extends Node
+
+enum Mode {
+	BRUSH,
+	LINE,
+	PAINT_BUCKET,
+	SHAPE_SQUARE,
+	SHAPE_CIRCLE,
+	MOVE,
+	ERASER,
+	EYEDROPPER,
+	SELECTION_SQUARE,
+}
+
+enum DisplayMode {
+	PREVIEW,
+	ACTUAL,
+	NONE
+}

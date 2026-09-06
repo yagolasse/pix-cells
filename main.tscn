@@ -3,6 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://c7ryyagcwvm82" path="res://icons/brush.svg" id="1_1bvp3"]
 [ext_resource type="Script" uid="uid://bet2pp0f2dh3j" path="res://scripts/app.gd" id="2_5vw27"]
 [ext_resource type="Theme" uid="uid://fpr7mpb5i2bn" path="res://theme/app_theme.tres" id="3_lquwl"]
+[ext_resource type="Script" uid="uid://ds1pg62o35fp8" path="res://scripts/tools_panel.gd" id="3_ryguw"]
 [ext_resource type="Texture2D" uid="uid://c3wf7cnxsxsol" path="res://icons/eraser.svg" id="4_1bvp3"]
 [ext_resource type="ButtonGroup" uid="uid://d3c07br53vuaf" path="res://theme/tool_button_group.tres" id="4_7mycd"]
 [ext_resource type="Texture2D" uid="uid://dqunnmuaw4xyy" path="res://icons/line.svg" id="4_272bh"]
@@ -105,6 +106,7 @@ size_flags_vertical = 3
 custom_minimum_size = Vector2(48, 0)
 layout_mode = 2
 size_flags_horizontal = 0
+script = ExtResource("3_ryguw")
 
 [node name="MarginContainer" type="MarginContainer" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel" unique_id=543959004]
 layout_mode = 1
@@ -249,7 +251,7 @@ cursor_icons = Dictionary[int, Texture2D]({
 3: ExtResource("15_yaehf"),
 4: ExtResource("15_yaehf"),
 5: ExtResource("11_getpj"),
-6: ExtResource("12_2cqfq"),
+6: ExtResource("4_1bvp3"),
 8: ExtResource("15_yaehf")
 })
 
