@@ -13,9 +13,10 @@ func _on_open_file_button_pressed() -> void:
 	file_dialog.visible = true
 
 func _on_file_dialog_file_selected(path: String) -> void:   
-	var image = Image.load_from_file(path)
+	var image := Image.load_from_file(path)
 	
 	if image:
+		get_window().title = "pix-cells - %s" % [path.get_file()]
 		image_editor.set_new_image(image)
 	else:
 		printerr("Failed to read file: %s" % [path])
