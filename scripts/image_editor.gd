@@ -7,8 +7,10 @@ extends Control
 @onready var preview_canvas: TextureRect = %PreviewCanvas
 @onready var color_picker: ColorPicker = %ColorPicker
 @onready var size_slider: SpinBox = %SizeSlider
+@onready var mouse_position_label: Label = %MousePositionLabel
 
 var image: Image
+var clipboard_image: Image
 var editor_texture: ImageTexture
 
 var preview_image: Image
@@ -29,12 +31,14 @@ var preview_color: Color:
 
 var primary_selected: bool = true
 
-var initial_canvas_position: Vector2
+var initial_move_position: Vector2
 var drag_start_mouse_position: Vector2
 var drag_end_mouse_position: Vector2
+var clipboard_rect: Rect2i
 var running_paint_bucket: bool = false
 var drag_started: bool = false
 var selection_area_defined: bool = false
+var selection_polygon_points: Array[Vector2i]
 
 var filled_shape: bool = false
 
@@ -55,28 +59,37 @@ var tool_brush_size: Dictionary[Enums.Mode, int] = {
 var brush_size: int:
 	get: return tool_brush_size[mode] if tool_brush_size.has(mode) else 1
 
+var is_mouse_inside_canvas: bool = false
+
 func _draw() -> void:
 	var rect := canvas.get_rect()
 	draw_rect(rect, Color.WHITE, false)
 	
 	if mode == Enums.Mode.SELECTION_SQUARE and (drag_started or selection_area_defined):
-		var local_start_mouse_position := drag_start_mouse_position - sprite_size / 2.0
-		var local_mouse_position := (mouse_position + Vector2.ONE) - sprite_size / 2.0
-		var x0 := int(local_start_mouse_position.x)
-		var y0 := int(local_start_mouse_position.y)
-		var x1 := int(local_mouse_position.x)
-		var y1 := int(local_mouse_position.y)
+		@warning_ignore_start("integer_division")
+		var x0 := clipboard_rect.position.x - sprite_size.x / 2
+		var y0 := clipboard_rect.position.y - sprite_size.y / 2
+		@warning_ignore_restore("integer_division")
 		
-		if selection_area_defined:
-			var local_end_mouse_position := drag_end_mouse_position - sprite_size / 2.0
-			x1 = int(local_end_mouse_position.x)
-			y1 = int(local_end_mouse_position.y)
+		var x1 := x0 + clipboard_rect.size.x
+		var y1 := y0 + clipboard_rect.size.y
 		
 		var dash_lenght := 6.0 / scale.x
 		draw_dashed_line(Vector2i(x0, y0), Vector2i(x1, y0), Color.GRAY, -1.0, dash_lenght)
 		draw_dashed_line(Vector2i(x1, y0), Vector2i(x1, y1), Color.GRAY, -1.0, dash_lenght)
 		draw_dashed_line(Vector2i(x1, y1), Vector2i(x0, y1), Color.GRAY, -1.0, dash_lenght)
 		draw_dashed_line(Vector2i(x0, y1), Vector2i(x0, y0), Color.GRAY, -1.0, dash_lenght)
+		
+	if mode == Enums.Mode.SELECTION_FREE and (drag_started or selection_area_defined) and not selection_polygon_points.is_empty():
+		@warning_ignore_start("integer_division")
+		var local_points := selection_polygon_points.map(func(e): return e - sprite_size / 2)
+		@warning_ignore_restore("integer_division")
+		
+		var points_size := local_points.size()
+		var first_point := local_points[0] as Vector2i
+		var last_point := local_points[points_size - 1] as Vector2i
+		var complementary_points := [] if abs((first_point - last_point).length()) < 1 else Geometry2D.bresenham_line(last_point, first_point)
+		draw_polygon(local_points + complementary_points, [Color.GRAY])
 
 func _ready() -> void:
 	Input.use_accumulated_input = false
@@ -84,10 +97,14 @@ func _ready() -> void:
 	primary_color = color_picker.color
 	active_color = primary_color
 	
+	is_mouse_inside_canvas = (get_parent() as Control).get_global_rect().has_point(get_global_mouse_position())
+	
 	image = Image.create_empty(sprite_size.x, sprite_size.y, false, Image.FORMAT_RGBA8)
+	clipboard_image = Image.create_empty(sprite_size.x, sprite_size.y, false, Image.FORMAT_RGBA8)
 	preview_image = Image.create_empty(sprite_size.x, sprite_size.y, false, Image.FORMAT_RGBA8)
 	
 	image.fill(Color.TRANSPARENT)
+	clipboard_image.fill(Color.TRANSPARENT)
 	
 	editor_texture = ImageTexture.create_from_image(image)
 	preview_editor_texture = ImageTexture.create_from_image(preview_image)
@@ -98,14 +115,22 @@ func _ready() -> void:
 	scale *= 10
 
 func _process(_delta: float) -> void:
+	var grid_mouse_position := Vector2i(canvas.get_local_mouse_position())
+	mouse_position_label.text = "x: %d, y: %d" % [grid_mouse_position.x, grid_mouse_position.y]
+	
 	if Input.is_action_just_pressed("undo") and undo_redo.has_undo():
 		undo_redo.undo()
 	elif Input.is_action_just_pressed("redo") and undo_redo.has_redo():
 		undo_redo.redo()
 	
-	if (get_parent() as Control).get_global_rect().has_point(get_global_mouse_position()):
+	Debug.instance.add_debug_property("Mouse inside flag", is_mouse_inside_canvas)
+	Debug.instance.add_debug_property("Mouse inside listener", (get_parent() as Control).get_global_rect().has_point(get_global_mouse_position()))
+	
+	if not is_mouse_inside_canvas and (get_parent() as Control).get_global_rect().has_point(get_global_mouse_position()):
+		is_mouse_inside_canvas = true
 		_on_mouse_entered()
-	else:
+	if is_mouse_inside_canvas and not (get_parent() as Control).get_global_rect().has_point(get_global_mouse_position()):
+		is_mouse_inside_canvas = false
 		_on_mouse_exited()
 	
 	if mode == Enums.Mode.ERASER:
@@ -130,6 +155,8 @@ func _process(_delta: float) -> void:
 			_handle_eyedropper_mode()
 		Enums.Mode.SELECTION_SQUARE:
 			_handle_square_selection_mode()
+		Enums.Mode.SELECTION_FREE:
+			_handle_free_selection_mode()
 	
 	if Input.is_action_just_pressed("clear"):
 		image.fill(Color.TRANSPARENT)
@@ -260,13 +287,13 @@ func _handle_move_mode() -> void:
 	if Input.is_action_just_pressed("drag_start"):
 		drag_started = true
 		drag_start_mouse_position = (get_parent() as Control).get_local_mouse_position()
-		initial_canvas_position = position
+		initial_move_position = position
 	
 	if Input.is_action_just_released("drag_start"):
 		drag_started = false
 	
 	if drag_started:
-		position = initial_canvas_position - drag_start_mouse_position + (get_parent() as Control).get_local_mouse_position()
+		position = initial_move_position - drag_start_mouse_position + (get_parent() as Control).get_local_mouse_position()
 
 func _handle_eyedropper_mode() -> void:
 	if Input.is_action_just_pressed("paint_primary_color") and Painter.image_has_point(image, int(mouse_position.x), int(mouse_position.y)):
@@ -278,22 +305,95 @@ func _handle_eyedropper_mode() -> void:
 
 func _handle_square_selection_mode() -> void:
 	if selection_area_defined: 
-		pass # Move selected area
+		if is_mouse_inside_canvas:
+			if clipboard_rect.has_point(canvas.get_local_mouse_position()):
+				Input.set_custom_mouse_cursor(cursor_icons.get(Enums.Mode.MOVE))
+			else:
+				Input.set_custom_mouse_cursor(cursor_icons.get(Enums.Mode.SELECTION_SQUARE))
+		if Input.is_action_pressed("drag_start") and not drag_started:
+			drag_started = true
+			initial_move_position = clipboard_rect.position
+			drag_start_mouse_position = canvas.get_local_mouse_position()
+		if Input.is_action_just_released("drag_start"):
+			drag_started = false
+		if Input.is_action_just_pressed("copy"):
+			clipboard_image.fill(Color.TRANSPARENT)
+			clipboard_image.blit_rect(image, clipboard_rect, Vector2i.ZERO)
+			%ClipboardCanvas.texture = ImageTexture.create_from_image(clipboard_image)
+		if Input.is_action_just_pressed("cut"):
+			clipboard_image.fill(Color.TRANSPARENT)
+			clipboard_image.blit_rect(image, clipboard_rect, Vector2i.ZERO)
+			%ClipboardCanvas.texture = ImageTexture.create_from_image(clipboard_image)
+			undo_redo.create_action("Cut")
+			undo_redo.add_undo_property(image, "data", image.data)
+			image.fill_rect(clipboard_rect, Color.TRANSPARENT)
+			undo_redo.add_do_property(image, "data", image.data)
+			undo_redo.commit_action(false)
+		if Input.is_action_just_pressed("paste"):
+			undo_redo.create_action("Paste")
+			undo_redo.add_undo_property(image, "data", image.data)
+			image.blend_rect(clipboard_image, clipboard_image.get_used_rect(), clipboard_rect.position)
+			undo_redo.add_do_property(image, "data", image.data)
+			undo_redo.commit_action(false)
+		if drag_started:
+			var new_clipboard_rect_position := initial_move_position + canvas.get_local_mouse_position() - drag_start_mouse_position
+			clipboard_rect = Rect2i(new_clipboard_rect_position, clipboard_rect.size)
 	else:
 		if Input.is_action_just_pressed("drag_start"):
 			drag_started = true
-			drag_start_mouse_position = mouse_position - Vector2.ONE
+			drag_start_mouse_position = Vector2i(mouse_position)
 		
 		if Input.is_action_just_released("drag_start"):
 			selection_area_defined = true
 			drag_started = false
-			drag_end_mouse_position = mouse_position + Vector2.ONE
+			drag_end_mouse_position = Vector2i(mouse_position)
+		
+		var end_position := mouse_position if Input.is_action_pressed("drag_start") else drag_end_mouse_position
+		_update_clipboard_rect(drag_start_mouse_position, end_position)
+
+func _handle_free_selection_mode() -> void:
+	if selection_area_defined: 
+		pass
+	else:
+		if Input.is_action_just_pressed("drag_start"):
+			drag_started = true
+			selection_polygon_points.clear()
+		
+		if Input.is_action_just_released("drag_start"):
+			selection_area_defined = true
+			drag_started = false
+			selection_polygon_points.push_back(Vector2i(mouse_position))
+		
+		if drag_started:
+			selection_polygon_points.push_back(Vector2i(mouse_position))
+		
+		#var end_position := mouse_position if Input.is_action_pressed("drag_start") else drag_end_mouse_position
+		#_update_clipboard_rect(drag_start_mouse_position, end_position)
+
+func _update_clipboard_rect(start_position: Vector2i, end_position: Vector2i) ->void:
+	var x0 := int(start_position.x)
+	var y0 := int(start_position.y)
+	var x1 := int(end_position.x)
+	var y1 := int(end_position.y)
+	if (x0 > x1):
+		var temp := x0
+		x0 = x1
+		x1 = temp
+	if (y0 > y1):
+		var temp := y0
+		y0 = y1
+		y1 = temp
+	clipboard_rect = Rect2i(Vector2i(x0, y0), Vector2i(x1, y1) - Vector2i(x0, y0))
 
 func set_new_image(new_image: Image) -> void:
 	image = new_image
 	sprite_size = image.get_size()
 	editor_texture = ImageTexture.create_from_image(image)
 	canvas.texture = editor_texture
+	
+	clipboard_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	clipboard_image.fill(Color.TRANSPARENT)
+	
 	preview_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	preview_image.fill(Color.TRANSPARENT)
 	preview_editor_texture = ImageTexture.create_from_image(preview_image)

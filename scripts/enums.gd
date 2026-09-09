@@ -10,6 +10,7 @@ enum Mode {
 	ERASER,
 	EYEDROPPER,
 	SELECTION_SQUARE,
+	SELECTION_FREE,
 }
 
 enum DisplayMode {

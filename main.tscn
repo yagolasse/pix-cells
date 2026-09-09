@@ -20,6 +20,7 @@
 [ext_resource type="Texture2D" uid="uid://mhrpk6k2lp3d" path="res://icons/eyedropper.svg" id="12_2cqfq"]
 [ext_resource type="Texture2D" uid="uid://b0vuq12efissj" path="res://icons/select.svg" id="14_ryguw"]
 [ext_resource type="Texture2D" uid="uid://djpom8b7c05tb" path="res://icons/point_scan.svg" id="15_yaehf"]
+[ext_resource type="Texture2D" uid="uid://v3qfhufma0p6" path="res://icons/lasso_select.svg" id="16_d13ii"]
 [ext_resource type="Texture2D" uid="uid://dx4uooq44v852" path="res://icons/close_small.svg" id="18_cegan"]
 [ext_resource type="Script" uid="uid://df04r7ooxjoe1" path="res://scripts/mini_preview.gd" id="19_82xsv"]
 
@@ -75,9 +76,12 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="Control/VSplitContainer/ToolsSettingsPanel" unique_id=915036515]
-layout_mode = 0
-offset_right = 1152.0
-offset_bottom = 39.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer" unique_id=68153184]
 layout_mode = 2
@@ -94,6 +98,16 @@ value = 1.0
 prefix = "Size"
 suffix = "px"
 custom_arrow_step = 1.0
+
+[node name="Panel" type="Panel" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=795717039]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="MousePositionLabel" type="Label" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=305860231]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
 
 [node name="HSeparator3" type="HSeparator" parent="Control/VSplitContainer" unique_id=1442290217]
 layout_mode = 2
@@ -222,6 +236,15 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("14_ryguw")
 
+[node name="SelectionFreeButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1009880653]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+toggle_mode = true
+button_group = ExtResource("4_7mycd")
+icon = ExtResource("16_d13ii")
+
 [node name="VSeparator" type="VSeparator" parent="Control/VSplitContainer/HSplitContainer" unique_id=1019834100]
 layout_mode = 2
 
@@ -232,6 +255,18 @@ size_flags_horizontal = 3
 theme = ExtResource("3_lquwl")
 script = ExtResource("7_kek77")
 metadata/_custom_type_script = "uid://lbq5fy31vm8n"
+
+[node name="ClipboardCanvas" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel" unique_id=924517508]
+unique_name_in_owner = true
+texture_filter = 1
+texture_repeat = 1
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -255.0
+offset_bottom = 236.0
+grow_horizontal = 0
 
 [node name="ImageEditor" type="Control" parent="Control/VSplitContainer/HSplitContainer/Panel" unique_id=360331639]
 unique_name_in_owner = true

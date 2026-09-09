@@ -13,6 +13,7 @@ extends Panel
 @onready var eraser_button: Button = %EraserButton
 @onready var eyedropper_button: Button = %EyedropperButton
 @onready var selection_square_button: Button = %SelectionSquareButton
+@onready var selection_free_button: Button = %SelectionFreeButton
 @onready var color_picker: ColorPicker = %ColorPicker
 @onready var size_slider: SpinBox = %SizeSlider
 
@@ -30,6 +31,7 @@ func _ready() -> void:
 	eraser_button.pressed.connect(_on_eraser_button_pressed)
 	eyedropper_button.pressed.connect(_on_eyedropper_button_pressed)
 	selection_square_button.pressed.connect(_on_selection_square_button_pressed)
+	selection_free_button.pressed.connect(_on_selection_free_button_pressed)
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
 	color_picker.color_changed.connect(_on_color_picker_color_changed)
 
@@ -70,6 +72,9 @@ func _on_eyedropper_button_pressed() -> void:
 
 func _on_selection_square_button_pressed() -> void:
 	image_editor.mode = Enums.Mode.SELECTION_SQUARE
+	
+func _on_selection_free_button_pressed() -> void:
+	image_editor.mode = Enums.Mode.SELECTION_FREE
 
 func _on_size_slider_value_changed(value: float) -> void:
 	image_editor.tool_brush_size[image_editor.mode] = int(value)
