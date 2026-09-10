@@ -54,6 +54,8 @@ var tool_brush_size: Dictionary[Enums.Mode, int] = {
 	Enums.Mode.ERASER: 1,
 }
 
+var initial_sprite_size := Vector2i(32, 32)
+
 var brush_size: int:
 	get: return tool_brush_size[mode] if tool_brush_size.has(mode) else 1
 
@@ -66,9 +68,21 @@ var brush_size: int:
 		if is_mouse_inside_canvas: _on_mouse_entered()
 		else: _on_mouse_exited()
 
+var background_tile_size: int = 4
+
 func _draw() -> void:
 	var rect := canvas.get_rect()
 	draw_rect(rect, Color.WHITE, false)
+
+	if image:
+		var tile_index := 0
+		for x in range(0, image.get_width(), background_tile_size):
+			tile_index += 1
+			for y in range(0, image.get_height(), background_tile_size):
+				tile_index += 1
+				var color := Color.GRAY if tile_index % 2 == 0 else Color.DIM_GRAY
+				draw_rect(Rect2(x - image.get_width() / 2.0, y - image.get_height() / 2.0, background_tile_size, background_tile_size), color)
+
 	
 	if mode == Enums.Mode.SELECTION_SQUARE and (drag_started or selection_area_defined):
 		@warning_ignore_start("integer_division")
@@ -99,10 +113,10 @@ func _draw() -> void:
 func _ready() -> void:
 	Input.use_accumulated_input = false
 
+	RenderingServer.canvas_item_set_custom_rect(get_canvas_item(), true, get_viewport_rect())
+
 	primary_color = color_picker.color
 	active_color = primary_color
-
-	var initial_sprite_size := Vector2i(32, 32)
 	
 	image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)
 	clipboard_image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)

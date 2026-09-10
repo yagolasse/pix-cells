@@ -24,9 +24,11 @@
 [ext_resource type="Texture2D" uid="uid://dx4uooq44v852" path="res://icons/close_small.svg" id="18_cegan"]
 [ext_resource type="Script" uid="uid://df04r7ooxjoe1" path="res://scripts/mini_preview.gd" id="19_82xsv"]
 
-[node name="CanvasLayer" type="CanvasLayer" unique_id=20523015]
+[node name="Editor" type="Node" unique_id=578838]
 
-[node name="Control" type="Control" parent="." unique_id=456177329]
+[node name="EditorCanvasLayer" type="CanvasLayer" parent="." unique_id=20523015]
+
+[node name="Control" type="Control" parent="EditorCanvasLayer" unique_id=456177329]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -37,7 +39,7 @@ mouse_filter = 2
 theme = ExtResource("3_lquwl")
 script = ExtResource("2_5vw27")
 
-[node name="VSplitContainer" type="VBoxContainer" parent="Control" unique_id=1735295974]
+[node name="VSplitContainer" type="VBoxContainer" parent="EditorCanvasLayer/Control" unique_id=1735295974]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -45,37 +47,44 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MenuBarContainer" type="Panel" parent="Control/VSplitContainer" unique_id=1132739944]
+[node name="MenuBarContainer" type="Panel" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=1132739944]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="MenuBar" type="MenuBar" parent="Control/VSplitContainer/MenuBarContainer" unique_id=64400901]
+[node name="MenuBar" type="MenuBar" parent="EditorCanvasLayer/Control/VSplitContainer/MenuBarContainer" unique_id=64400901]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 0
 offset_right = 1152.0
 offset_bottom = 32.0
 size_flags_vertical = 0
 
-[node name="OpenFileButton" type="MenuButton" parent="Control/VSplitContainer/MenuBarContainer/MenuBar" unique_id=1307290664]
+[node name="FileButton" type="MenuButton" parent="EditorCanvasLayer/Control/VSplitContainer/MenuBarContainer/MenuBar" unique_id=1307290664]
 unique_name_in_owner = true
 layout_mode = 0
 offset_right = 8.0
 offset_bottom = 8.0
 text = "File
 "
-item_count = 1
+switch_on_hover = true
+item_count = 4
 popup/item_0/text = "Open"
 popup/item_0/id = 0
+popup/item_1/text = "Save"
+popup/item_1/id = 1
+popup/item_2/text = "Save As..."
+popup/item_2/id = 2
+popup/item_3/text = "Exit"
+popup/item_3/id = 3
 
-[node name="HSeparator" type="HSeparator" parent="Control/VSplitContainer" unique_id=1851042240]
+[node name="HSeparator" type="HSeparator" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=1851042240]
 layout_mode = 2
 
-[node name="ToolsSettingsPanel" type="Panel" parent="Control/VSplitContainer" unique_id=1704043965]
+[node name="ToolsSettingsPanel" type="Panel" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=1704043965]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Control/VSplitContainer/ToolsSettingsPanel" unique_id=915036515]
+[node name="MarginContainer" type="MarginContainer" parent="EditorCanvasLayer/Control/VSplitContainer/ToolsSettingsPanel" unique_id=915036515]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -83,10 +92,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer" unique_id=68153184]
+[node name="HBoxContainer" type="HBoxContainer" parent="EditorCanvasLayer/Control/VSplitContainer/ToolsSettingsPanel/MarginContainer" unique_id=68153184]
 layout_mode = 2
 
-[node name="SizeSlider" type="SpinBox" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=492154648]
+[node name="SizeSlider" type="SpinBox" parent="EditorCanvasLayer/Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=492154648]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(104, 0)
 layout_mode = 2
@@ -99,30 +108,30 @@ prefix = "Size"
 suffix = "px"
 custom_arrow_step = 1.0
 
-[node name="Panel" type="Panel" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=795717039]
+[node name="Panel" type="Panel" parent="EditorCanvasLayer/Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=795717039]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 
-[node name="MousePositionLabel" type="Label" parent="Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=305860231]
+[node name="MousePositionLabel" type="Label" parent="EditorCanvasLayer/Control/VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=305860231]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="HSeparator3" type="HSeparator" parent="Control/VSplitContainer" unique_id=1442290217]
+[node name="HSeparator3" type="HSeparator" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=1442290217]
 layout_mode = 2
 
-[node name="HSplitContainer" type="HBoxContainer" parent="Control/VSplitContainer" unique_id=1168878778]
+[node name="HSplitContainer" type="HBoxContainer" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=1168878778]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ToolsPanel" type="Panel" parent="Control/VSplitContainer/HSplitContainer" unique_id=1262916001]
+[node name="ToolsPanel" type="Panel" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer" unique_id=1262916001]
 custom_minimum_size = Vector2(48, 0)
 layout_mode = 2
 size_flags_horizontal = 0
 script = ExtResource("3_ryguw")
 
-[node name="MarginContainer" type="MarginContainer" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel" unique_id=543959004]
+[node name="MarginContainer" type="MarginContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel" unique_id=543959004]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -132,12 +141,12 @@ offset_right = 20.0
 offset_bottom = 576.0
 grow_horizontal = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer" unique_id=586563035]
+[node name="VBoxContainer" type="VBoxContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer" unique_id=586563035]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 4
 
-[node name="BrushButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1475343510]
+[node name="BrushButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1475343510]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -146,7 +155,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("1_1bvp3")
 
-[node name="LineButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1441586822]
+[node name="LineButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1441586822]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -155,7 +164,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("4_272bh")
 
-[node name="PaintBucketButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1103708916]
+[node name="PaintBucketButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1103708916]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -164,7 +173,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("6_efxa6")
 
-[node name="ShapeSquareButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1104935130]
+[node name="ShapeSquareButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1104935130]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -173,7 +182,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("7_dg77c")
 
-[node name="ShapeFilledSquareButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1787187507]
+[node name="ShapeFilledSquareButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1787187507]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -182,7 +191,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("8_vivmo")
 
-[node name="ShapeCircleButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=216467326]
+[node name="ShapeCircleButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=216467326]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -191,7 +200,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("8_ycdy4")
 
-[node name="ShapeFilledCircleButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1376236799]
+[node name="ShapeFilledCircleButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1376236799]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -200,7 +209,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("10_w48qg")
 
-[node name="MoveButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1125842130]
+[node name="MoveButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1125842130]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -209,7 +218,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("11_getpj")
 
-[node name="EraserButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=2091031398]
+[node name="EraserButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=2091031398]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -218,7 +227,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("4_1bvp3")
 
-[node name="EyedropperButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1612297497]
+[node name="EyedropperButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1612297497]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -227,7 +236,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("12_2cqfq")
 
-[node name="SelectionSquareButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1198670253]
+[node name="SelectionSquareButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1198670253]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -236,7 +245,7 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("14_ryguw")
 
-[node name="SelectionFreeButton" type="Button" parent="Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1009880653]
+[node name="SelectionFreeButton" type="Button" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ToolsPanel/MarginContainer/VBoxContainer" unique_id=1009880653]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -245,10 +254,10 @@ toggle_mode = true
 button_group = ExtResource("4_7mycd")
 icon = ExtResource("16_d13ii")
 
-[node name="VSeparator" type="VSeparator" parent="Control/VSplitContainer/HSplitContainer" unique_id=1019834100]
+[node name="VSeparator" type="VSeparator" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer" unique_id=1019834100]
 layout_mode = 2
 
-[node name="Panel" type="Panel" parent="Control/VSplitContainer/HSplitContainer" unique_id=553283001]
+[node name="Panel" type="Panel" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer" unique_id=553283001]
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -256,7 +265,7 @@ theme = ExtResource("3_lquwl")
 script = ExtResource("7_kek77")
 metadata/_custom_type_script = "uid://lbq5fy31vm8n"
 
-[node name="ClipboardCanvas" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel" unique_id=924517508]
+[node name="ClipboardCanvas" type="TextureRect" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/Panel" unique_id=924517508]
 unique_name_in_owner = true
 texture_filter = 1
 texture_repeat = 1
@@ -268,7 +277,7 @@ offset_left = -255.0
 offset_bottom = 236.0
 grow_horizontal = 0
 
-[node name="ImageEditor" type="Control" parent="Control/VSplitContainer/HSplitContainer/Panel" unique_id=360331639]
+[node name="ImageEditor" type="Control" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/Panel" unique_id=360331639]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -290,7 +299,7 @@ cursor_icons = Dictionary[int, Texture2D]({
 8: ExtResource("15_yaehf")
 })
 
-[node name="DrawingCanvas" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=1013024214]
+[node name="DrawingCanvas" type="TextureRect" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=1013024214]
 unique_name_in_owner = true
 texture_filter = 1
 texture_repeat = 1
@@ -303,7 +312,7 @@ grow_vertical = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="PreviewCanvas" type="TextureRect" parent="Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=539924669]
+[node name="PreviewCanvas" type="TextureRect" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=539924669]
 unique_name_in_owner = true
 texture_filter = 1
 texture_repeat = 1
@@ -314,41 +323,63 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VSeparator2" type="VSeparator" parent="Control/VSplitContainer/HSplitContainer" unique_id=499337806]
+[node name="VSeparator2" type="VSeparator" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer" unique_id=499337806]
 layout_mode = 2
 
-[node name="ManipulationPanel" type="ScrollContainer" parent="Control/VSplitContainer/HSplitContainer" unique_id=1646027156]
+[node name="ManipulationPanel" type="ScrollContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer" unique_id=1646027156]
 layout_mode = 2
 size_flags_horizontal = 8
 theme_override_styles/panel = ExtResource("9_4c57u")
 horizontal_scroll_mode = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="Control/VSplitContainer/HSplitContainer/ManipulationPanel" unique_id=1132539829]
+[node name="VBoxContainer" type="VBoxContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel" unique_id=1523872955]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PanelContainer" type="PanelContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel/VBoxContainer" unique_id=1132539829]
 layout_mode = 2
 
-[node name="ColorPicker" type="ColorPicker" parent="Control/VSplitContainer/HSplitContainer/ManipulationPanel/PanelContainer" unique_id=903315063]
+[node name="ColorPicker" type="ColorPicker" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel/VBoxContainer/PanelContainer" unique_id=903315063]
 unique_name_in_owner = true
 layout_mode = 2
 edit_alpha = false
 edit_intensity = false
 
-[node name="HSeparator2" type="HSeparator" parent="Control/VSplitContainer" unique_id=1110953350]
+[node name="Panel" type="Panel" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel/VBoxContainer" unique_id=1701071614]
 layout_mode = 2
 
-[node name="AnimationPanel" type="PanelContainer" parent="Control/VSplitContainer" unique_id=2042655827]
+[node name="MarginContainer" type="MarginContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel/VBoxContainer/Panel" unique_id=1696837810]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel/VBoxContainer/Panel/MarginContainer" unique_id=1036939888]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="EditorCanvasLayer/Control/VSplitContainer/HSplitContainer/ManipulationPanel/VBoxContainer/Panel/MarginContainer/VBoxContainer" unique_id=1604998608]
+layout_mode = 2
+text = "Layer 1"
+
+[node name="HSeparator2" type="HSeparator" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=1110953350]
+layout_mode = 2
+
+[node name="AnimationPanel" type="PanelContainer" parent="EditorCanvasLayer/Control/VSplitContainer" unique_id=2042655827]
 layout_mode = 2
 size_flags_vertical = 8
 
-[node name="Debug" type="Control" parent="Control" unique_id=662278047 node_paths=PackedStringArray("container")]
+[node name="Debug" type="Control" parent="EditorCanvasLayer/Control" unique_id=662278047 node_paths=PackedStringArray("container")]
 layout_mode = 1
 anchors_preset = 0
 script = ExtResource("6_7mycd")
 container = NodePath("VBoxContainer")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control/Debug" unique_id=2143301379]
+[node name="VBoxContainer" type="VBoxContainer" parent="EditorCanvasLayer/Control/Debug" unique_id=2143301379]
 layout_mode = 1
 
-[node name="FileDialog" type="FileDialog" parent="Control" unique_id=992110812]
+[node name="DialogCanvasLayer" type="CanvasLayer" parent="." unique_id=723514784]
+
+[node name="OpenFileDialog" type="FileDialog" parent="DialogCanvasLayer" unique_id=992110812]
 unique_name_in_owner = true
 oversampling_override = 1.0
 title = "Open a File"
@@ -358,21 +389,31 @@ file_mode = 0
 access = 2
 use_native_dialog = true
 
-[node name="PreviewPopup" type="Popup" parent="Control" unique_id=536962860]
+[node name="SaveFileDialog" type="FileDialog" parent="DialogCanvasLayer" unique_id=481885764]
+unique_name_in_owner = true
+oversampling_override = 1.0
+initial_position = 2
+dialog_hide_on_ok = true
+access = 2
+filters = PackedStringArray("*.png")
+use_native_dialog = true
+option_count = 1
+
+[node name="PreviewPopup" type="Popup" parent="DialogCanvasLayer" unique_id=536962860]
 unique_name_in_owner = true
 oversampling_override = 1.0
 position = Vector2i(600, 400)
 size = Vector2i(150, 150)
 always_on_top = true
 
-[node name="Panel" type="Panel" parent="Control/PreviewPopup" unique_id=1837611950]
+[node name="Panel" type="Panel" parent="DialogCanvasLayer/PreviewPopup" unique_id=1837611950]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Control/PreviewPopup/Panel" unique_id=1936109906]
+[node name="MarginContainer" type="MarginContainer" parent="DialogCanvasLayer/PreviewPopup/Panel" unique_id=1936109906]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -380,23 +421,30 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Control/PreviewPopup/Panel/MarginContainer" unique_id=1192423054]
+[node name="VBoxContainer" type="VBoxContainer" parent="DialogCanvasLayer/PreviewPopup/Panel/MarginContainer" unique_id=1192423054]
 layout_mode = 2
 
-[node name="VBoxContainer" type="HBoxContainer" parent="Control/PreviewPopup/Panel/MarginContainer/VBoxContainer" unique_id=915826352]
+[node name="VBoxContainer" type="HBoxContainer" parent="DialogCanvasLayer/PreviewPopup/Panel/MarginContainer/VBoxContainer" unique_id=915826352]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="Control/PreviewPopup/Panel/MarginContainer/VBoxContainer/VBoxContainer" unique_id=432669651]
+[node name="Label" type="Label" parent="DialogCanvasLayer/PreviewPopup/Panel/MarginContainer/VBoxContainer/VBoxContainer" unique_id=432669651]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Preview"
 
-[node name="Button" type="Button" parent="Control/PreviewPopup/Panel/MarginContainer/VBoxContainer/VBoxContainer" unique_id=128902557]
+[node name="Button" type="Button" parent="DialogCanvasLayer/PreviewPopup/Panel/MarginContainer/VBoxContainer/VBoxContainer" unique_id=128902557]
 layout_mode = 2
 size_flags_horizontal = 8
 icon = ExtResource("18_cegan")
 
-[node name="TextureRect" type="TextureRect" parent="Control/PreviewPopup/Panel/MarginContainer/VBoxContainer" unique_id=681832807]
+[node name="TextureRect" type="TextureRect" parent="DialogCanvasLayer/PreviewPopup/Panel/MarginContainer/VBoxContainer" unique_id=681832807]
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("19_82xsv")
+
+[node name="ExitConfirmationDialog" type="ConfirmationDialog" parent="DialogCanvasLayer" unique_id=1452289143]
+unique_name_in_owner = true
+title = "Warning!"
+initial_position = 2
+ok_button_text = "Don't Save"
+dialog_text = "Changes were made to the file! Are you sure you want to exit without saving them?"
