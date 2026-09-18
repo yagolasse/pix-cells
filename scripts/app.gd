@@ -12,6 +12,7 @@ const WINDOW_TITLE = "pix-cells - %s%s"
 
 var file_path: String
 var current_image: Image
+var dialogs_open: bool = false
 
 func _ready() -> void:
 	get_tree().set_auto_accept_quit(false)
@@ -30,20 +31,19 @@ func _ready() -> void:
 	current_image.fill(Color.TRANSPARENT)
 
 func _process(_delta: float) -> void:
-	image_editor.process_mode = Node.PROCESS_MODE_DISABLED \
-		if open_file_dialog.visible or save_file_dialog.visible or exit_confirmation_dialog.visible else \
-		Node.PROCESS_MODE_INHERIT
-
+	dialogs_open = open_file_dialog.visible or save_file_dialog.visible or exit_confirmation_dialog.visible
+	image_editor.process_mode = Node.PROCESS_MODE_DISABLED if dialogs_open else Node.PROCESS_MODE_INHERIT
+	
 	var difference = image_editor.image.compute_image_metrics(current_image, false)["max"]
 	
 	var format: Array[String] = []
-
+	
 	if file_path: format.push_back(file_path.get_file())
 	else: format.push_back("Untitled")
-
+	
 	if difference: format.push_back("*")
 	else: format.push_back("")
-
+	
 	get_window().title = WINDOW_TITLE % format
 
 func _notification(what: int) -> void:
@@ -63,21 +63,23 @@ func _on_close_request() -> void:
 	var difference = image_editor.image.compute_image_metrics(current_image, false)["max"]
 
 	if difference:
-		exit_confirmation_dialog.visible = true
+		exit_confirmation_dialog.popup_centered()
 	else:
 		get_tree().quit()
 
 func _on_file_menu_button_id_pressed(id: int) -> void:
+	if dialogs_open: return
+	
 	match id:
 		0:
-			open_file_dialog.visible = true
+			open_file_dialog.popup_centered()
 		1:
 			if file_path:
 				_save_image_and_update_cache(file_path)
 			else:
-				save_file_dialog.visible = true
+				save_file_dialog.popup_centered()
 		2:
-			save_file_dialog.visible = true
+			save_file_dialog.popup_centered()
 		3:
 			_on_close_request()
 
@@ -96,7 +98,7 @@ func _on_open_file_dialog_file_selected(path: String) -> void:
 
 func _on_save_file_dialog_file_selected(path: String, should_quit: bool = true) -> void:
 	var err := _save_image_and_update_cache(path)
-
+	
 	if err:
 		printerr("Error saving, ", error_string(err))
 	elif should_quit:
@@ -109,5 +111,5 @@ func _on_exit_confirmation_dialog_confirmed() -> void:
 
 func _on_exit_custom_action_dialog_confirmed(action: StringName) -> void:
 	if action == EXIT_CONFIRMATION_SAVE_ACTION:
-		exit_confirmation_dialog.visible = false
-		save_file_dialog.visible = true
+		exit_confirmation_dialog.hide()
+		save_file_dialog.popup_centered()

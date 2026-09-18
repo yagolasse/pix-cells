@@ -44,10 +44,19 @@ var undo_redo: UndoRedo = UndoRedo.new()
 
 var mode: Enums.Mode = Enums.Mode.BRUSH:
 	set(value):
+		if mode == value: return
 		mode = value
+	
 		selection_area_defined = false
+
+		if is_mouse_inside_canvas:
+			_on_mouse_entered()
+
 		if tool_brush_size.has(mode):
+			size_slider.visible = true
 			size_slider.value = tool_brush_size[mode]
+		else:
+			size_slider.visible = false
 
 var tool_brush_size: Dictionary[Enums.Mode, int] = {
 	Enums.Mode.BRUSH: 1,
@@ -115,8 +124,9 @@ func _ready() -> void:
 
 	RenderingServer.canvas_item_set_custom_rect(get_canvas_item(), true, get_viewport_rect())
 
-	primary_color = color_picker.color
-	active_color = primary_color
+	primary_color = Color.BLACK
+	active_color = Color.BLACK
+	color_picker.color = Color.BLACK
 	
 	image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)
 	clipboard_image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)

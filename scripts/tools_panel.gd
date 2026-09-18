@@ -17,6 +17,32 @@ extends Panel
 @onready var color_picker: ColorPicker = %ColorPicker
 @onready var size_slider: SpinBox = %SizeSlider
 
+@onready var input_map_to_mode: Dictionary[StringName, Enums.Mode] = {
+	&"brush": Enums.Mode.BRUSH,
+	&"eraser": Enums.Mode.ERASER,
+	&"line": Enums.Mode.LINE,
+	&"bucket": Enums.Mode.PAINT_BUCKET,
+	&"square": Enums.Mode.SHAPE_SQUARE,
+	&"filled_square": Enums.Mode.SHAPE_SQUARE,
+	&"circle": Enums.Mode.SHAPE_CIRCLE,
+	&"filled_circle": Enums.Mode.SHAPE_CIRCLE,
+	&"pan": Enums.Mode.MOVE,
+	&"eyedropper": Enums.Mode.EYEDROPPER,
+	&"select_square": Enums.Mode.SELECTION_SQUARE,
+}
+
+@onready var mode_to_button: Dictionary[Enums.Mode, Button] = {
+	Enums.Mode.BRUSH: brush_button,
+	Enums.Mode.ERASER: eraser_button,
+	Enums.Mode.LINE: line_button,
+	Enums.Mode.PAINT_BUCKET: paint_bucket_button,
+	Enums.Mode.SHAPE_SQUARE: shape_square_button,
+	Enums.Mode.SHAPE_CIRCLE: shape_circle_button,
+	Enums.Mode.MOVE: move_button,
+	Enums.Mode.EYEDROPPER: eyedropper_button,
+	Enums.Mode.SELECTION_SQUARE: selection_square_button,
+}
+
 func _ready() -> void:
 	brush_button.button_pressed = true
 	
@@ -35,6 +61,13 @@ func _ready() -> void:
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
 	color_picker.color_changed.connect(_on_color_picker_color_changed)
 
+func _process(_delta: float) -> void:
+	for key in input_map_to_mode.keys():
+		if Input.is_action_just_pressed(key):
+			var mode := input_map_to_mode[key]
+			image_editor.mode = mode
+			image_editor.filled_shape = (key as StringName).begins_with("filled")
+			mode_to_button[mode].button_pressed = true
 
 func _on_brush_button_pressed() -> void:
 	image_editor.mode = Enums.Mode.BRUSH
