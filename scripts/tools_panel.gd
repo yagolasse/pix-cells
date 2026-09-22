@@ -44,22 +44,23 @@ extends Panel
 }
 
 func _ready() -> void:
-	brush_button.button_pressed = true
+	pass
+	# brush_button.button_pressed = true
 	
-	brush_button.pressed.connect(_on_brush_button_pressed)
-	line_button.pressed.connect(_on_line_button_pressed)
-	paint_bucket_button.pressed.connect(_on_paint_bucket_button_pressed)
-	shape_square_button.pressed.connect(_on_shape_square_button_pressed)
-	shape_filled_square_button.pressed.connect(_on_shape_filled_square_button_pressed)
-	shape_circle_button.pressed.connect(_on_shape_circle_button_pressed)
-	shape_filled_circle_button.pressed.connect(_on_shape_filled_circle_button_pressed)
-	move_button.pressed.connect(_on_move_button_pressed)
-	eraser_button.pressed.connect(_on_eraser_button_pressed)
-	eyedropper_button.pressed.connect(_on_eyedropper_button_pressed)
-	selection_square_button.pressed.connect(_on_selection_square_button_pressed)
-	selection_free_button.pressed.connect(_on_selection_free_button_pressed)
-	size_slider.value_changed.connect(_on_size_slider_value_changed)
-	color_picker.color_changed.connect(_on_color_picker_color_changed)
+	# brush_button.pressed.connect(_on_brush_button_pressed)
+	# line_button.pressed.connect(_on_line_button_pressed)
+	# paint_bucket_button.pressed.connect(_on_paint_bucket_button_pressed)
+	# shape_square_button.pressed.connect(_on_shape_square_button_pressed)
+	# shape_filled_square_button.pressed.connect(_on_shape_filled_square_button_pressed)
+	# shape_circle_button.pressed.connect(_on_shape_circle_button_pressed)
+	# shape_filled_circle_button.pressed.connect(_on_shape_filled_circle_button_pressed)
+	# move_button.pressed.connect(_on_move_button_pressed)
+	# eraser_button.pressed.connect(_on_eraser_button_pressed)
+	# eyedropper_button.pressed.connect(_on_eyedropper_button_pressed)
+	# selection_square_button.pressed.connect(_on_selection_square_button_pressed)
+	# selection_free_button.pressed.connect(_on_selection_free_button_pressed)
+	# size_slider.value_changed.connect(_on_size_slider_value_changed)
+	# color_picker.color_changed.connect(_on_color_picker_color_changed)
 
 func _process(_delta: float) -> void:
 	for key in input_map_to_mode.keys():

@@ -155,17 +155,15 @@ offset_bottom = 8.0
 text = "File
 "
 switch_on_hover = true
-item_count = 5
-popup/item_0/text = "New"
-popup/item_0/id = 4
-popup/item_1/text = "Open"
-popup/item_1/id = 0
-popup/item_2/text = "Save"
-popup/item_2/id = 1
-popup/item_3/text = "Save As..."
-popup/item_3/id = 2
-popup/item_4/text = "Exit"
-popup/item_4/id = 3
+item_count = 4
+popup/item_0/text = "Open"
+popup/item_0/id = 0
+popup/item_1/text = "Save"
+popup/item_1/id = 1
+popup/item_2/text = "Save As..."
+popup/item_2/id = 2
+popup/item_3/text = "Exit"
+popup/item_3/id = 3
 
 [node name="HSeparator" type="HSeparator" parent="VSplitContainer" unique_id=648531393]
 layout_mode = 2
@@ -594,53 +592,3 @@ initial_position = 2
 always_on_top = true
 ok_button_text = "Don't Save"
 dialog_text = "Changes were made to the file! Are you sure you want to exit without saving them?"
-
-[node name="NewCanvasDialog" type="ConfirmationDialog" parent="." unique_id=1904909130]
-unique_name_in_owner = true
-oversampling_override = 1.0
-title = "New Canvas"
-initial_position = 2
-size = Vector2i(200, 135)
-always_on_top = true
-
-[node name="Control" type="Control" parent="NewCanvasDialog" unique_id=1181017498]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 8.0
-offset_right = -8.0
-offset_bottom = -49.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="NewCanvasDialog/Control" unique_id=1539434552]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="NewCanvasDialog/Control/MarginContainer" unique_id=1302087201]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="WidthSpinBox" type="SpinBox" parent="NewCanvasDialog/Control/MarginContainer/VBoxContainer" unique_id=1565906765]
-unique_name_in_owner = true
-layout_mode = 2
-max_value = 512.0
-value = 16.0
-rounded = true
-prefix = "Width"
-suffix = "px"
-
-[node name="HeightSpinBox" type="SpinBox" parent="NewCanvasDialog/Control/MarginContainer/VBoxContainer" unique_id=1145843867]
-unique_name_in_owner = true
-layout_mode = 2
-max_value = 512.0
-value = 16.0
-rounded = true
-prefix = "Height"
-suffix = "px"

@@ -63,8 +63,6 @@ var tool_brush_size: Dictionary[Enums.Mode, int] = {
 	Enums.Mode.ERASER: 1,
 }
 
-var initial_sprite_size := Vector2i(32, 32)
-
 var brush_size: int:
 	get: return tool_brush_size[mode] if tool_brush_size.has(mode) else 1
 
@@ -124,26 +122,16 @@ func _ready() -> void:
 
 	RenderingServer.canvas_item_set_custom_rect(get_canvas_item(), true, get_viewport_rect())
 
+	size_slider.value_changed.connect(_on_size_slider_value_changed)
+	color_picker.color_changed.connect(_on_color_picker_color_changed)
+
 	primary_color = Color.BLACK
 	active_color = Color.BLACK
 	color_picker.color = Color.BLACK
-	
-	image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)
-	clipboard_image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)
-	preview_image = Image.create_empty(initial_sprite_size.x, initial_sprite_size.y, false, Image.FORMAT_RGBA8)
-	
-	image.fill(Color.TRANSPARENT)
-	clipboard_image.fill(Color.TRANSPARENT)
-	
-	editor_texture = ImageTexture.create_from_image(image)
-	preview_editor_texture = ImageTexture.create_from_image(preview_image)
-	
-	canvas.texture = editor_texture
-	preview_canvas.texture = preview_editor_texture
-
-	scale *= 10
 
 func _process(_delta: float) -> void:
+	if not image or not preview_image or not clipboard_image: return
+	
 	var grid_mouse_position := Vector2i(canvas.get_local_mouse_position())
 	mouse_position_label.text = "x: %d, y: %d" % [grid_mouse_position.x, grid_mouse_position.y]
 	
@@ -197,6 +185,12 @@ func _gui_input(event: InputEvent) -> void:
 			scale /= 1.2
 	
 		queue_redraw()
+
+func _on_size_slider_value_changed(value: float) -> void:
+	tool_brush_size[mode] = int(value)
+
+func _on_color_picker_color_changed(color: Color) -> void:
+	primary_color = color
 
 func _on_mouse_entered() -> void:
 	var hotspot := Vector2(12, 12)
@@ -415,17 +409,24 @@ func _update_clipboard_rect(start_position: Vector2i, end_position: Vector2i) ->
 		y1 = temp
 	clipboard_rect = Rect2i(Vector2i(x0, y0), Vector2i(x1, y1) - Vector2i(x0, y0))
 
+func create_new_image(width: int, height: int) -> void:
+	var new_image := Image.create_empty(width, height, false, Image.FORMAT_RGBA8)
+	new_image.fill(Color.TRANSPARENT)
+
+	set_new_image(new_image)
+
 func set_new_image(new_image: Image) -> void:
 	image = new_image
-	editor_texture = ImageTexture.create_from_image(image)
-	canvas.texture = editor_texture
-	
 	clipboard_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
-	clipboard_image.fill(Color.TRANSPARENT)
-	
 	preview_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	
+	clipboard_image.fill(Color.TRANSPARENT)
 	preview_image.fill(Color.TRANSPARENT)
+
+	editor_texture = ImageTexture.create_from_image(image)
 	preview_editor_texture = ImageTexture.create_from_image(preview_image)
+
+	canvas.texture = editor_texture
 	preview_canvas.texture = preview_editor_texture
 	
 	await get_tree().process_frame

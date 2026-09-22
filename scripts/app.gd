@@ -8,7 +8,10 @@ const WINDOW_TITLE = "pix-cells - %s%s"
 @onready var open_file_dialog: FileDialog = %OpenFileDialog
 @onready var save_file_dialog: FileDialog = %SaveFileDialog
 @onready var exit_confirmation_dialog: ConfirmationDialog = %ExitConfirmationDialog
+@onready var new_canvas_dialog: ConfirmationDialog = %NewCanvasDialog
 @onready var image_editor: ImageEditor = %ImageEditor
+@onready var new_canvas_width_spin_box: SpinBox = %WidthSpinBox
+@onready var new_canvas_height_spin_box: SpinBox = %HeightSpinBox
 
 var file_path: String
 var current_image: Image
@@ -22,15 +25,23 @@ func _ready() -> void:
 	save_file_dialog.file_selected.connect(_on_save_file_dialog_file_selected)
 	exit_confirmation_dialog.confirmed.connect(_on_exit_confirmation_dialog_confirmed)
 	exit_confirmation_dialog.custom_action.connect(_on_exit_custom_action_dialog_confirmed)
+	new_canvas_dialog.confirmed.connect(_on_new_canvas_dialog_confirmed)
 
 	exit_confirmation_dialog.add_button("Save", false, EXIT_CONFIRMATION_SAVE_ACTION)
 
 	get_window().title = WINDOW_TITLE % ["Untitled", ""]
 
-	current_image = Image.create_empty(image_editor.initial_sprite_size.x, image_editor.initial_sprite_size.y, false, Image.FORMAT_RGBA8)
+	var width := 32
+	var height := 32
+
+	current_image = Image.create_empty(width, height, false, Image.FORMAT_RGBA8)
 	current_image.fill(Color.TRANSPARENT)
 
+	image_editor.create_new_image(width, height)
+
 func _process(_delta: float) -> void:
+	if not image_editor.image: return
+	
 	dialogs_open = open_file_dialog.visible or save_file_dialog.visible or exit_confirmation_dialog.visible
 	image_editor.process_mode = Node.PROCESS_MODE_DISABLED if dialogs_open else Node.PROCESS_MODE_INHERIT
 	
@@ -67,10 +78,16 @@ func _on_close_request() -> void:
 	else:
 		get_tree().quit()
 
+func _on_new_canvas() -> void:
+	
+	new_canvas_dialog.visible = true
+
 func _on_file_menu_button_id_pressed(id: int) -> void:
 	if dialogs_open: return
 	
 	match id:
+		4: 
+			_on_new_canvas()
 		0:
 			open_file_dialog.popup_centered()
 		1:
@@ -82,6 +99,19 @@ func _on_file_menu_button_id_pressed(id: int) -> void:
 			save_file_dialog.popup_centered()
 		3:
 			_on_close_request()
+
+func _on_new_canvas_dialog_confirmed() -> void:
+	#var difference = image_editor.image.compute_image_metrics(current_image, false)["max"]
+#
+	#if difference:
+		#save_file_dialog.visible = true
+		#await save_file_dialog.close_requested
+	
+	var width := int(new_canvas_width_spin_box.value)
+	var height := int(new_canvas_height_spin_box.value)
+	image_editor.create_new_image(width, height)
+	current_image = Image.create_empty(width, height, false, Image.FORMAT_RGBA8)
+	current_image.fill(Color.TRANSPARENT)
 
 func _on_open_file_dialog_file_selected(path: String) -> void:
 	var image := Image.load_from_file(path)
