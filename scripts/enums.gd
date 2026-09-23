@@ -18,3 +18,19 @@ enum DisplayMode {
 	ACTUAL,
 	NONE
 }
+
+enum SaveFileMode {
+	NONE,
+	OPEN_FILE, 
+	NEW_FILE, 
+	EXIT
+}
+
+enum FileMenuButton {
+	OPEN = 0,
+	SAVE,
+	SAVE_AS,
+	EXIT,
+	NEW,
+	EXPORT_PNG
+}

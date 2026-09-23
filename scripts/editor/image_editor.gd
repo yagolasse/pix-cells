@@ -172,8 +172,8 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("clear"):
 		image.fill(Color.TRANSPARENT)
 	
-	editor_texture.update(image)
-	preview_editor_texture.update(preview_image)
+	if editor_texture: editor_texture.update(image)
+	if preview_editor_texture: preview_editor_texture.update(preview_image)
 	
 	queue_redraw()
 
@@ -262,12 +262,9 @@ func _handle_paint_bucket_mode() -> void:
 		undo_redo.create_action("Paint Bucket")
 		undo_redo.add_undo_property(image, "data", image.data)
 		
-		var initial_time := Time.get_ticks_msec()
-	
 		Painter.flood_fill(image, mouse_position, active_color)
 		undo_redo.add_do_property(image, "data", image.data)
 		
-		print("Flood fill time %d ms" % [Time.get_ticks_msec() - initial_time])
 		undo_redo.commit_action(false)
 
 func _handle_shape_mode() -> void:
@@ -422,7 +419,7 @@ func set_new_image(new_image: Image) -> void:
 	
 	clipboard_image.fill(Color.TRANSPARENT)
 	preview_image.fill(Color.TRANSPARENT)
-
+	
 	editor_texture = ImageTexture.create_from_image(image)
 	preview_editor_texture = ImageTexture.create_from_image(preview_image)
 
