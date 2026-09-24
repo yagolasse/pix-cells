@@ -1,6 +1,10 @@
 class_name ImageEditor
 extends Control
 
+signal layer_added(index: int)
+signal layer_deleted(index: int)
+signal active_layer_changed(index: int)
+
 @export var cursor_icons: Dictionary[Enums.Mode, Texture2D]
 
 @onready var canvas: TextureRect = %DrawingCanvas
@@ -9,6 +13,14 @@ extends Control
 @onready var size_slider: SpinBox = %SizeSlider
 @onready var mouse_position_label: Label = %MousePositionLabel
 
+@onready var create_layer_button: Button = %CreateLayerButton
+@onready var duplicate_layer_button: Button = %DuplicateLayerButton
+@onready var delete_layer_button: Button = %DeleteLayerButton
+
+var layers: Array[Layer] = []
+var active_layer_index: int = 0
+
+var display_image: Image
 var image: Image
 var clipboard_image: Image
 var editor_texture: ImageTexture
@@ -125,12 +137,21 @@ func _ready() -> void:
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
 	color_picker.color_changed.connect(_on_color_picker_color_changed)
 
+	create_layer_button.pressed.connect(_on_create_layer_button_pressed)
+	duplicate_layer_button.pressed.connect(_on_duplicate_layer_button_pressed)
+	delete_layer_button.pressed.connect(_on_delete_layer_button_pressed)
+
 	primary_color = Color.BLACK
 	active_color = Color.BLACK
 	color_picker.color = Color.BLACK
 
 func _process(_delta: float) -> void:
+	Debug.instance.add_debug_property("Layers", layers)
+	Debug.instance.add_debug_property("Selected Layer", active_layer_index)
+	
 	if not image or not preview_image or not clipboard_image: return
+	
+	image = layers[active_layer_index].image
 	
 	var grid_mouse_position := Vector2i(canvas.get_local_mouse_position())
 	mouse_position_label.text = "x: %d, y: %d" % [grid_mouse_position.x, grid_mouse_position.y]
@@ -172,7 +193,16 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("clear"):
 		image.fill(Color.TRANSPARENT)
 	
-	if editor_texture: editor_texture.update(image)
+	if editor_texture: 
+		display_image.fill(Color.TRANSPARENT)
+		var default_rect := Rect2i(0, 0, image.get_width(), image.get_height())
+		if layers.size() > 1:
+			for i in range(layers.size() - 1, -1, -1):
+				display_image.blend_rect(layers[i].image, default_rect, Vector2i.ZERO)
+		else:
+			display_image.copy_from(image)
+		editor_texture.update(display_image)
+	
 	if preview_editor_texture: preview_editor_texture.update(preview_image)
 	
 	queue_redraw()
@@ -414,13 +444,21 @@ func create_new_image(width: int, height: int) -> void:
 
 func set_new_image(new_image: Image) -> void:
 	image = new_image
+	
+	var layer := Layer.new()
+	layer.image = new_image
+	layer.name = &"Layer 1"
+	layers.push_back(layer)
+	
+	display_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	clipboard_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	preview_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	
+	display_image.fill(Color.TRANSPARENT)
 	clipboard_image.fill(Color.TRANSPARENT)
 	preview_image.fill(Color.TRANSPARENT)
 	
-	editor_texture = ImageTexture.create_from_image(image)
+	editor_texture = ImageTexture.create_from_image(display_image)
 	preview_editor_texture = ImageTexture.create_from_image(preview_image)
 
 	canvas.texture = editor_texture
@@ -432,3 +470,39 @@ func set_new_image(new_image: Image) -> void:
 	offset_top = 0
 	offset_right = 0
 	offset_bottom = 0
+
+func _on_create_layer_button_pressed() -> void:
+	var layer := Layer.new()
+	layer.image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	layer.name = &"Layer " + str(layers.size() + 1) 
+	layers.push_back(layer)
+	layer_added.emit(layers.size() - 1)
+
+func _on_duplicate_layer_button_pressed() -> void:
+	var layer := Layer.new()
+	layer.image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
+	
+	var active_layer := layers[active_layer_index]
+	layer.image.copy_from(active_layer.image)
+	
+	layer.name = active_layer.name + " Copy"
+	layers.insert(active_layer_index + 1, layer)
+	layer_added.emit(active_layer_index + 1)
+
+func _on_delete_layer_button_pressed() -> void:
+	if layers.size() < 2: return
+	
+	layers.remove_at(active_layer_index)
+	
+	layer_deleted.emit(active_layer_index)
+	
+	if active_layer_index > layers.size() - 1: active_layer_index -= 1
+	
+	active_layer_changed.emit(active_layer_index)
+
+class Layer extends RefCounted:
+	var name: StringName
+	var image: Image
+	
+	func _to_string() -> String:
+		return "LayerInstance: " + name
