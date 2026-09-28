@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://c8wiimw20dbae"]
+
+[ext_resource type="Texture2D" uid="uid://cjx12bosmyx5r" path="res://icons/visibility.svg" id="1_h5s4f"]
+[ext_resource type="Script" uid="uid://bigku15chkuos" path="res://scripts/gui/layer_gui_item.gd" id="1_jo1ob"]
+[ext_resource type="Texture2D" uid="uid://ds1cwvdtic1bo" path="res://icons/visibility_off.svg" id="2_ffq1r"]
+
+[node name="Control" type="Panel" unique_id=382839353 node_paths=PackedStringArray("layer_visibility_button", "layer_button", "mini_preview")]
+custom_minimum_size = Vector2(0, 30)
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_jo1ob")
+layer_visibility_button = NodePath("HBoxContainer/LayerVisibilityButton")
+layer_button = NodePath("HBoxContainer/LayerButton")
+mini_preview = NodePath("HBoxContainer/TextureRect")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=448553797]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer" unique_id=1261904408]
+texture_filter = 1
+texture_repeat = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+expand_mode = 1
+
+[node name="LayerButton" type="Button" parent="HBoxContainer" unique_id=548294558]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Layer 1"
+alignment = 0
+
+[node name="LayerVisibilityButton" type="CheckButton" parent="HBoxContainer" unique_id=2067820824]
+layout_mode = 2
+theme_override_icons/checked = ExtResource("1_h5s4f")
+theme_override_icons/unchecked = ExtResource("2_ffq1r")
+button_pressed = true

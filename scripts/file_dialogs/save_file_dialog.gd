@@ -21,7 +21,7 @@ func _on_file_selected(path: String) -> void:
 	var err := app.save_image_as(path)
 	
 	if err:
-		printerr("Error saving, ", error_string(err))
+		printerr("Error saving, " + error_string(err))
 	else:
 		app.update_image_local_cache(path)
 		_handle_next_state()

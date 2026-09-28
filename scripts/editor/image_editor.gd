@@ -1,9 +1,7 @@
 class_name ImageEditor
 extends Control
 
-signal layer_added(index: int)
-signal layer_deleted(index: int)
-signal active_layer_changed(index: int)
+signal layers_changed()
 
 @export var cursor_icons: Dictionary[Enums.Mode, Texture2D]
 
@@ -60,10 +58,10 @@ var mode: Enums.Mode = Enums.Mode.BRUSH:
 		mode = value
 	
 		selection_area_defined = false
-
+	
 		if is_mouse_inside_canvas:
 			_on_mouse_entered()
-
+	
 		if tool_brush_size.has(mode):
 			size_slider.visible = true
 			size_slider.value = tool_brush_size[mode]
@@ -92,16 +90,15 @@ var background_tile_size: int = 4
 func _draw() -> void:
 	var rect := canvas.get_rect()
 	draw_rect(rect, Color.WHITE, false)
-
+	
 	if image:
 		var tile_index := 0
-		for x in range(0, image.get_width(), background_tile_size):
+		for x in range(rect.position.x, rect.position.x + image.get_width(), background_tile_size):
 			tile_index += 1
-			for y in range(0, image.get_height(), background_tile_size):
+			for y in range(rect.position.y, rect.position.y + image.get_height(), background_tile_size):
 				tile_index += 1
 				var color := Color.GRAY if tile_index % 2 == 0 else Color.DIM_GRAY
-				draw_rect(Rect2(x - image.get_width() / 2.0, y - image.get_height() / 2.0, background_tile_size, background_tile_size), color)
-
+				draw_rect(Rect2(x, y, background_tile_size, background_tile_size), color)
 	
 	if mode == Enums.Mode.SELECTION_SQUARE and (drag_started or selection_area_defined):
 		@warning_ignore_start("integer_division")
@@ -131,16 +128,18 @@ func _draw() -> void:
 
 func _ready() -> void:
 	Input.use_accumulated_input = false
-
+	
 	RenderingServer.canvas_item_set_custom_rect(get_canvas_item(), true, get_viewport_rect())
-
+	
+	undo_redo.version_changed.connect(_on_undo_redo_version_changed)
+	
 	size_slider.value_changed.connect(_on_size_slider_value_changed)
 	color_picker.color_changed.connect(_on_color_picker_color_changed)
-
+	
 	create_layer_button.pressed.connect(_on_create_layer_button_pressed)
 	duplicate_layer_button.pressed.connect(_on_duplicate_layer_button_pressed)
 	delete_layer_button.pressed.connect(_on_delete_layer_button_pressed)
-
+	
 	primary_color = Color.BLACK
 	active_color = Color.BLACK
 	color_picker.color = Color.BLACK
@@ -198,7 +197,8 @@ func _process(_delta: float) -> void:
 		var default_rect := Rect2i(0, 0, image.get_width(), image.get_height())
 		if layers.size() > 1:
 			for i in range(layers.size() - 1, -1, -1):
-				display_image.blend_rect(layers[i].image, default_rect, Vector2i.ZERO)
+				if layers[i].visible:
+					display_image.blend_rect(layers[i].image, default_rect, Vector2i.ZERO)
 		else:
 			display_image.copy_from(image)
 		editor_texture.update(display_image)
@@ -215,6 +215,9 @@ func _gui_input(event: InputEvent) -> void:
 			scale /= 1.2
 	
 		queue_redraw()
+
+func _on_undo_redo_version_changed() -> void:
+	print("Undo/Redo: " + undo_redo.get_current_action_name())
 
 func _on_size_slider_value_changed(value: float) -> void:
 	tool_brush_size[mode] = int(value)
@@ -437,18 +440,51 @@ func _update_clipboard_rect(start_position: Vector2i, end_position: Vector2i) ->
 	clipboard_rect = Rect2i(Vector2i(x0, y0), Vector2i(x1, y1) - Vector2i(x0, y0))
 
 func create_new_image(width: int, height: int) -> void:
+	layers.clear()
+	
 	var new_image := Image.create_empty(width, height, false, Image.FORMAT_RGBA8)
 	new_image.fill(Color.TRANSPARENT)
-
+	
 	set_new_image(new_image)
+	
+	layers_changed.emit()
+
+func set_from_pix_file(layers_from_file: Array[Layer]) -> void:
+	layers.clear()
+	
+	layers = Layer.deep_duplicate_array(layers_from_file)
+	image = layers[0].image
+		
+	layers_changed.emit()
 
 func set_new_image(new_image: Image) -> void:
+	layers.clear()
+	layers_changed.emit()
+	
 	image = new_image
 	
 	var layer := Layer.new()
 	layer.image = new_image
 	layer.name = &"Layer 1"
 	layers.push_back(layer)
+	
+	layers_changed.emit()
+	
+	_reset_editor_state()
+	
+	_reset_offsets()
+
+func _reset_offsets() -> void:
+	var new_canvas_size := Vector2(image.get_width(), image.get_height())
+	
+	canvas.size = new_canvas_size
+	preview_canvas.size = new_canvas_size
+	
+	canvas.position = -new_canvas_size / 2.0
+	preview_canvas.position = -new_canvas_size / 2.0
+
+func _reset_editor_state() -> void:
+	undo_redo.clear_history()
 	
 	display_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	clipboard_image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
@@ -460,49 +496,72 @@ func set_new_image(new_image: Image) -> void:
 	
 	editor_texture = ImageTexture.create_from_image(display_image)
 	preview_editor_texture = ImageTexture.create_from_image(preview_image)
-
+	
 	canvas.texture = editor_texture
 	preview_canvas.texture = preview_editor_texture
-	
-	await get_tree().process_frame
-	
-	offset_left = 0
-	offset_top = 0
-	offset_right = 0
-	offset_bottom = 0
 
 func _on_create_layer_button_pressed() -> void:
 	var layer := Layer.new()
 	layer.image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
 	layer.name = &"Layer " + str(layers.size() + 1) 
-	layers.push_back(layer)
-	layer_added.emit(layers.size() - 1)
+	
+	var current_size := layers.size()
+	
+	undo_redo.create_action("Add layer")
+	undo_redo.add_undo_property(self, "active_layer_index", active_layer_index)
+	undo_redo.add_undo_method(
+		func():
+			layers.remove_at(current_size)
+			layers_changed.emit()
+	)
+	undo_redo.add_do_property(self, "active_layer_index", current_size)
+	undo_redo.add_do_method(
+		func():
+			layers.push_back(layer)
+			layers_changed.emit()
+	)
+	undo_redo.commit_action()
 
 func _on_duplicate_layer_button_pressed() -> void:
+	var active_layer := layers[active_layer_index]
+	
 	var layer := Layer.new()
 	layer.image = Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8)
-	
-	var active_layer := layers[active_layer_index]
 	layer.image.copy_from(active_layer.image)
-	
 	layer.name = active_layer.name + " Copy"
-	layers.insert(active_layer_index + 1, layer)
-	layer_added.emit(active_layer_index + 1)
+	
+	undo_redo.create_action("Duplicate layer")
+	undo_redo.add_undo_property(self, "active_layer_index", active_layer_index)
+	undo_redo.add_undo_method(
+		func():
+			layers.remove_at(active_layer_index + 1)
+			layers_changed.emit()
+	)
+	undo_redo.add_do_property(self, "active_layer_index", active_layer_index + 1)
+	undo_redo.add_do_method(
+		func():
+			layers.insert(active_layer_index + 1, layer)
+			layers_changed.emit()
+	)
+	undo_redo.commit_action()
 
 func _on_delete_layer_button_pressed() -> void:
 	if layers.size() < 2: return
 	
-	layers.remove_at(active_layer_index)
+	var index_to_remove := active_layer_index
+	var layer_to_remove := layers[active_layer_index]
 	
-	layer_deleted.emit(active_layer_index)
-	
-	if active_layer_index > layers.size() - 1: active_layer_index -= 1
-	
-	active_layer_changed.emit(active_layer_index)
-
-class Layer extends RefCounted:
-	var name: StringName
-	var image: Image
-	
-	func _to_string() -> String:
-		return "LayerInstance: " + name
+	undo_redo.create_action("Duplicate layer")
+	undo_redo.add_undo_property(self, "active_layer_index", active_layer_index)
+	undo_redo.add_undo_method(
+		func():
+			layers.insert(index_to_remove, layer_to_remove)
+			layers_changed.emit()
+	)
+	undo_redo.add_do_method(
+		func():
+			layers.remove_at(active_layer_index)
+			if active_layer_index > layers.size() - 1: active_layer_index -= 1
+			layers_changed.emit()
+	)
+	undo_redo.commit_action()
