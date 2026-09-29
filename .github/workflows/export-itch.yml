@@ -1,0 +1,92 @@
+name: Export to itch.io
+
+on:
+  push:
+    tags:
+      - "*"
+
+env:
+  # Must match the exact Godot version your project uses (e.g. "4.5" or "4.5.1")
+  GODOT_VERSION: "4.7.2"
+  GODOT_RELEASE: "stable"
+  # Base name for the exported executables
+  EXPORT_NAME: "pix-cells"
+  # itch.io target: <username>/<game-slug>
+  ITCH_TARGET: "theniceguuy/pix-cells"
+  # Preset names exactly as they appear in export_presets.cfg
+  WINDOWS_PRESET: "Windows Desktop"
+  LINUX_PRESET: "Linux"
+
+jobs:
+  export:
+    name: Export and push to itch.io
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Godot and export templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_RELEASE }}
+
+      - name: Install Godot and export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          V="${GODOT_VERSION}-${GODOT_RELEASE}"
+          BASE="https://github.com/godotengine/godot-builds/releases/download/${V}"
+
+          mkdir -p ~/godot
+          wget -q "${BASE}/Godot_v${V}_linux.x86_64.zip" -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${V}_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+
+          TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_RELEASE}"
+          mkdir -p "$TEMPLATES_DIR"
+          wget -q "${BASE}/Godot_v${V}_export_templates.tpz" -O /tmp/templates.tpz
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mv /tmp/templates/templates/* "$TEMPLATES_DIR"
+
+      - name: Add Godot to PATH
+        run: echo "$HOME/godot" >> "$GITHUB_PATH"
+
+      - name: Import project assets
+        run: godot --headless --path . --import
+
+      - name: Export Windows
+        run: |
+          mkdir -p build/windows
+          godot --headless --path . --export-release "$WINDOWS_PRESET" "build/windows/${EXPORT_NAME}.exe"
+          test -f "build/windows/${EXPORT_NAME}.exe"
+
+      - name: Export Linux
+        run: |
+          mkdir -p build/linux
+          godot --headless --path . --export-release "$LINUX_PRESET" "build/linux/${EXPORT_NAME}.x86_64"
+          test -f "build/linux/${EXPORT_NAME}.x86_64"
+
+      - name: Install butler
+        run: |
+          set -euo pipefail
+          curl -sSL -o /tmp/butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          mkdir -p ~/butler
+          unzip -q /tmp/butler.zip -d ~/butler
+          chmod +x ~/butler/butler
+          echo "$HOME/butler" >> "$GITHUB_PATH"
+
+      - name: Push to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler -V
+          butler push build/windows "${ITCH_TARGET}:windows" --userversion "${GITHUB_REF_NAME}"
+          butler push build/linux "${ITCH_TARGET}:linux" --userversion "${GITHUB_REF_NAME}"
