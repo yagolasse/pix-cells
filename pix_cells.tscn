@@ -173,6 +173,7 @@ grow_vertical = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VSplitContainer/ToolsSettingsPanel/MarginContainer" unique_id=1754835703]
 layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="SizeSlider" type="SpinBox" parent="VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=1192209065]
 unique_name_in_owner = true
@@ -191,12 +192,6 @@ custom_arrow_step = 1.0
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-
-[node name="MousePositionLabel" type="Label" parent="VSplitContainer/ToolsSettingsPanel/MarginContainer/HBoxContainer" unique_id=1963611465]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 8
-text = "x: -148, y: -79"
 
 [node name="HSeparator3" type="HSeparator" parent="VSplitContainer" unique_id=1746548466]
 layout_mode = 2
@@ -550,11 +545,55 @@ layer_gui_item_packed_scene = ExtResource("24_m3hpb")
 layer_button_group = ExtResource("23_5drhf")
 
 [node name="HSeparator2" type="HSeparator" parent="VSplitContainer" unique_id=652213811]
+visible = false
 layout_mode = 2
 
 [node name="AnimationPanel" type="PanelContainer" parent="VSplitContainer" unique_id=1956134543]
+visible = false
 layout_mode = 2
 size_flags_vertical = 8
+
+[node name="HSeparator4" type="HSeparator" parent="VSplitContainer" unique_id=139245114]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="VSplitContainer" unique_id=103760861]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="MarginContainer" type="MarginContainer" parent="VSplitContainer/Panel" unique_id=101730899]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -39.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VSplitContainer/Panel/MarginContainer" unique_id=87397290]
+layout_mode = 2
+
+[node name="MousePositionLabel" type="Label" parent="VSplitContainer/Panel/MarginContainer/HBoxContainer" unique_id=1963611465]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+text = "x: -148, y: -79"
+
+[node name="Control" type="Control" parent="VSplitContainer/Panel/MarginContainer/HBoxContainer" unique_id=1044504439]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ZoomSlider" type="SpinBox" parent="VSplitContainer/Panel/MarginContainer/HBoxContainer" unique_id=2013829740]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+min_value = 50.0
+max_value = 3000.0
+value = 100.0
+alignment = 1
+prefix = "Zoom"
+suffix = "%"
 
 [node name="Debug" type="Control" parent="." unique_id=1940605058 node_paths=PackedStringArray("container")]
 layout_mode = 1
