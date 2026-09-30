@@ -18,8 +18,13 @@ func _ready() -> void:
 	file_menu_button.get_popup().id_pressed.connect(_on_file_menu_button_id_pressed)
 
 func _on_file_selected(path: String) -> void:
-	var err := app.save_image_as(path)
-	
+	var err: Error = Error.ERR_METHOD_NOT_FOUND
+
+	if path.ends_with(".png"):
+		err = app.export_current_image_as_png(path)
+	elif path.ends_with(".pix"):
+		err = app.save_image_as(path)
+
 	if err:
 		printerr("Error saving, " + error_string(err))
 	else:
@@ -38,10 +43,16 @@ func _handle_next_state() -> void:
 			get_tree().quit()
 
 func _on_file_menu_button_id_pressed(id: int) -> void:
+	var extension: String
+
 	if id == Enums.FileMenuButton.SAVE_AS or id == Enums.FileMenuButton.SAVE:
+		extension = ".pix"
 		filters = PackedStringArray(["*.pix"])
 	elif id == Enums.FileMenuButton.EXPORT_PNG:
+		extension = ".png"
 		filters = PackedStringArray(["*.png"])
+	
+	current_file = App.instance.file_path.split(".")[0] + extension
 	
 	if id == Enums.FileMenuButton.EXPORT_PNG or id == Enums.FileMenuButton.SAVE_AS or (id == Enums.FileMenuButton.SAVE and not app.file_exists()):
 		popup_centered()

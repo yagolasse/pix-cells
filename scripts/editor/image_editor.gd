@@ -15,6 +15,8 @@ signal layers_changed()
 @onready var duplicate_layer_button: Button = %DuplicateLayerButton
 @onready var delete_layer_button: Button = %DeleteLayerButton
 
+@onready var dialog_watcher: DialogWatcher = %DialogWatcher
+
 var layers: Array[Layer] = []
 var active_layer_index: int = 0
 
@@ -155,6 +157,8 @@ func _process(_delta: float) -> void:
 	var grid_mouse_position := Vector2i(canvas.get_local_mouse_position())
 	mouse_position_label.text = "x: %d, y: %d" % [grid_mouse_position.x, grid_mouse_position.y]
 	
+	if dialog_watcher.any_open(): return
+	
 	var mouse_pressed := Input.is_action_pressed("primary_paint_or_drag_action")
 	
 	if not mouse_pressed and Input.is_action_just_pressed("undo") and undo_redo.has_undo():
@@ -206,15 +210,6 @@ func _process(_delta: float) -> void:
 	if preview_editor_texture: preview_editor_texture.update(preview_image)
 	
 	queue_redraw()
-
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			scale *= 1.2
-		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			scale /= 1.2
-	
-		queue_redraw()
 
 func _on_undo_redo_version_changed() -> void:
 	print("Undo/Redo: " + undo_redo.get_current_action_name())

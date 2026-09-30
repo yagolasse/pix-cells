@@ -19,6 +19,7 @@
 [ext_resource type="Script" uid="uid://lbq5fy31vm8n" path="res://scripts/editor/drawing_canvas_panel.gd" id="17_j7u2p"]
 [ext_resource type="Script" uid="uid://bm5bpo1ax051d" path="res://scripts/editor/image_editor.gd" id="18_fqoyd"]
 [ext_resource type="Texture2D" uid="uid://djpom8b7c05tb" path="res://icons/point_scan.svg" id="19_m64ry"]
+[ext_resource type="Script" uid="uid://lygrtuapn1gi" path="res://scripts/editor/dialog_watcher.gd" id="20_5drhf"]
 [ext_resource type="StyleBox" uid="uid://b0oyt54jcur2p" path="res://theme/default_panel_background.tres" id="20_v7taq"]
 [ext_resource type="Script" uid="uid://r1idmla4tegn" path="res://scripts/gui/debug.gd" id="21_gtnvw"]
 [ext_resource type="Script" uid="uid://cp0vv6vfnkwib" path="res://scripts/gui/layer_gui.gd" id="21_ipvof"]
@@ -457,6 +458,15 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="DialogWatcher" type="Node" parent="VSplitContainer/HSplitContainer/Panel/ImageEditor" unique_id=502514691 node_paths=PackedStringArray("open_file_dialog", "save_file_dialog", "new_canvas_dialog", "save_confirmation_dialog")]
+unique_name_in_owner = true
+script = ExtResource("20_5drhf")
+open_file_dialog = NodePath("../../../../../OpenFileDialog")
+save_file_dialog = NodePath("../../../../../SaveFileDialog")
+new_canvas_dialog = NodePath("../../../../../SaveConfirmationDialog")
+save_confirmation_dialog = NodePath("../../../../../NewCanvasDialog")
+metadata/_custom_type_script = "uid://lygrtuapn1gi"
+
 [node name="VSeparator2" type="VSeparator" parent="VSplitContainer/HSplitContainer" unique_id=1353851933]
 layout_mode = 2
 
@@ -557,7 +567,6 @@ layout_mode = 1
 
 [node name="OpenFileDialog" type="FileDialog" parent="." unique_id=837207418]
 unique_name_in_owner = true
-oversampling_override = 1.0
 title = "Open a File"
 initial_position = 2
 always_on_top = true
@@ -565,17 +574,14 @@ dialog_hide_on_ok = true
 file_mode = 0
 access = 2
 filters = PackedStringArray("*.png", "*.pix")
-use_native_dialog = true
 script = ExtResource("22_en7jx")
 
 [node name="SaveFileDialog" type="FileDialog" parent="." unique_id=825081986]
 unique_name_in_owner = true
-oversampling_override = 1.0
 initial_position = 2
 always_on_top = true
 dialog_hide_on_ok = true
 access = 2
-use_native_dialog = true
 option_count = 1
 script = ExtResource("23_ppub6")
 
@@ -628,6 +634,7 @@ oversampling_override = 1.0
 title = "Warning!"
 initial_position = 2
 size = Vector2i(681, 100)
+unresizable = true
 always_on_top = true
 ok_button_text = "Don't Save"
 dialog_text = "Changes were made to the file! Are you sure you want to close it without saving them?"
@@ -639,6 +646,7 @@ oversampling_override = 1.0
 title = "New Canvas"
 initial_position = 2
 size = Vector2i(200, 135)
+unresizable = true
 always_on_top = true
 script = ExtResource("26_ppub6")
 

@@ -1,6 +1,8 @@
 class_name App
 extends Control
 
+static var instance: App
+
 const EXIT_CONFIRMATION_SAVE_ACTION := &"save"
 const WINDOW_TITLE = "pix-cells - %s%s"
 
@@ -13,6 +15,8 @@ var reference_layers: Array[Layer]
 var dialogs_open: bool = false
 
 func _ready() -> void:
+	instance = self
+
 	get_tree().set_auto_accept_quit(false)
 	
 	file_menu_button.get_popup().id_pressed.connect(_on_file_menu_button_id_pressed)
